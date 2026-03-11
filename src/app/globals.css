@@ -1,0 +1,496 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-noto-sans);
+  --font-serif: var(--font-instrument-serif);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
+  --radius-3xl: calc(var(--radius) + 12px);
+  --radius-4xl: calc(var(--radius) + 16px);
+}
+
+/* ── Base: fully neutral (no brand tint) ── */
+:root {
+  --radius: 0rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.55 0.15 195);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.965 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.965 0 0);
+  --muted-foreground: oklch(0.45 0 0);
+  --accent: oklch(0.955 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.55 0.15 195);
+  --chart-1: oklch(0.55 0.15 195);
+  --chart-2: oklch(0.6 0.118 184.704);
+  --chart-3: oklch(0.398 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --sidebar: oklch(0.975 0 0);
+  --sidebar-foreground: oklch(0.145 0 0);
+  --sidebar-primary: oklch(0.55 0.15 195);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.94 0 0);
+  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-border: oklch(0.91 0 0);
+  --sidebar-ring: oklch(0.55 0.15 195);
+}
+
+/* ── Brand: lernen.diy (Teal, Hue ~195) ── */
+:root[data-brand="lernen"] {
+  --primary: oklch(0.55 0.15 195);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.965 0.01 195);
+  --muted: oklch(0.965 0.005 195);
+  --accent: oklch(0.955 0.02 195);
+  --ring: oklch(0.55 0.15 195);
+  --chart-1: oklch(0.55 0.15 195);
+  --sidebar: oklch(0.975 0.008 195);
+  --sidebar-primary: oklch(0.55 0.15 195);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.94 0.02 195);
+  --sidebar-border: oklch(0.91 0.01 195);
+  --sidebar-ring: oklch(0.55 0.15 195);
+}
+
+/* ── Brand: unlearn.how (Purple, Hue ~292) ── */
+:root[data-brand="unlearn"] {
+  --primary: oklch(0.59 0.22 292);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.965 0.01 292);
+  --muted: oklch(0.965 0.005 292);
+  --accent: oklch(0.955 0.03 292);
+  --ring: oklch(0.59 0.22 292);
+  --chart-1: oklch(0.59 0.22 292);
+  --sidebar: oklch(0.975 0.008 292);
+  --sidebar-primary: oklch(0.59 0.22 292);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.94 0.03 280);
+  --sidebar-border: oklch(0.91 0.01 280);
+  --sidebar-ring: oklch(0.59 0.22 292);
+}
+
+/* ── Brand: loschke.ai (Orange, Hue ~28) ── */
+:root[data-brand="loschke"] {
+  --primary: oklch(0.58 0.22 28);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.965 0.01 28);
+  --muted: oklch(0.965 0.005 28);
+  --accent: oklch(0.955 0.03 28);
+  --ring: oklch(0.58 0.22 28);
+  --chart-1: oklch(0.58 0.22 28);
+  --sidebar: oklch(0.975 0.008 28);
+  --sidebar-primary: oklch(0.58 0.22 28);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.94 0.03 35);
+  --sidebar-border: oklch(0.91 0.01 35);
+  --sidebar-ring: oklch(0.58 0.22 28);
+}
+
+/* ── Brand: Prototyp (Charcoal #2F2F33 / Pearl White #F5F6F7) ── */
+:root[data-brand="prototype"] {
+  --primary: oklch(0.27 0.005 280);
+  --primary-foreground: oklch(0.97 0.002 250);
+  --secondary: oklch(0.965 0.003 260);
+  --muted: oklch(0.965 0.002 260);
+  --accent: oklch(0.955 0.003 260);
+  --ring: oklch(0.27 0.005 280);
+  --chart-1: oklch(0.27 0.005 280);
+  --sidebar: oklch(0.975 0.002 260);
+  --sidebar-primary: oklch(0.27 0.005 280);
+  --sidebar-primary-foreground: oklch(0.97 0.002 250);
+  --sidebar-accent: oklch(0.94 0.003 260);
+  --sidebar-border: oklch(0.91 0.003 260);
+  --sidebar-ring: oklch(0.27 0.005 280);
+}
+
+/* ── Brand: AOK (Green #005E3F, Hue ~165) ── */
+:root[data-brand="aok"] {
+  --primary: oklch(0.38 0.1 165);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.965 0.01 165);
+  --muted: oklch(0.965 0.005 165);
+  --accent: oklch(0.955 0.03 165);
+  --ring: oklch(0.38 0.1 165);
+  --chart-1: oklch(0.38 0.1 165);
+  --sidebar: oklch(0.975 0.008 165);
+  --sidebar-primary: oklch(0.38 0.1 165);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.94 0.03 165);
+  --sidebar-border: oklch(0.91 0.01 165);
+  --sidebar-ring: oklch(0.38 0.1 165);
+}
+
+/* ═══════════════════════════════════════
+   Dark Mode Variants
+   ═══════════════════════════════════════ */
+
+/* ── Dark Base: neutral ── */
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.93 0 0);
+  --card: oklch(0.18 0 0);
+  --card-foreground: oklch(0.93 0 0);
+  --popover: oklch(0.18 0 0);
+  --popover-foreground: oklch(0.93 0 0);
+  --primary: oklch(0.6 0.15 195);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.22 0 0);
+  --secondary-foreground: oklch(0.93 0 0);
+  --muted: oklch(0.22 0 0);
+  --muted-foreground: oklch(0.6 0 0);
+  --accent: oklch(0.25 0 0);
+  --accent-foreground: oklch(0.93 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.28 0 0);
+  --input: oklch(0.28 0 0);
+  --ring: oklch(0.6 0.15 195);
+  --chart-1: oklch(0.6 0.15 195);
+  --chart-2: oklch(0.65 0.118 184.704);
+  --chart-3: oklch(0.5 0.07 227.392);
+  --chart-4: oklch(0.828 0.189 84.429);
+  --chart-5: oklch(0.769 0.188 70.08);
+  --sidebar: oklch(0.16 0 0);
+  --sidebar-foreground: oklch(0.93 0 0);
+  --sidebar-primary: oklch(0.6 0.15 195);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.22 0 0);
+  --sidebar-accent-foreground: oklch(0.93 0 0);
+  --sidebar-border: oklch(0.25 0 0);
+  --sidebar-ring: oklch(0.6 0.15 195);
+}
+
+/* ── Dark + lernen.diy (Teal, Hue ~195) ── */
+.dark[data-brand="lernen"] {
+  --primary: oklch(0.6 0.15 195);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.22 0.01 195);
+  --muted: oklch(0.22 0.005 195);
+  --accent: oklch(0.25 0.02 195);
+  --ring: oklch(0.6 0.15 195);
+  --chart-1: oklch(0.6 0.15 195);
+  --sidebar: oklch(0.16 0.008 195);
+  --sidebar-primary: oklch(0.6 0.15 195);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.22 0.02 195);
+  --sidebar-border: oklch(0.25 0.01 195);
+  --sidebar-ring: oklch(0.6 0.15 195);
+}
+
+/* ── Dark + unlearn.how (Purple, Hue ~292) ── */
+.dark[data-brand="unlearn"] {
+  --primary: oklch(0.65 0.22 292);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.22 0.01 292);
+  --muted: oklch(0.22 0.005 292);
+  --accent: oklch(0.25 0.03 292);
+  --ring: oklch(0.65 0.22 292);
+  --chart-1: oklch(0.65 0.22 292);
+  --sidebar: oklch(0.16 0.008 292);
+  --sidebar-primary: oklch(0.65 0.22 292);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.22 0.03 280);
+  --sidebar-border: oklch(0.25 0.01 280);
+  --sidebar-ring: oklch(0.65 0.22 292);
+}
+
+/* ── Dark + loschke.ai (Orange, Hue ~28) ── */
+.dark[data-brand="loschke"] {
+  --primary: oklch(0.64 0.22 28);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.22 0.01 28);
+  --muted: oklch(0.22 0.005 28);
+  --accent: oklch(0.25 0.03 28);
+  --ring: oklch(0.64 0.22 28);
+  --chart-1: oklch(0.64 0.22 28);
+  --sidebar: oklch(0.16 0.008 28);
+  --sidebar-primary: oklch(0.64 0.22 28);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.22 0.03 35);
+  --sidebar-border: oklch(0.25 0.01 35);
+  --sidebar-ring: oklch(0.64 0.22 28);
+}
+
+/* ── Dark + Prototype (Charcoal / Pearl) ── */
+.dark[data-brand="prototype"] {
+  --primary: oklch(0.7 0.005 280);
+  --primary-foreground: oklch(0.145 0 0);
+  --secondary: oklch(0.22 0.003 260);
+  --muted: oklch(0.22 0.002 260);
+  --accent: oklch(0.25 0.003 260);
+  --ring: oklch(0.7 0.005 280);
+  --chart-1: oklch(0.7 0.005 280);
+  --sidebar: oklch(0.16 0.002 260);
+  --sidebar-primary: oklch(0.7 0.005 280);
+  --sidebar-primary-foreground: oklch(0.145 0 0);
+  --sidebar-accent: oklch(0.22 0.003 260);
+  --sidebar-border: oklch(0.25 0.003 260);
+  --sidebar-ring: oklch(0.7 0.005 280);
+}
+
+/* ── Dark + AOK (Green, Hue ~165) ── */
+.dark[data-brand="aok"] {
+  --primary: oklch(0.5 0.1 165);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.22 0.01 165);
+  --muted: oklch(0.22 0.005 165);
+  --accent: oklch(0.25 0.03 165);
+  --ring: oklch(0.5 0.1 165);
+  --chart-1: oklch(0.5 0.1 165);
+  --sidebar: oklch(0.16 0.008 165);
+  --sidebar-primary: oklch(0.5 0.1 165);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.22 0.03 165);
+  --sidebar-border: oklch(0.25 0.01 165);
+  --sidebar-ring: oklch(0.5 0.1 165);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* ═══════════════════════════════════════
+   Brand Identity — RL. Design DNA
+   ═══════════════════════════════════════ */
+
+/* Bold Headline Utility */
+.headline-black {
+  font-weight: 900;
+  letter-spacing: -0.025em;
+}
+
+/* Uppercase Micro Labels */
+.micro-label {
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted-foreground);
+}
+
+/* ═══════════════════════════════════════
+   Interaction & Motion
+   ═══════════════════════════════════════ */
+
+.transition-lift {
+  transition:
+    transform 200ms cubic-bezier(0.4, 0, 0.2, 1),
+    box-shadow 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+.transition-lift:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px oklch(0 0 0 / 0.06);
+}
+
+.glass-card {
+  background: oklch(from var(--background) l c h / 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid oklch(from var(--primary) 0.92 0.01 h / 0.3);
+  box-shadow:
+    0 1px 3px oklch(0 0 0 / 0.04),
+    0 8px 24px oklch(0 0 0 / 0.03);
+}
+
+.dark .glass-card {
+  border-color: oklch(from var(--primary) 0.3 0.03 h / 0.3);
+  box-shadow:
+    0 1px 3px oklch(0 0 0 / 0.2),
+    0 8px 24px oklch(0 0 0 / 0.15);
+}
+
+/* ═══════════════════════════════════════
+   Streamdown Prose Typography
+   ═══════════════════════════════════════ */
+
+/* Scope: className="chat-prose" on MessageResponse */
+
+/* Comfortable line-height for reading */
+.chat-prose {
+  line-height: 1.65;
+}
+
+/* Headings: visual hierarchy with more space above */
+.chat-prose > h1,
+.chat-prose > h2,
+.chat-prose > h3,
+.chat-prose > h4 {
+  font-weight: 600;
+  line-height: 1.35;
+  margin-top: 1.5em;
+  margin-bottom: 0.25em;
+}
+
+.chat-prose > h1 { font-size: 1.25em; }
+.chat-prose > h2 { font-size: 1.125em; }
+.chat-prose > h3 { font-size: 1.05em; }
+
+/* First heading: no extra top margin */
+.chat-prose > h1:first-child,
+.chat-prose > h2:first-child,
+.chat-prose > h3:first-child,
+.chat-prose > h4:first-child {
+  margin-top: 0;
+}
+
+/* Lists: restore markers and spacing */
+.chat-prose > ul,
+.chat-prose > ol {
+  padding-left: 1.5em;
+  margin-block: 0.25em;
+}
+
+.chat-prose > ul { list-style-type: disc; }
+.chat-prose > ol { list-style-type: decimal; }
+
+.chat-prose li {
+  margin-block: 0.2em;
+  padding-left: 0.25em;
+}
+
+.chat-prose li > ul,
+.chat-prose li > ol {
+  margin-top: 0.2em;
+  padding-left: 1.25em;
+}
+
+/* Blockquotes */
+.chat-prose > blockquote {
+  border-left: 3px solid var(--border);
+  padding-left: 1em;
+  color: var(--muted-foreground);
+  font-style: italic;
+}
+
+/* Horizontal rules */
+.chat-prose > hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin-block: 1.5em;
+}
+
+/* Tables */
+.chat-prose table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875em;
+}
+
+.chat-prose th,
+.chat-prose td {
+  border: 1px solid var(--border);
+  padding: 0.375em 0.625em;
+  text-align: left;
+}
+
+.chat-prose th {
+  background: var(--muted);
+  font-weight: 600;
+}
+
+/* Inline code (not inside code blocks) */
+.chat-prose :not(pre) > code {
+  background: var(--muted);
+  padding: 0.1em 0.35em;
+  border-radius: 0.25em;
+  font-size: 0.875em;
+}
+
+/* Links */
+.chat-prose a {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.chat-prose a:hover {
+  color: oklch(from var(--primary) calc(l - 0.1) c h);
+}
+
+/* ═══════════════════════════════════════
+   Streamdown Code Block Overrides
+   ═══════════════════════════════════════ */
+
+/* Flatten nested container look: outer box becomes seamless wrapper */
+[data-streamdown="code-block"] {
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin-block: 0.75rem;
+  gap: 0;
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+/* Language header: tighter, sits on top of code body */
+[data-streamdown="code-block-header"] {
+  height: auto;
+  padding: 0.375rem 0.75rem;
+  background: var(--muted);
+  border: 1px solid var(--border);
+  border-bottom: none;
+  border-radius: 0.5rem 0.5rem 0 0;
+}
+
+/* Code body: allow horizontal scroll, no double border */
+[data-streamdown="code-block-body"] {
+  overflow-x: auto;
+  overflow-y: hidden;
+  border-radius: 0 0 0.5rem 0.5rem;
+  padding: 0.75rem;
+}
+
+/* Actions toolbar: reduce z-fighting, tighter layout */
+[data-streamdown="code-block-actions"] {
+  background: oklch(from var(--muted) l c h / 0.9);
+  border-color: var(--border);
+}
