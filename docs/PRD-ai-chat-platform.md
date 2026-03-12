@@ -3,7 +3,7 @@
 > **Projekt:** Eigene AI Chat Plattform mit Artifact-System, Expertensystem, MCP-Integration, Skills und Websearch
 > **Stand:** 2026-03-12
 > **Autor:** Rico Loschke
-> **Aktueller Meilenstein:** M2 Chat Features — implementiert, nicht committed. M1 Foundation abgeschlossen (commit `12bc85b`).
+> **Aktueller Meilenstein:** M3 Artifact System. M2 Chat Features abgeschlossen (commit `e3bc9a5`). M1 Foundation abgeschlossen (commit `12bc85b`).
 
 ---
 
@@ -1047,7 +1047,7 @@ Sidebar:
 
 ### Meilenstein 1: Foundation ✅ (2026-03-12)
 
-**Status:** Implementiert. Build erfolgreich. DB-Push + E2E-Test ausstehend.
+**Status:** Abgeschlossen. Commit `12bc85b`.
 
 **Erledigt:**
 - ✅ DB Schema erweitert: `chats`, `messages`, `artifacts`, `usage_logs` in `src/lib/db/schema/`
@@ -1060,43 +1060,61 @@ Sidebar:
 - ✅ Web Tools: web_search + web_fetch via Anthropic Tools
 - ✅ Cleanup: alte (app)/ Routes, Assistant-System, Modul-Navigation entfernt
 - ✅ CLAUDE.md aktualisiert, Recherche-Pflicht verankert
-
-**Noch offen:**
-- ⬜ `pnpm db:push` — Schema in Neon DB pushen
-- ⬜ End-to-End-Test: Login → Chat → Persistenz → Sidebar-History → Chat laden
+- ✅ DB-Push auf Neon, E2E-Test bestanden
 
 **Entscheidungen:**
 - nanoid (text) statt UUID für Chat-IDs (URL-freundlich: `/c/V1StGXR8_Z`)
 - Logto `sub` direkt als `userId` (kein FK zu users-Tabelle in M1)
 - `messageMetadata` statt Response-Header für chatId-Übertragung Server→Client
-- Assistant-Komponenten behalten als M3-Referenz (tsconfig excluded)
 
-### Meilenstein 2: Chat-Features ⬜
+### Meilenstein 2: Chat Features ✅ (2026-03-12)
 
-**Chat-UX:**
-- Multi-Model-Auswahl (ModelSelector) + `src/config/models.ts` (Model-Registry)
-- Chat-Sidebar mit Chronologie-Gruppierung (Today, Yesterday, 7 Days, Older)
-- Chat-Titel Auto-Generation (Basis in M1 implementiert, UI-Refresh fehlt)
-- Pinned Chats (Toggle, Sortierung)
-- Chat-Suche (Volltext über Titel)
+**Status:** Abgeschlossen. Commits `baf6a2b` (Features), `99cd30e` (UI), `e3bc9a5` (Security Hardening).
 
-**Token-Tracking & Context Window Management (must have):**
-- Kumulierter Token-Count pro Chat in DB (`chats.totalTokens` oder aus `usage_logs` aggregiert)
-- Token-Verbrauch im UI anzeigen (pro Chat, z.B. in Sidebar oder Header)
-- Context Window Warnung wenn Chat sich dem Modell-Limit nähert (z.B. 80%)
-- Anthropic Prompt Caching auf System-Prompt aktivieren (`providerOptions.anthropic.cacheControl: { type: 'ephemeral' }`) — spart Kosten und Latenz bei jedem Turn
-- Cache-Metriken tracken (`cacheReadTokens`, `cacheWriteTokens` aus `usage.inputTokenDetails`)
+**Erledigt — Chat-UX:**
+- ✅ Model Registry mit ENV-basierter Konfiguration (`MODELS_CONFIG` JSON, Zod-validiert)
+- ✅ ModelSelector UI mit Zweck-Gruppen (allrounder, creative, coding, analysis, fast) und Region-Flags (EU/US)
+- ✅ Model-Persistenz pro Chat (PATCH `/api/chats/[chatId]`)
+- ✅ Chat-Sidebar: Chronologie-Gruppen (Heute, Gestern, 7 Tage, Älter), Pinned-Section, Client-Suche
+- ✅ Chat-Titel Auto-Generation (via `generateText` in `onFinish`)
+- ✅ Pinned Chats (Toggle via API, optimistic UI)
+- ✅ Custom Instructions Dialog (User-spezifische System-Prompt-Erweiterungen)
+- ✅ Spracheingabe (Web Speech API, SpeechButton)
+- ✅ Message Metadata Toolbar (Model-Name, Token-Count, Copy, Download als MD)
+- ✅ Auto-Scroll mit Scroll-to-Bottom Button (use-stick-to-bottom)
+- ✅ `/api/models` GET-Endpoint für Client-seitige Model-Discovery
 
-**Context Window Strategie (should have):**
-- Message-Truncation via Sliding Window: wenn Token-Count > 70% des Modell-Limits, ältere Nachrichten abschneiden (System-Prompt + letzte N Nachrichten behalten)
-- Zusammenfassung älterer Nachrichten: vor dem Abschneiden per LLM eine Zusammenfassung generieren und als synthetische "summary" Message am Anfang einfügen
-- Umsetzung: Logik vor `convertToModelMessages()` in der Chat-Route, oder via AI SDK `prepareStep` Callback wenn Agent-Loops genutzt werden
-- Client-seitiges Lazy Loading der Chat-History (nicht alle Messages auf einmal laden bei langen Chats)
+**Erledigt — Token-Tracking (Credit-System-ready):**
+- ✅ `usage_logs` mit allen Token-Typen: input, output, total, reasoning, cachedInput, cacheRead, cacheWrite, stepCount
+- ✅ Token-Verbrauch in Message-Metadata (UI-Anzeige per Hover-Toolbar)
+- ✅ Anthropic Prompt Caching auf System-Prompt (`cacheControl: { type: "ephemeral" }`)
+- ✅ Cache-Metriken (read/write) in `usage_logs` persistiert
 
-**Caching-Infrastruktur (optional, bei Bedarf):**
-- Upstash Redis für Rate-Limiting (ersetzt In-Memory-Limiter)
-- Redis Response-Cache für wiederholte/ähnliche Anfragen
-- `ai-sdk-tools` `createCached()` für Tool-Call-Caching
+**Erledigt — Security Hardening:**
+- ✅ CSP: `unsafe-eval` entfernt, unused `react-jsx-parser` Dependency entfernt
+- ✅ HSTS Header (63072000s, includeSubDomains, preload)
+- ✅ Zod-Validierung für `MODELS_CONFIG` ENV-Parsing mit Fallback
+- ✅ userId-Scoping auf allen DB-Mutation-Queries (defense-in-depth)
+- ✅ Rate Limiting auf allen API-Endpoints (chat, chats, models, instructions)
+- ✅ Input-Validierung: chatId-Format, message-Rollen (user/assistant only), limit/offset Bounds
+- ✅ ModelId-Validierung gegen Registry in Chat-Route und PATCH
+- ✅ Auth null-Guards in `getUser()`/`getUserFull()`
+- ✅ DB-Connection-Caching für Serverless (module-level Singleton)
+- ✅ `ensureUserExists()` mit In-Memory-Cache
+- ✅ Error/Loading Boundaries (`error.tsx`, `loading.tsx`)
+- ✅ Console-Error-Sanitization (keine vollen Error-Objekte)
+- ✅ SQL-Level Pagination in `getChatWithMessages`
+
+**Bewusst verschoben (kein Blocker für M2):**
+- ⏭️ Context Window UI + Truncation-Strategie → eigenes Feature, ggf. M3 oder später
+- ⏭️ Upstash Redis für Rate-Limiting (aktuell In-Memory, ausreichend für Single-User)
+- ⏭️ `chats.totalTokens` Spalte (Aggregation aus `usage_logs` reicht)
+
+**Entscheidungen:**
+- Model Registry via ENV statt DB (kein Admin-UI nötig, Deployment-unabhängig)
+- Kategorien statt Provider als UI-Gruppierung (Nutzer denken in Zweck, nicht Provider)
+- In-Memory Rate Limiter akzeptabel für aktuelle Nutzerzahl (Serverless-Limitation dokumentiert)
+- `totalUsage` aus AI SDK `onFinish` statt per-Step-Tracking (summiert automatisch über Tool-Call-Steps)
 
 ### Meilenstein 3: Artifact System ⬜
 - Artifact-Erkennung in AI-Responses

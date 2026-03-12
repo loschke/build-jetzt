@@ -10,15 +10,6 @@ import {
   ConversationScrollButton,
 } from "@/components/ai-elements/conversation"
 import {
-  Message,
-  MessageContent,
-  MessageResponse,
-  MessageToolbar,
-  MessageActions,
-  MessageAction,
-} from "@/components/ai-elements/message"
-import { CopyIcon, DownloadIcon, CoinsIcon } from "lucide-react"
-import {
   PromptInput,
   PromptInputBody,
   PromptInputTextarea,
@@ -27,9 +18,13 @@ import {
   PromptInputSubmit,
   type PromptInputMessage,
 } from "@/components/ai-elements/prompt-input"
+import { ArtifactPanel } from "@/components/assistant/artifact-panel"
 import { ChatEmptyState } from "./chat-empty-state"
+import { ChatMessage } from "./chat-message"
+import { ArtifactErrorBoundary } from "./artifact-error-boundary"
 import { SpeechButton } from "./speech-button"
 import { ModelSelector } from "./model-selector"
+import { useArtifact, mapSavedPartsToUI } from "@/hooks/use-artifact"
 
 interface ChatViewProps {
   chatId?: string
@@ -84,11 +79,18 @@ export function ChatView({ chatId, initialModelId }: ChatViewProps) {
         navigatedRef.current = true
         currentChatIdRef.current = meta.chatId
         window.history.replaceState(null, "", `/c/${meta.chatId}`)
-        // Notify sidebar about new chat
         window.dispatchEvent(new CustomEvent("chat-updated"))
       }
     },
   })
+
+  // Artifact state management (extracted hook)
+  const {
+    selectedArtifact,
+    handleArtifactCardClick,
+    handleArtifactSave,
+    closeArtifact,
+  } = useArtifact({ messages, status })
 
   // Load existing messages when chatId is provided
   useEffect(() => {
@@ -103,21 +105,22 @@ export function ChatView({ chatId, initialModelId }: ChatViewProps) {
         const data = await res.json()
 
         if (data.messages) {
-          const uiMessages = data.messages.map((msg: { id: string; role: string; parts: unknown[]; metadata?: unknown }) => ({
-            id: msg.id,
-            role: msg.role,
-            parts: msg.parts,
-            content: "",
-            metadata: msg.metadata ?? undefined,
-          }))
+          const uiMessages = data.messages.map((msg: { id: string; role: string; parts: unknown[]; metadata?: unknown }) => {
+            const parts = mapSavedPartsToUI(msg.parts)
+            return {
+              id: msg.id,
+              role: msg.role,
+              parts,
+              content: "",
+              metadata: msg.metadata ?? undefined,
+            }
+          })
           setMessages(uiMessages)
         }
 
-        // Initialize model from loaded chat
         if (data.modelId) setModelId(data.modelId)
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") return
-        // Failed to load — user will see empty chat
       } finally {
         if (!controller.signal.aborted) setInitialMessagesLoaded(true)
       }
@@ -130,7 +133,6 @@ export function ChatView({ chatId, initialModelId }: ChatViewProps) {
   const handleModelChange = useCallback(
     (newModelId: string) => {
       setModelId(newModelId)
-      // Persist model change to existing chat
       const cid = currentChatIdRef.current
       if (cid) {
         fetch(`/api/chats/${cid}`, {
@@ -146,7 +148,6 @@ export function ChatView({ chatId, initialModelId }: ChatViewProps) {
   const handleSubmit = useCallback(
     (message: PromptInputMessage) => {
       if (!message.text.trim()) return
-
       sendMessage(
         { text: message.text },
         { body: { chatId: currentChatIdRef.current ?? chatId, modelId } }
@@ -175,143 +176,100 @@ export function ChatView({ chatId, initialModelId }: ChatViewProps) {
   }
 
   const isGenerating = status === "streaming" || status === "submitted"
+  const hasArtifact = selectedArtifact !== null
 
   return (
-    <div className="flex flex-1 min-h-0 flex-col">
-      {/* Messages area */}
-      <Conversation className="flex-1">
-        <ConversationContent className="mx-auto w-full max-w-3xl gap-6 p-6">
-          {messages.length === 0 ? (
-            <ChatEmptyState onSuggestionSelect={handleSuggestionSelect} />
-          ) : (
-            <>
-              {messages.map((message) => {
-                const isUser = message.role === "user"
-                const meta = message.metadata as {
-                  modelId?: string
-                  modelName?: string
-                  totalTokens?: number
-                } | undefined
-                const messageText = message.parts
-                  ?.filter((part) => part.type === "text")
-                  .map((part) => part.text)
-                  .join("") ?? ""
-                return (
-                  <Message from={message.role} key={message.id}>
-                    {!isUser && (
+    <div className="flex flex-1 min-h-0">
+      {/* Chat column */}
+      <div className={`flex min-h-0 flex-col ${hasArtifact ? "w-1/2 border-r max-md:hidden" : "flex-1"}`}>
+        {/* Messages area */}
+        <Conversation className="flex-1">
+          <ConversationContent className={`mx-auto w-full gap-6 p-6 ${hasArtifact ? "max-w-2xl" : "max-w-3xl"}`}>
+            {messages.length === 0 ? (
+              <ChatEmptyState onSuggestionSelect={handleSuggestionSelect} />
+            ) : (
+              <>
+                {messages.map((message) => (
+                  <ChatMessage
+                    key={message.id}
+                    message={message}
+                    isLastMessage={message.id === messages[messages.length - 1]?.id}
+                    isStreaming={status === "streaming"}
+                    selectedArtifact={selectedArtifact}
+                    onArtifactClick={handleArtifactCardClick}
+                  />
+                ))}
+                {status === "submitted" &&
+                  messages[messages.length - 1]?.role !== "assistant" && (
+                    <div className="flex gap-2">
                       <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm">
                         ✦
                       </div>
-                    )}
-                    <MessageContent>
-                      {isUser ? (
-                        <p className="whitespace-pre-wrap">{messageText}</p>
-                      ) : (
-                        message.parts
-                          ?.filter((part) => part.type === "text")
-                          .map((part, i) => (
-                            <MessageResponse
-                              key={`${message.id}-${i}`}
-                              className="chat-prose"
-                              isAnimating={
-                                status === "streaming" &&
-                                message.id === messages[messages.length - 1]?.id
-                              }
-                            >
-                              {part.text}
-                            </MessageResponse>
-                          ))
-                      )}
-                    </MessageContent>
-                    {!isUser && !(status === "streaming" && message.id === messages[messages.length - 1]?.id) && (
-                      <MessageToolbar className="mt-1 opacity-0 transition-opacity group-hover:opacity-100">
-                        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                          {meta?.modelName && <span>{meta.modelName}</span>}
-                          {meta?.totalTokens != null && (
-                            <span className="flex items-center gap-0.5">
-                              <CoinsIcon className="size-3" />
-                              {meta.totalTokens.toLocaleString()}
-                            </span>
-                          )}
-                        </div>
-                        <MessageActions>
-                          <MessageAction
-                            tooltip="Kopieren"
-                            onClick={() => navigator.clipboard.writeText(messageText)}
-                          >
-                            <CopyIcon className="size-3" />
-                          </MessageAction>
-                          <MessageAction
-                            tooltip="Als Markdown herunterladen"
-                            onClick={() => {
-                              const blob = new Blob([messageText], { type: "text/markdown" })
-                              const url = URL.createObjectURL(blob)
-                              const a = document.createElement("a")
-                              a.href = url
-                              a.download = `message-${message.id}.md`
-                              a.click()
-                              URL.revokeObjectURL(url)
-                            }}
-                          >
-                            <DownloadIcon className="size-3" />
-                          </MessageAction>
-                        </MessageActions>
-                      </MessageToolbar>
-                    )}
-                  </Message>
-                )
-              })}
-              {status === "submitted" &&
-                messages[messages.length - 1]?.role !== "assistant" && (
-                  <div className="flex gap-2">
-                    <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm">
-                      ✦
+                      <div className="flex items-center gap-1 rounded-2xl rounded-bl-md bg-muted px-4 py-3">
+                        <span className="size-1.5 animate-bounce rounded-full bg-muted-foreground/40 [animation-delay:0ms]" />
+                        <span className="size-1.5 animate-bounce rounded-full bg-muted-foreground/40 [animation-delay:150ms]" />
+                        <span className="size-1.5 animate-bounce rounded-full bg-muted-foreground/40 [animation-delay:300ms]" />
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1 rounded-2xl rounded-bl-md bg-muted px-4 py-3">
-                      <span className="size-1.5 animate-bounce rounded-full bg-muted-foreground/40 [animation-delay:0ms]" />
-                      <span className="size-1.5 animate-bounce rounded-full bg-muted-foreground/40 [animation-delay:150ms]" />
-                      <span className="size-1.5 animate-bounce rounded-full bg-muted-foreground/40 [animation-delay:300ms]" />
-                    </div>
-                  </div>
-                )}
-            </>
-          )}
-        </ConversationContent>
-        <ConversationScrollButton />
-      </Conversation>
+                  )}
+              </>
+            )}
+          </ConversationContent>
+          <ConversationScrollButton />
+        </Conversation>
 
-      {/* Input area */}
-      <div className="mx-auto w-full max-w-3xl px-6 pb-6">
-        <PromptInput onSubmit={handleSubmit} className="rounded-xl border bg-background shadow-sm">
-          <PromptInputBody>
-            <PromptInputTextarea
-              value={input}
-              onChange={(e) => setInput(e.currentTarget.value)}
-              placeholder="Nachricht eingeben..."
-              maxLength={2000}
-            />
-          </PromptInputBody>
-          <PromptInputFooter>
-            <PromptInputTools>
-              <ModelSelector
-                value={modelId}
-                onChange={handleModelChange}
-                disabled={isGenerating}
+        {/* Input area */}
+        <div className={`mx-auto w-full px-6 pb-6 ${hasArtifact ? "max-w-2xl" : "max-w-3xl"}`}>
+          <PromptInput onSubmit={handleSubmit} className="rounded-xl border bg-background shadow-sm">
+            <PromptInputBody>
+              <PromptInputTextarea
+                value={input}
+                onChange={(e) => setInput(e.currentTarget.value)}
+                placeholder="Nachricht eingeben..."
+                maxLength={2000}
               />
-            </PromptInputTools>
-            <div className="flex items-center gap-1">
-              <SpeechButton
-                lang="de-DE"
-                onTranscript={(text) => setInput((prev) => prev ? `${prev} ${text}` : text)}
-              />
-              <PromptInputSubmit
-                status={status}
-                disabled={!input.trim()}
-              />
-            </div>
-          </PromptInputFooter>
-        </PromptInput>
+            </PromptInputBody>
+            <PromptInputFooter>
+              <PromptInputTools>
+                <ModelSelector
+                  value={modelId}
+                  onChange={handleModelChange}
+                  disabled={isGenerating}
+                />
+              </PromptInputTools>
+              <div className="flex items-center gap-1">
+                <SpeechButton
+                  lang="de-DE"
+                  onTranscript={(text) => setInput((prev) => prev ? `${prev} ${text}` : text)}
+                />
+                <PromptInputSubmit
+                  status={status}
+                  disabled={!input.trim()}
+                />
+              </div>
+            </PromptInputFooter>
+          </PromptInput>
+        </div>
       </div>
+
+      {/* Artifact panel with error boundary */}
+      {hasArtifact && (
+        <div className="flex w-1/2 min-h-0 max-md:w-full max-md:absolute max-md:inset-0 max-md:z-50 max-md:bg-background">
+          <ArtifactErrorBoundary onClose={closeArtifact}>
+            <ArtifactPanel
+              content={selectedArtifact.content}
+              title={selectedArtifact.title}
+              contentType={selectedArtifact.type}
+              language={selectedArtifact.language}
+              isStreaming={selectedArtifact.isStreaming}
+              artifactId={selectedArtifact.id}
+              version={selectedArtifact.version}
+              onClose={closeArtifact}
+              onSave={selectedArtifact.id ? handleArtifactSave : undefined}
+            />
+          </ArtifactErrorBoundary>
+        </div>
+      )}
     </div>
   )
 }

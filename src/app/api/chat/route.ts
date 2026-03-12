@@ -15,6 +15,9 @@ import { saveMessages } from "@/lib/db/queries/messages"
 import { logUsage } from "@/lib/db/queries/usage"
 import { getCustomInstructions } from "@/lib/db/queries/users"
 import { getModelById } from "@/config/models"
+import { createArtifactTool } from "@/lib/ai/tools/create-artifact"
+import { createArtifact } from "@/lib/db/queries/artifacts"
+import { parseFakeArtifactCall } from "@/lib/ai/tools/parse-fake-artifact"
 import { chatBodySchema, type MessagePart } from "./schema"
 
 /**
@@ -143,17 +146,18 @@ export async function POST(req: Request) {
   }
 
   // Resolve or create chat
-  let chatId = requestChatId
   let isNewChat = false
+  let resolvedChatId: string
 
-  if (chatId) {
-    const existingChat = await getChatById(chatId)
+  if (requestChatId) {
+    const existingChat = await getChatById(requestChatId)
     if (!existingChat || existingChat.userId !== user.id) {
       return new Response("Chat not found", { status: 404 })
     }
+    resolvedChatId = requestChatId
   } else {
     const newChat = await createChat(user.id, { modelId })
-    chatId = newChat.id
+    resolvedChatId = newChat.id
     isNewChat = true
   }
 
@@ -164,7 +168,7 @@ export async function POST(req: Request) {
   // Filter out non-standard parts (tool-call, tool-result, source-url etc.) before conversion.
   // These originate from previous tool usage (web_search, web_fetch) and cause validation errors
   // in convertToModelMessages. The model context is preserved via the text parts.
-  const ALLOWED_PART_TYPES = new Set(["text", "image", "file"])
+  const ALLOWED_PART_TYPES = new Set(["text", "image", "file", "tool-invocation"])
   const cleanedMessages = (messages as import("ai").UIMessage[]).map((msg) => ({
     ...msg,
     parts: msg.parts?.filter((part) => ALLOWED_PART_TYPES.has(part.type)),
@@ -184,10 +188,11 @@ export async function POST(req: Request) {
   ]
   modelMessages = addSystemCacheControl(modelMessages, modelId)
 
-  // Web tools
+  // Tools
   const tools = {
     web_search: anthropic.tools.webSearch_20250305({ maxUses: 5 }),
     web_fetch: anthropic.tools.webFetch_20250910({ maxUses: 3 }),
+    create_artifact: createArtifactTool(resolvedChatId),
   }
 
   const result = streamText({
@@ -198,35 +203,110 @@ export async function POST(req: Request) {
     tools,
     onFinish: async ({ response, totalUsage, steps }) => {
       try {
-        if (!chatId) return
-
         // Save user message (last one)
         const userMsg = messages[messages.length - 1]
         if (userMsg?.role === "user") {
           await saveMessages([
             {
-              chatId: chatId!,
+              chatId: resolvedChatId,
               role: "user",
               parts: userMsg.parts ?? [{ type: "text", text: typeof userMsg.content === "string" ? userMsg.content : "" }],
             },
           ])
         }
 
-        // Save assistant response
-        const assistantParts = response.messages
-          .filter((m) => m.role === "assistant")
-          .flatMap((m) =>
-            Array.isArray(m.content)
-              ? m.content
-                  .filter((c) => c.type === "text")
-                  .map((c) => ({ type: "text" as const, text: c.text }))
-              : []
-          )
+        // Save assistant response (text + tool-call parts for artifact reload)
+        const assistantParts: Array<Record<string, unknown>> = []
+        for (const m of response.messages.filter((m) => m.role === "assistant")) {
+          if (!Array.isArray(m.content)) continue
+          for (const c of m.content) {
+            if (c.type === "text") {
+              assistantParts.push({ type: "text", text: c.text })
+            } else if (c.type === "tool-call") {
+              assistantParts.push({
+                type: "tool-call",
+                toolCallId: c.toolCallId,
+                toolName: c.toolName,
+                args: c.input,
+              })
+            }
+          }
+        }
+        // Also persist tool-result parts from response content parts
+        for (const m of response.messages.filter((m) => m.role === "assistant")) {
+          if (!Array.isArray(m.content)) continue
+          for (const c of m.content) {
+            if (c.type === "tool-result") {
+              const tr = c as { type: string; toolCallId: string; toolName: string; output: unknown }
+              assistantParts.push({
+                type: "tool-result",
+                toolCallId: tr.toolCallId,
+                toolName: tr.toolName,
+                result: tr.output,
+              })
+            }
+          }
+        }
+
+        // Detect fake artifact tool calls in text (models that can't do tool calling)
+        const fullText = assistantParts
+          .filter((p) => p.type === "text")
+          .map((p) => p.text as string)
+          .join("")
+        const fakeArtifact = parseFakeArtifactCall(fullText)
+        if (fakeArtifact) {
+          try {
+            // Create artifact in DB
+            const artifact = await createArtifact({
+              chatId: resolvedChatId,
+              type: fakeArtifact.type,
+              title: fakeArtifact.title,
+              content: fakeArtifact.content,
+              language: fakeArtifact.language,
+            })
+
+            // Replace text parts: remove JSON, keep surrounding text
+            const cleanText = [fakeArtifact.textBefore, fakeArtifact.textAfter].filter(Boolean).join("\n\n")
+            // Remove all text parts and replace with clean text + tool-call + tool-result
+            const nonTextParts = assistantParts.filter((p) => p.type !== "text")
+            assistantParts.length = 0
+            if (cleanText) {
+              assistantParts.push({ type: "text", text: cleanText })
+            }
+            const fakeToolCallId = `fake-${artifact.id}`
+            assistantParts.push({
+              type: "tool-call",
+              toolCallId: fakeToolCallId,
+              toolName: "create_artifact",
+              args: {
+                type: fakeArtifact.type,
+                title: fakeArtifact.title,
+                content: fakeArtifact.content,
+                language: fakeArtifact.language,
+              },
+            })
+            assistantParts.push({
+              type: "tool-result",
+              toolCallId: fakeToolCallId,
+              toolName: "create_artifact",
+              result: {
+                artifactId: artifact.id,
+                title: artifact.title,
+                type: artifact.type,
+                version: artifact.version,
+              },
+            })
+            assistantParts.push(...nonTextParts)
+          } catch (err) {
+            console.error("Failed to create artifact from fake tool call:", err instanceof Error ? err.message : "Unknown")
+            // Continue with original text parts — message still gets saved
+          }
+        }
 
         if (assistantParts.length > 0) {
           const savedMessages = await saveMessages([
             {
-              chatId: chatId!,
+              chatId: resolvedChatId,
               role: "assistant",
               parts: assistantParts,
               metadata: {
@@ -246,7 +326,7 @@ export async function POST(req: Request) {
           if (totalUsage) {
             await logUsage({
               userId: user.id,
-              chatId: chatId!,
+              chatId: resolvedChatId,
               messageId: savedMessages[0]?.id,
               modelId,
               inputTokens: totalUsage.inputTokens ?? 0,
@@ -285,7 +365,7 @@ export async function POST(req: Request) {
                 .trim()
                 .slice(0, 80)
               if (title) {
-                await updateChatTitle(chatId!, user.id, title)
+                await updateChatTitle(resolvedChatId, user.id, title)
               }
             } catch {
               // Title generation is non-critical
@@ -294,7 +374,7 @@ export async function POST(req: Request) {
         }
 
         // Touch chat to update timestamp
-        await touchChat(chatId!, user.id)
+        await touchChat(resolvedChatId, user.id)
       } catch (error) {
         console.error("Failed to persist chat data:", error instanceof Error ? error.message : "Unknown error")
       }
@@ -306,7 +386,7 @@ export async function POST(req: Request) {
     messageMetadata: ({ part }) => {
       if (part.type === "start") {
         return {
-          chatId,
+          chatId: resolvedChatId,
           modelId,
           modelName: getModelById(modelId)?.name ?? modelId.split("/").pop(),
         }

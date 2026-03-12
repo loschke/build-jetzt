@@ -8,7 +8,7 @@
 
 **Repository:** `loschke-chat`
 **Zweck:** AI Chat Plattform (wie Claude.ai/ChatGPT) mit Chat-Persistenz, Sidebar-History und Streaming.
-**Status:** Meilenstein 2 (Chat Features) — Model-Auswahl, Sidebar-Verbesserungen, Token-Tracking (Credit-System-ready), Prompt Caching. Nicht committed.
+**Status:** Meilenstein 3 (Artifacts) abgeschlossen. Nächster Schritt: M4 Experts.
 **Roadmap:** 7 Meilensteine (M1: Foundation, M2: Chat Features, M3: Artifacts, M4: Experts, M5: MCP & Tools, M6: Skills API, M7: Projects). Details in `docs/PRD-ai-chat-platform.md`.
 
 ### Architektur
@@ -18,6 +18,7 @@
 - `/api/chat` — Unified Chat API (streaming + DB-Persistenz)
 - `/api/chats` — Chat-History CRUD
 - `/api/models` — Model-Registry (GET, aus ENV-Konfiguration)
+- `/api/artifacts/[artifactId]` — Artifact GET + PATCH (Content-Update mit Version-Bump)
 - Auth über Logto, DB über Neon, Storage über R2 (optional)
 
 ---
@@ -247,7 +248,7 @@ try {
 
 - `chats` — id (nanoid text PK), userId (Logto sub), title, isPinned, modelId, metadata (jsonb)
 - `messages` — id (nanoid text PK), chatId (FK → chats, cascade), role, parts (jsonb), metadata (jsonb)
-- `artifacts` — id (nanoid text PK), chatId (FK), messageId (FK), type, title, content, language, version (Schema vorbereitet, UI in M3)
+- `artifacts` — id (nanoid text PK), chatId (FK), messageId (FK), type, title, content, language, version, fileUrl
 - `usage_logs` — id (nanoid text PK), userId, chatId, messageId, modelId, inputTokens, outputTokens, totalTokens, reasoningTokens, cachedInputTokens, cacheReadTokens, cacheWriteTokens, stepCount
 - User-Referenz direkt über Logto `sub` claim als `userId` (text), kein FK zu users-Tabelle
 
@@ -346,13 +347,17 @@ ChatShell (Server Component)
 │   ├── ChatSidebarContent (Angepinnt + Chronologie-Gruppen)
 │   └── NavUser (+ Custom Instructions Dialog)
 ├── ChatHeader
-└── ChatView (Client Component)
-    ├── ChatToolbar
-    │   └── ModelSelector (Select mit Zweck-Gruppen)
-    ├── Conversation + ConversationContent
-    │   → Message + MessageContent + MessageResponse (Streamdown)
-    │   → ChatEmptyState (Vorschläge)
-    └── PromptInput + PromptInputTextarea + PromptInputSubmit
+└── ChatView (Client Component) — Split-View wenn Artifact offen
+    ├── Chat-Column (50% oder 100%)
+    │   ├── Conversation + ConversationContent
+    │   │   → Message + MessageContent + MessageResponse (Streamdown)
+    │   │   → ArtifactCard (inline, bei tool-create_artifact Parts)
+    │   │   → ChatEmptyState (Vorschläge)
+    │   └── PromptInput + ModelSelector + SpeechButton
+    └── ArtifactPanel (50%, optional)
+        ├── Header (Title, Version-Badge, Save/Edit/Copy/Download)
+        ├── View: HtmlPreview | MessageResponse (Markdown/Code)
+        └── Edit: ArtifactEditor (CodeMirror)
 ```
 
 **Persistenz:** `useChat` mit `DefaultChatTransport` → `/api/chat` → `streamText` mit `onFinish` Callback → DB Persist (messages + usage). `chatId` wird per `messageMetadata` vom Server zum Client gesendet. Token-Tracking via `totalUsage` (Summe aller Steps) in `usage_logs`.
@@ -363,12 +368,58 @@ ChatShell (Server Component)
 
 Streamdown rendert semantisches HTML, Tailwind Preflight entfernt alle Default-Margins. Für lesbaren Chat-Output gibt es eine scoped `.chat-prose` CSS-Klasse in `globals.css`:
 
-- **Anwendung:** `className="chat-prose"` auf `MessageResponse` in `chat-panel.tsx`
+- **Anwendung:** `className="chat-prose"` auf `MessageResponse` in `chat-view.tsx`
 - **Scope:** Nur Chat-Ausgabe, nicht global. Kein `@tailwindcss/typography` nötig.
 - **Enthält:** Line-height (1.65), Heading-Hierarchie, List-Marker/Spacing, Tabellen, Inline-Code, Blockquotes, Links, HR
 - **Code-Blöcke:** Separates Styling via `[data-streamdown="code-block"]` Selektoren (ebenfalls in `globals.css`)
 
 Bei Styling-Anpassungen am Chat-Output: `globals.css` Sektionen "Streamdown Prose Typography" und "Streamdown Code Block Overrides" bearbeiten.
+
+---
+
+## Artifact System (M3)
+
+Eigenständige Outputs (HTML-Seiten, Dokumente, Code-Dateien) werden als Artifacts in einem Split-View-Panel neben dem Chat angezeigt, persistiert und sind editierbar.
+
+### Architektur
+
+- **Tool-basiert:** Model erstellt Artifacts via `create_artifact` Tool-Call
+- **Streaming:** Tool-Argumente (content, title, type) streamen automatisch zum Client via AI SDK typed tool parts
+- **Persistenz:** `execute`-Funktion speichert in `artifacts`-Tabelle, Tool-Call/Result Parts werden in Message-Parts gespeichert
+- **Chat-Reload:** Gespeicherte `tool-call`/`tool-result` Parts werden zu AI SDK 6 typed tool parts gemappt (`tool-{toolName}` mit states)
+
+### Dateien
+
+| Datei | Beschreibung |
+|-------|-------------|
+| `src/lib/ai/tools/create-artifact.ts` | Tool-Definition (Factory mit chatId-Closure) |
+| `src/lib/db/queries/artifacts.ts` | CRUD-Queries (create, getById, getByChatId, updateContent) |
+| `src/app/api/artifacts/[artifactId]/route.ts` | GET + PATCH API (Ownership-Check via chat.userId) |
+| `src/components/assistant/artifact-panel.tsx` | Side-Panel (View/Edit, Download, Save, Version-Badge) |
+| `src/components/assistant/artifact-card.tsx` | Inline-Card im Chat (klickbar, öffnet Panel) |
+| `src/components/assistant/artifact-editor.tsx` | CodeMirror Editor (JS/TS/Python/CSS/JSON/HTML/Markdown) |
+| `src/components/assistant/artifact-utils.ts` | Helpers (languageToExtension, artifactTypeToIcon, extractTitle) |
+| `src/components/assistant/html-preview.tsx` | Sandboxed iframe (allow-scripts, kein allow-same-origin) |
+
+### Content Types
+
+- `markdown` — Dokumente, Berichte, Anleitungen → Streamdown-Rendering
+- `html` — Interaktive Web-Seiten → iframe Preview mit `sandbox="allow-scripts"`
+- `code` — Source Code → Syntax-Highlighting via Streamdown/Shiki
+
+### AI SDK 6 Tool Parts
+
+Server-definierte Tools kommen als typed parts an: `type: "tool-{toolName}"` (z.B. `"tool-create_artifact"`). Das gilt auch ohne Tool-Generics in `useChat`. States:
+- `input-streaming` — Args werden gestreamt, Panel öffnet sich
+- `input-available` — Args komplett, Tool wird ausgeführt
+- `output-available` — Execute fertig, artifactId verfügbar
+- `output-error` — Fehler bei Ausführung
+
+### Split-View Layout
+
+- Desktop: Chat 50% | Panel 50% (nebeneinander)
+- Mobile: Panel als Overlay (Chat hidden)
+- Ohne Artifact: Chat volle Breite
 
 ---
 
@@ -550,20 +601,48 @@ Zwei Patterns:
 - `X-Frame-Options: DENY`
 - `X-Content-Type-Options: nosniff`
 - `Referrer-Policy: strict-origin-when-cross-origin`
+- `Strict-Transport-Security: max-age=63072000; includeSubDomains; preload`
+- `X-DNS-Prefetch-Control: on`
+- `Permissions-Policy: camera=(), microphone=(self), geolocation=(), browsing-topics=()`
 
 ### Content Security Policy
 
 CSP wird in `next.config.ts` konfiguriert. Bei Aenderungen an der CSP beachten:
 
-- **`connect-src` braucht `blob:`** — File-Uploads im Assistant konvertieren Dateien client-seitig von blob-URLs zu data-URLs via `fetch(blobUrl)`. Ohne `blob:` in `connect-src` schlaegt der fetch fehl und rohe blob-URLs landen am Server, was zu `"Invalid base64 data"` Fehlern fuehrt.
+- **Kein `unsafe-eval`** — CSP script-src ist `'self' 'unsafe-inline'`. Keine Dependencies benötigen eval.
+- **`connect-src` braucht `blob:`** — File-Uploads konvertieren Dateien client-seitig von blob-URLs zu data-URLs via `fetch(blobUrl)`.
 - **`img-src` braucht `blob:` und `data:`** — Attachment-Previews nutzen blob-URLs, Inline-Bilder nutzen data-URLs.
+
+### Rate Limiting
+
+In-Memory Rate Limiter in `src/lib/rate-limit.ts`. Alle API-Endpoints sind rate-limited:
+
+| Endpoint | Limit |
+|----------|-------|
+| `/api/chat` | 20 req/min |
+| `/api/chats`, `/api/chats/[chatId]` | 60 req/min |
+| `/api/models` | 60 req/min |
+| `/api/user/instructions` | 60 req/min |
+| `/api/artifacts/[artifactId]` | 60 req/min |
+
+**Limitation:** In-Memory-Limiter wird bei Serverless-Deployments pro Instanz zurückgesetzt. Für Produktion mit mehreren Usern: Upstash Redis einbauen.
 
 ### Chat-API Input-Validierung
 
-- **Slug-Validierung:** `moduleSlug` wird gegen `/^[a-z0-9-]+$/` geprüft (Path Traversal Prevention)
-- **Message-Limit:** Max. 50 Messages pro Request (server-seitig)
+- **chatId-Format:** Max 20 Zeichen, nur `[a-zA-Z0-9_-]` (Injection Prevention)
+- **Message-Rollen:** Nur `user` und `assistant` erlaubt (server-seitig via Zod)
+- **Message-Limit:** Max. 50 Messages pro Request
 - **Nachrichtenlänge:** Max. 2000 Zeichen pro User-Nachricht
-- **JSON-Parsing:** try/catch um `req.json()`, gibt 400 bei invalidem Body
+- **ModelId-Validierung:** Gegen Model-Registry geprüft (chat route + PATCH)
+- **JSON-Parsing:** try/catch um `req.text()` + `JSON.parse()`, gibt 400 bei invalidem Body
+- **Body-Size:** Max 5MB (Content-Length + rawBody.length Check)
+
+### DB-Sicherheit
+
+- **userId-Scoping:** Alle Mutation-Queries (update, delete) prüfen `WHERE userId = ?` (defense-in-depth)
+- **Connection-Caching:** Module-level Singleton verhindert Connection-Exhaustion auf Serverless
+- **SQL-Pagination:** `getChatWithMessages` nutzt SQL-Level `LIMIT/OFFSET` statt JS-Slicing
+- **User-Sync:** `ensureUserExists()` mit In-Memory-Cache in `requireAuth()` (Upsert bei erstem API-Call)
 
 ---
 

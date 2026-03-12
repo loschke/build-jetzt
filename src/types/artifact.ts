@@ -1,6 +1,5 @@
 /** Content types the Artifact panel can render */
-export type ArtifactContentType = "markdown" | "html"
-// Extensible: | "image" | "video" | "audio"
+export type ArtifactContentType = "markdown" | "html" | "code"
 
 /** Registered output format in the format registry */
 export interface OutputFormat {

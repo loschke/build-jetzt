@@ -1,8 +1,8 @@
 "use client"
 
-import { useCallback, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import dynamic from "next/dynamic"
-import { X, Eye, Pencil, Copy, Download, Check, FileText, Printer, Code } from "lucide-react"
+import { X, Eye, Pencil, Copy, Download, Check, FileText, Printer, Code, Save } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -14,6 +14,8 @@ import {
 import { MessageResponse } from "@/components/ai-elements/message"
 import type { ArtifactContentType } from "@/types/artifact"
 import { HtmlPreview } from "./html-preview"
+import { CodePreview } from "./code-preview"
+import { languageToExtension } from "./artifact-utils"
 
 const ArtifactEditor = dynamic(
   () =>
@@ -23,12 +25,25 @@ const ArtifactEditor = dynamic(
   { ssr: false }
 )
 
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;")
+}
+
 interface ArtifactPanelProps {
   content: string
   title: string
   contentType: ArtifactContentType
+  language?: string
   isStreaming: boolean
+  artifactId?: string
+  version?: number
   onClose: () => void
+  onSave?: (content: string) => void
 }
 
 function sanitizeFilename(title: string): string {
@@ -40,73 +55,119 @@ function sanitizeFilename(title: string): string {
   )
 }
 
-export function ArtifactPanel({ content, title, contentType, isStreaming, onClose }: ArtifactPanelProps) {
+export function ArtifactPanel({
+  content,
+  title,
+  contentType,
+  language,
+  isStreaming,
+  artifactId,
+  version,
+  onClose,
+  onSave,
+}: ArtifactPanelProps) {
   const [mode, setMode] = useState<"view" | "edit">("view")
   const [editContent, setEditContent] = useState(content)
   const [copied, setCopied] = useState(false)
+  const [saving, setSaving] = useState(false)
   const viewRef = useRef<HTMLDivElement>(null)
+  const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const printIframesRef = useRef<HTMLIFrameElement[]>([])
+
+  // Cleanup timeouts and print iframes on unmount
+  useEffect(() => {
+    return () => {
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current)
+      }
+      for (const iframe of printIframesRef.current) {
+        iframe.remove()
+      }
+      printIframesRef.current = []
+    }
+  }, [])
 
   const handleCopy = useCallback(async () => {
     const textToCopy = mode === "edit" ? editContent : content
-    await navigator.clipboard.writeText(textToCopy)
+    try {
+      await navigator.clipboard.writeText(textToCopy)
+    } catch {
+      // Clipboard API may not be available in insecure contexts
+      return
+    }
     setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    if (copyTimeoutRef.current) {
+      clearTimeout(copyTimeoutRef.current)
+    }
+    copyTimeoutRef.current = setTimeout(() => {
+      setCopied(false)
+      copyTimeoutRef.current = null
+    }, 2000)
   }, [mode, editContent, content])
+
+  const handleSave = useCallback(async () => {
+    if (!onSave || saving) return
+    setSaving(true)
+    try {
+      await onSave(editContent)
+    } finally {
+      setSaving(false)
+    }
+  }, [onSave, editContent, saving])
 
   const handleDownloadFile = useCallback(() => {
     const textToDownload = mode === "edit" ? editContent : content
-    const isHtml = contentType === "html"
-    const blob = new Blob([textToDownload], {
-      type: isHtml ? "text/html" : "text/markdown",
-    })
+    let ext: string
+    let mimeType: string
+
+    if (contentType === "html") {
+      ext = ".html"
+      mimeType = "text/html"
+    } else if (contentType === "code") {
+      ext = languageToExtension(language)
+      mimeType = "text/plain"
+    } else {
+      ext = ".md"
+      mimeType = "text/markdown"
+    }
+
+    const blob = new Blob([textToDownload], { type: mimeType })
     const url = URL.createObjectURL(blob)
     const link = document.createElement("a")
     link.href = url
-    link.download = `${sanitizeFilename(title)}.${isHtml ? "html" : "md"}`
+    link.download = `${sanitizeFilename(title)}${ext}`
     document.body.append(link)
     link.click()
     link.remove()
     URL.revokeObjectURL(url)
-  }, [mode, editContent, content, title, contentType])
+  }, [mode, editContent, content, title, contentType, language])
 
   const handleDownloadPdf = useCallback(() => {
     if (contentType === "html") {
-      // For HTML content, print the HTML directly
       const htmlToPrint = mode === "edit" ? editContent : content
       const iframe = document.createElement("iframe")
-      iframe.setAttribute("sandbox", "allow-same-origin allow-modals")
       iframe.style.position = "fixed"
       iframe.style.left = "-9999px"
       iframe.style.top = "0"
       iframe.style.width = "0"
       iframe.style.height = "0"
-      document.body.appendChild(iframe)
-
-      const iframeDoc = iframe.contentDocument ?? iframe.contentWindow?.document
-      if (!iframeDoc) {
-        iframe.remove()
-        return
-      }
-
-      iframeDoc.open()
-      iframeDoc.write(htmlToPrint)
-      iframeDoc.close()
+      iframe.setAttribute("sandbox", "allow-modals")
+      iframe.srcdoc = htmlToPrint
+      printIframesRef.current.push(iframe)
 
       iframe.onload = () => {
         iframe.contentWindow?.print()
-        setTimeout(() => iframe.remove(), 1000)
+        setTimeout(() => {
+          iframe.remove()
+          printIframesRef.current = printIframesRef.current.filter((f) => f !== iframe)
+        }, 1000)
       }
 
-      setTimeout(() => {
-        if (iframe.parentNode) {
-          iframe.contentWindow?.print()
-          setTimeout(() => iframe.remove(), 1000)
-        }
-      }, 250)
+      document.body.appendChild(iframe)
       return
     }
 
-    // For markdown content, render as styled HTML for print
+    // For markdown/code content, render as styled HTML for print
     let htmlContent: string
     if (viewRef.current) {
       htmlContent = viewRef.current.innerHTML
@@ -118,10 +179,11 @@ export function ArtifactPanel({ content, title, contentType, isStreaming, onClos
       htmlContent = `<pre style="white-space: pre-wrap;">${escaped}</pre>`
     }
 
+    const escapedTitle = escapeHtml(title)
     const printDoc = `<!DOCTYPE html>
 <html><head>
 <meta charset="utf-8">
-<title>${title}</title>
+<title>${escapedTitle}</title>
 <style>
   @page { size: A4; margin: 20mm; }
   body {
@@ -151,35 +213,24 @@ export function ArtifactPanel({ content, title, contentType, isStreaming, onClos
 </head><body>${htmlContent}</body></html>`
 
     const iframe = document.createElement("iframe")
-      iframe.setAttribute("sandbox", "allow-same-origin allow-modals")
     iframe.style.position = "fixed"
     iframe.style.left = "-9999px"
     iframe.style.top = "0"
     iframe.style.width = "0"
     iframe.style.height = "0"
-    document.body.appendChild(iframe)
-
-    const iframeDoc = iframe.contentDocument ?? iframe.contentWindow?.document
-    if (!iframeDoc) {
-      iframe.remove()
-      return
-    }
-
-    iframeDoc.open()
-    iframeDoc.write(printDoc)
-    iframeDoc.close()
+    iframe.setAttribute("sandbox", "allow-modals")
+    iframe.srcdoc = printDoc
+    printIframesRef.current.push(iframe)
 
     iframe.onload = () => {
       iframe.contentWindow?.print()
-      setTimeout(() => iframe.remove(), 1000)
+      setTimeout(() => {
+        iframe.remove()
+        printIframesRef.current = printIframesRef.current.filter((f) => f !== iframe)
+      }, 1000)
     }
 
-    setTimeout(() => {
-      if (iframe.parentNode) {
-        iframe.contentWindow?.print()
-        setTimeout(() => iframe.remove(), 1000)
-      }
-    }, 250)
+    document.body.appendChild(iframe)
   }, [mode, editContent, content, title, contentType])
 
   const handleToggleMode = useCallback(() => {
@@ -191,7 +242,12 @@ export function ArtifactPanel({ content, title, contentType, isStreaming, onClos
     }
   }, [mode, content])
 
-  const isHtml = contentType === "html"
+  const editorLanguage =
+    contentType === "html"
+      ? "html"
+      : contentType === "code"
+        ? language ?? "text"
+        : "markdown"
 
   return (
     <div className="flex h-full w-full flex-col bg-background">
@@ -202,8 +258,26 @@ export function ArtifactPanel({ content, title, contentType, isStreaming, onClos
             <span className="bg-primary size-2 shrink-0 animate-pulse rounded-full" />
           )}
           <span className="truncate text-sm font-semibold">{title}</span>
+          {version != null && version > 1 && (
+            <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
+              v{version}
+            </span>
+          )}
         </div>
         <div className="flex items-center gap-1">
+          {mode === "edit" && onSave && artifactId && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-7"
+              onClick={handleSave}
+              disabled={saving}
+              title="Speichern"
+            >
+              <Save className="size-3.5" />
+            </Button>
+          )}
           <Button
             type="button"
             variant="ghost"
@@ -246,17 +320,25 @@ export function ArtifactPanel({ content, title, contentType, isStreaming, onClos
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={handleDownloadFile}>
-                {isHtml ? (
+                {contentType === "code" ? (
+                  <Code className="size-3.5" />
+                ) : contentType === "html" ? (
                   <Code className="size-3.5" />
                 ) : (
                   <FileText className="size-3.5" />
                 )}
-                {isHtml ? "HTML (.html)" : "Markdown (.md)"}
+                {contentType === "html"
+                  ? "HTML (.html)"
+                  : contentType === "code"
+                    ? `Code (${languageToExtension(language)})`
+                    : "Markdown (.md)"}
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleDownloadPdf}>
-                <Printer className="size-3.5" />
-                Als PDF drucken
-              </DropdownMenuItem>
+              {contentType !== "code" && (
+                <DropdownMenuItem onClick={handleDownloadPdf}>
+                  <Printer className="size-3.5" />
+                  Als PDF drucken
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
           <Button
@@ -275,8 +357,14 @@ export function ArtifactPanel({ content, title, contentType, isStreaming, onClos
       {/* Content */}
       <div className="flex-1 overflow-auto">
         {mode === "view" ? (
-          isHtml ? (
-            <HtmlPreview html={content} />
+          contentType === "html" ? (
+            isStreaming ? (
+              <HtmlStreamingPlaceholder title={title} />
+            ) : (
+              <HtmlPreview html={content} />
+            )
+          ) : contentType === "code" ? (
+            <CodePreview code={content} language={language} />
           ) : (
             <div ref={viewRef} className="p-6">
               <MessageResponse className="chat-prose">
@@ -288,10 +376,29 @@ export function ArtifactPanel({ content, title, contentType, isStreaming, onClos
           <ArtifactEditor
             value={editContent}
             onChange={setEditContent}
-            language={isHtml ? "html" : "markdown"}
+            language={editorLanguage}
           />
         )}
       </div>
+    </div>
+  )
+}
+
+function HtmlStreamingPlaceholder({ title }: { title: string }) {
+  return (
+    <div className="flex h-full flex-col items-center justify-center gap-4 bg-neutral-900 p-8 text-neutral-400">
+      <div className="flex items-center gap-2">
+        <span className="size-2 animate-pulse rounded-full bg-primary" />
+        <span className="text-sm font-medium text-neutral-200">{title}</span>
+      </div>
+      <div className="w-full max-w-md space-y-3">
+        <div className="h-3 w-3/4 animate-pulse rounded bg-neutral-700" />
+        <div className="h-3 w-full animate-pulse rounded bg-neutral-700 [animation-delay:150ms]" />
+        <div className="h-3 w-5/6 animate-pulse rounded bg-neutral-700 [animation-delay:300ms]" />
+        <div className="h-3 w-2/3 animate-pulse rounded bg-neutral-700 [animation-delay:450ms]" />
+        <div className="h-3 w-4/5 animate-pulse rounded bg-neutral-700 [animation-delay:600ms]" />
+      </div>
+      <p className="mt-2 text-xs text-neutral-500">HTML wird generiert...</p>
     </div>
   )
 }

@@ -1,5 +1,6 @@
 import {
   FileText,
+  Code,
   GalleryHorizontalEnd,
   Maximize2,
   type LucideIcon,
@@ -9,6 +10,7 @@ import { cn } from "@/lib/utils"
 
 const ICON_MAP: Record<string, LucideIcon> = {
   FileText,
+  Code,
   GalleryHorizontalEnd,
 }
 

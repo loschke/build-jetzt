@@ -117,14 +117,21 @@ export function extractHtmlTitle(html: string): string {
  * Code execution results have: output.content[].file_id
  */
 export function extractCodeExecutionFileId(
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  parts: any[] | undefined
+  parts: unknown[] | undefined
 ): string | null {
   if (!parts) return null
   for (const part of parts) {
+    if (
+      typeof part !== "object" ||
+      part === null ||
+      !("type" in part) ||
+      !("output" in part)
+    ) continue
+    const partType = (part as { type: unknown }).type
+    const partOutput = (part as { output: unknown }).output
     // Tool parts from code execution have output with content array
-    if (part.type?.startsWith("tool-") && part.output) {
-      const output = part.output
+    if (typeof partType === "string" && partType.startsWith("tool-") && partOutput && typeof partOutput === "object") {
+      const output = partOutput as Record<string, unknown>
       const content = output.content as
         | Array<{ type: string; file_id: string }>
         | undefined
@@ -156,6 +163,59 @@ export async function fetchCodeExecutionFile(
     return await res.text()
   } catch {
     return null
+  }
+}
+
+/**
+ * Map a programming language name to its file extension.
+ */
+export function languageToExtension(language?: string): string {
+  if (!language) return ".txt"
+  const map: Record<string, string> = {
+    javascript: ".js",
+    js: ".js",
+    typescript: ".ts",
+    ts: ".ts",
+    jsx: ".jsx",
+    tsx: ".tsx",
+    python: ".py",
+    py: ".py",
+    html: ".html",
+    css: ".css",
+    json: ".json",
+    markdown: ".md",
+    md: ".md",
+    sql: ".sql",
+    bash: ".sh",
+    sh: ".sh",
+    yaml: ".yaml",
+    yml: ".yml",
+    xml: ".xml",
+    java: ".java",
+    go: ".go",
+    rust: ".rs",
+    ruby: ".rb",
+    php: ".php",
+    swift: ".swift",
+    kotlin: ".kt",
+    c: ".c",
+    cpp: ".cpp",
+    csharp: ".cs",
+  }
+  return map[language.toLowerCase()] ?? `.${language.toLowerCase()}`
+}
+
+/**
+ * Map an artifact type to an icon name for ArtifactCard.
+ */
+export function artifactTypeToIcon(type: string): string {
+  switch (type) {
+    case "html":
+      return "GalleryHorizontalEnd"
+    case "code":
+      return "Code"
+    default:
+      return "FileText"
   }
 }
 
