@@ -23,8 +23,12 @@ export async function getUser(): Promise<AppUser | null> {
 
     const claims = context.claims
 
+    if (!claims?.sub) {
+      return null
+    }
+
     return {
-      id: claims?.sub ?? "",
+      id: claims.sub,
       email: claims?.email ?? undefined,
       name: claims?.name ?? undefined,
       avatar: claims?.picture ?? undefined,
@@ -52,8 +56,13 @@ export async function getUserFull(): Promise<AppUser | null> {
     const userInfo = context.userInfo
     const claims = context.claims
 
+    const userId = claims?.sub ?? userInfo?.sub
+    if (!userId) {
+      return null
+    }
+
     return {
-      id: claims?.sub ?? userInfo?.sub ?? "",
+      id: userId,
       email: userInfo?.email ?? claims?.email ?? undefined,
       name: userInfo?.name ?? claims?.name ?? undefined,
       avatar: userInfo?.picture ?? claims?.picture ?? undefined,

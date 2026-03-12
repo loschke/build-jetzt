@@ -7,6 +7,9 @@ import { ensureUserExists } from "@/lib/db/queries/users"
 
 const DEFAULT_MAX_BODY = 1024 * 1024 // 1MB
 
+/** Cache of user IDs already upserted in this process lifetime */
+const knownUserIds = new Set<string>()
+
 type AuthSuccess = { user: AppUser; error?: never }
 type AuthFailure = { user?: never; error: Response }
 
@@ -27,7 +30,10 @@ export async function requireAuth(): Promise<AuthSuccess | AuthFailure> {
   }
 
   // Upsert user record so DB queries (custom instructions etc.) work
-  await ensureUserExists({ logtoId: user.id, email: user.email, name: user.name })
+  if (!knownUserIds.has(user.id)) {
+    await ensureUserExists({ logtoId: user.id, email: user.email, name: user.name })
+    knownUserIds.add(user.id)
+  }
 
   return { user }
 }

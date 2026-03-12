@@ -62,7 +62,7 @@ export function ChatSidebarContent() {
 
   useEffect(() => {
     fetchChats()
-  }, [fetchChats, pathname])
+  }, [fetchChats])
 
   // Listen for chat-updated events (e.g. after new chat title generated)
   useEffect(() => {

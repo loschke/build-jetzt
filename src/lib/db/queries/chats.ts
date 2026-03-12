@@ -1,4 +1,4 @@
-import { eq, desc, and } from "drizzle-orm"
+import { eq, desc, and, count } from "drizzle-orm"
 import { nanoid } from "nanoid"
 import { getDb } from "@/lib/db"
 import { chats } from "@/lib/db/schema/chats"
@@ -38,7 +38,10 @@ export async function getChatById(chatId: string) {
   return chat ?? null
 }
 
-export async function getChatWithMessages(chatId: string) {
+export async function getChatWithMessages(
+  chatId: string,
+  options?: { limit?: number; offset?: number }
+) {
   const db = getDb()
   const [chat] = await db
     .select()
@@ -48,21 +51,40 @@ export async function getChatWithMessages(chatId: string) {
 
   if (!chat) return null
 
-  const chatMessages = await db
+  let query = db
     .select()
     .from(messages)
     .where(eq(messages.chatId, chatId))
     .orderBy(messages.createdAt)
+    .$dynamic()
+
+  if (options?.limit && options.limit > 0) {
+    query = query.limit(options.limit)
+  }
+  if (options?.offset && options.offset > 0) {
+    query = query.offset(options.offset)
+  }
+
+  const chatMessages = await query
 
   return { ...chat, messages: chatMessages }
 }
 
-export async function updateChatTitle(chatId: string, title: string) {
+export async function getMessageCount(chatId: string): Promise<number> {
+  const db = getDb()
+  const [result] = await db
+    .select({ count: count() })
+    .from(messages)
+    .where(eq(messages.chatId, chatId))
+  return result?.count ?? 0
+}
+
+export async function updateChatTitle(chatId: string, userId: string, title: string) {
   const db = getDb()
   await db
     .update(chats)
     .set({ title, updatedAt: new Date() })
-    .where(eq(chats.id, chatId))
+    .where(and(eq(chats.id, chatId), eq(chats.userId, userId)))
 }
 
 export async function deleteChat(chatId: string, userId: string) {
@@ -72,34 +94,26 @@ export async function deleteChat(chatId: string, userId: string) {
     .where(and(eq(chats.id, chatId), eq(chats.userId, userId)))
 }
 
-export async function touchChat(chatId: string) {
+export async function touchChat(chatId: string, userId: string) {
   const db = getDb()
   await db
     .update(chats)
     .set({ updatedAt: new Date() })
-    .where(eq(chats.id, chatId))
+    .where(and(eq(chats.id, chatId), eq(chats.userId, userId)))
 }
 
-export async function toggleChatPin(chatId: string, isPinned: boolean) {
+export async function toggleChatPin(chatId: string, userId: string, isPinned: boolean) {
   const db = getDb()
   await db
     .update(chats)
     .set({ isPinned, updatedAt: new Date() })
-    .where(eq(chats.id, chatId))
+    .where(and(eq(chats.id, chatId), eq(chats.userId, userId)))
 }
 
-export async function updateChatModel(chatId: string, modelId: string) {
+export async function updateChatModel(chatId: string, userId: string, modelId: string) {
   const db = getDb()
   await db
     .update(chats)
     .set({ modelId, updatedAt: new Date() })
-    .where(eq(chats.id, chatId))
-}
-
-export async function updateChatMetadata(chatId: string, metadata: Record<string, unknown>) {
-  const db = getDb()
-  await db
-    .update(chats)
-    .set({ metadata, updatedAt: new Date() })
-    .where(eq(chats.id, chatId))
+    .where(and(eq(chats.id, chatId), eq(chats.userId, userId)))
 }

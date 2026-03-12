@@ -198,6 +198,8 @@ export async function POST(req: Request) {
     tools,
     onFinish: async ({ response, totalUsage, steps }) => {
       try {
+        if (!chatId) return
+
         // Save user message (last one)
         const userMsg = messages[messages.length - 1]
         if (userMsg?.role === "user") {
@@ -283,7 +285,7 @@ export async function POST(req: Request) {
                 .trim()
                 .slice(0, 80)
               if (title) {
-                await updateChatTitle(chatId!, title)
+                await updateChatTitle(chatId!, user.id, title)
               }
             } catch {
               // Title generation is non-critical
@@ -292,9 +294,9 @@ export async function POST(req: Request) {
         }
 
         // Touch chat to update timestamp
-        await touchChat(chatId!)
+        await touchChat(chatId!, user.id)
       } catch (error) {
-        console.error("Failed to persist chat data:", error)
+        console.error("Failed to persist chat data:", error instanceof Error ? error.message : "Unknown error")
       }
     },
   })

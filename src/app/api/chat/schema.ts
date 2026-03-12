@@ -10,14 +10,14 @@ export const messagePartSchema = z.object({
 
 export const messageSchema = z.object({
   id: z.string().optional(),
-  role: z.enum(["user", "assistant", "system", "data", "tool"]),
+  role: z.enum(["user", "assistant"]),
   content: z.union([z.string(), z.array(messagePartSchema)]).optional(),
   parts: z.array(messagePartSchema).optional(),
 })
 
 export const chatBodySchema = z.object({
   messages: z.array(messageSchema).min(1).max(50),
-  chatId: z.string().optional(),
+  chatId: z.string().max(20).regex(/^[a-zA-Z0-9_-]+$/).optional(),
   modelId: z.string().optional(),
 })
 

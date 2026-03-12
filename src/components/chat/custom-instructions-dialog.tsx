@@ -46,11 +46,15 @@ export function CustomInstructionsDialog({ open, onOpenChange }: CustomInstructi
   const handleSave = async () => {
     setIsSaving(true)
     try {
-      await fetch("/api/user/instructions", {
+      const res = await fetch("/api/user/instructions", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ instructions }),
       })
+      if (!res.ok) {
+        console.warn("[CustomInstructions] Failed to save:", res.status)
+        return
+      }
       onOpenChange(false)
     } catch {
       // Non-critical

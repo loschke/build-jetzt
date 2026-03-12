@@ -1,7 +1,4 @@
-import { aiDefaults } from "./ai"
-
 export const chatConfig = {
-  ...aiDefaults,
   /** Maximale Output-Tokens pro Antwort */
   maxTokens: 4096,
   /** File-Upload Konfiguration */

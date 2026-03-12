@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { SlidersHorizontalIcon, CheckIcon } from "lucide-react"
 import {
   ModelSelector as ModelSelectorRoot,
@@ -89,7 +89,7 @@ export function ModelSelector({ value, onChange, disabled }: ModelSelectorProps)
   )
 
   // Deduplicate: each model appears only in its primary (first) category group
-  const deduplicatedGroups = (() => {
+  const deduplicatedGroups = useMemo(() => {
     const seen = new Set<string>()
     return groups
       .map((group) => ({
@@ -101,7 +101,7 @@ export function ModelSelector({ value, onChange, disabled }: ModelSelectorProps)
         }),
       }))
       .filter((group) => group.models.length > 0)
-  })()
+  }, [groups])
 
   const selectedModel = models.find((m) => m.id === value)
   const displayName = selectedModel

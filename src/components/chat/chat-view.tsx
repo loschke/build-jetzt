@@ -137,7 +137,7 @@ export function ChatView({ chatId, initialModelId }: ChatViewProps) {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ modelId: newModelId }),
-        }).catch(() => {})
+        }).catch((err) => console.warn("[ModelSelector] Failed to persist model:", err))
       }
     },
     []

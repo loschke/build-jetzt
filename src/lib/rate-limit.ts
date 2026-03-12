@@ -61,6 +61,7 @@ export function checkRateLimit(
 // Pre-configured limiters for different route types
 export const RATE_LIMITS = {
   chat: { maxRequests: 20, windowMs: 60_000 },
+  api: { maxRequests: 60, windowMs: 60_000 },
   web: { maxRequests: 30, windowMs: 60_000 },
   upload: { maxRequests: 10, windowMs: 60_000 },
 } as const

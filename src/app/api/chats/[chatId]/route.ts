@@ -1,7 +1,9 @@
 import { z } from "zod"
 
 import { requireAuth } from "@/lib/api-guards"
-import { getChatById, getChatWithMessages, deleteChat, updateChatTitle, toggleChatPin, updateChatModel } from "@/lib/db/queries/chats"
+import { getChatById, getChatWithMessages, getMessageCount, deleteChat, updateChatTitle, toggleChatPin, updateChatModel } from "@/lib/db/queries/chats"
+import { getModelById } from "@/config/models"
+import { checkRateLimit, RATE_LIMITS, rateLimitResponse } from "@/lib/rate-limit"
 
 const patchChatSchema = z.object({
   title: z.string().min(1).max(200).optional(),
@@ -17,27 +19,46 @@ export async function GET(
   if (auth.error) return auth.error
   const { user } = auth
 
+  const rateCheck = checkRateLimit(user.id, RATE_LIMITS.api)
+  if (!rateCheck.allowed) {
+    return rateLimitResponse(rateCheck.retryAfterMs)
+  }
+
   const { chatId } = await params
   const url = new URL(req.url)
-  const limit = parseInt(url.searchParams.get("limit") ?? "0", 10)
-  const offset = parseInt(url.searchParams.get("offset") ?? "0", 10)
+  const rawLimit = url.searchParams.get("limit")
+  const rawOffset = url.searchParams.get("offset")
 
-  const chat = await getChatWithMessages(chatId)
+  let limit = 0
+  let offset = 0
+
+  if (rawLimit !== null) {
+    limit = parseInt(rawLimit, 10)
+    if (isNaN(limit) || limit < 0 || limit > 200) {
+      return Response.json({ error: "Invalid limit (0-200)" }, { status: 400 })
+    }
+  }
+
+  if (rawOffset !== null) {
+    offset = parseInt(rawOffset, 10)
+    if (isNaN(offset) || offset < 0) {
+      return Response.json({ error: "Invalid offset (>= 0)" }, { status: 400 })
+    }
+  }
+
+  const paginationOptions = limit > 0 ? { limit, offset } : undefined
+  const chat = await getChatWithMessages(chatId, paginationOptions)
 
   if (!chat || chat.userId !== user.id) {
     return Response.json({ error: "Not found" }, { status: 404 })
   }
 
-  // Apply pagination if limit is specified
+  // Include pagination metadata when limit is specified
   if (limit > 0) {
-    const totalMessages = chat.messages.length
-    const start = Math.max(0, totalMessages - offset - limit)
-    const end = totalMessages - offset
-    const paginatedMessages = chat.messages.slice(Math.max(0, start), Math.max(0, end))
+    const totalMessages = await getMessageCount(chatId)
     return Response.json({
       ...chat,
-      messages: paginatedMessages,
-      hasMore: start > 0,
+      hasMore: offset + limit < totalMessages,
       totalMessages,
     })
   }
@@ -52,6 +73,11 @@ export async function PATCH(
   const auth = await requireAuth()
   if (auth.error) return auth.error
   const { user } = auth
+
+  const rateCheck = checkRateLimit(user.id, RATE_LIMITS.api)
+  if (!rateCheck.allowed) {
+    return rateLimitResponse(rateCheck.retryAfterMs)
+  }
 
   const { chatId } = await params
 
@@ -74,15 +100,18 @@ export async function PATCH(
   }
 
   if (parsed.data.title !== undefined) {
-    await updateChatTitle(chatId, parsed.data.title)
+    await updateChatTitle(chatId, user.id, parsed.data.title)
   }
 
   if (parsed.data.isPinned !== undefined) {
-    await toggleChatPin(chatId, parsed.data.isPinned)
+    await toggleChatPin(chatId, user.id, parsed.data.isPinned)
   }
 
   if (parsed.data.modelId !== undefined) {
-    await updateChatModel(chatId, parsed.data.modelId)
+    if (!getModelById(parsed.data.modelId)) {
+      return Response.json({ error: "Invalid model" }, { status: 400 })
+    }
+    await updateChatModel(chatId, user.id, parsed.data.modelId)
   }
 
   return Response.json({ success: true })
@@ -95,6 +124,11 @@ export async function DELETE(
   const auth = await requireAuth()
   if (auth.error) return auth.error
   const { user } = auth
+
+  const rateCheck = checkRateLimit(user.id, RATE_LIMITS.api)
+  if (!rateCheck.allowed) {
+    return rateLimitResponse(rateCheck.retryAfterMs)
+  }
 
   const { chatId } = await params
   await deleteChat(chatId, user.id)

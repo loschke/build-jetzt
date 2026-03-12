@@ -7,6 +7,8 @@
  * für datenschutzbewusste Auswahl.
  */
 
+import { z } from "zod"
+
 export type ModelCategory =
   | "enterprise"
   | "allrounder"
@@ -25,6 +27,19 @@ export interface ModelConfig {
   maxOutputTokens: number
   isDefault: boolean
 }
+
+const modelConfigSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  provider: z.string().min(1),
+  categories: z.array(z.enum(["enterprise", "allrounder", "creative", "coding", "analysis", "fast"])).min(1),
+  region: z.enum(["eu", "us"]),
+  contextWindow: z.number().int().positive(),
+  maxOutputTokens: z.number().int().positive(),
+  isDefault: z.boolean(),
+})
+
+const modelsConfigSchema = z.array(modelConfigSchema).min(1)
 
 export const CATEGORY_LABELS: Record<ModelCategory, string> = {
   enterprise: "Enterprise",
@@ -66,11 +81,13 @@ function parseModels(): ModelConfig[] {
   const envConfig = process.env.MODELS_CONFIG
   if (envConfig) {
     try {
-      const parsed = JSON.parse(envConfig) as ModelConfig[]
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        cachedModels = parsed
-        return parsed
+      const raw = JSON.parse(envConfig)
+      const result = modelsConfigSchema.safeParse(raw)
+      if (result.success) {
+        cachedModels = result.data
+        return result.data
       }
+      console.warn("MODELS_CONFIG validation failed, using fallback:", result.error.flatten().fieldErrors)
     } catch (e) {
       console.error("Failed to parse MODELS_CONFIG:", e)
     }
@@ -132,19 +149,9 @@ export function getModelContextWindow(id: string): number {
 }
 
 /**
- * Public model info for client-side usage (no sensitive data).
+ * Public model info for client-side usage.
+ * ModelConfig contains no sensitive data, so no separate type needed.
  */
-export interface PublicModelConfig {
-  id: string
-  name: string
-  provider: string
-  categories: ModelCategory[]
-  region: "eu" | "us"
-  contextWindow: number
-  maxOutputTokens: number
-  isDefault: boolean
-}
-
-export function getPublicModels(): PublicModelConfig[] {
+export function getPublicModels(): ModelConfig[] {
   return getModels()
 }
