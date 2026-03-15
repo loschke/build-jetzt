@@ -169,6 +169,63 @@ export async function saveMemory(
   }
 }
 
+// --- List & Delete ---
+
+/**
+ * List all memories for a user.
+ * Used by the Memory Management UI.
+ */
+export async function listMemories(userId: string): Promise<MemoryEntry[]> {
+  if (isCircuitOpen()) {
+    throw new Error("Memory service temporarily unavailable")
+  }
+
+  try {
+    const { getMemoryClient } = await import("@/config/memory")
+    const client = await getMemoryClient()
+
+    const results = await client.getAll({ user_id: userId })
+
+    recordSuccess()
+
+    if (!Array.isArray(results)) return []
+
+    return results.map((r) => ({
+      id: r.id,
+      memory: r.memory ?? "",
+      metadata: r.metadata as Record<string, unknown> | undefined,
+      score: r.score,
+      created_at: r.created_at ? String(r.created_at) : undefined,
+      updated_at: r.updated_at ? String(r.updated_at) : undefined,
+    }))
+  } catch (error) {
+    recordFailure()
+    throw error
+  }
+}
+
+/**
+ * Delete a specific memory by ID.
+ * Used by the Memory Management UI.
+ */
+export async function deleteMemory(memoryId: string): Promise<void> {
+  if (isCircuitOpen()) {
+    throw new Error("Memory service temporarily unavailable")
+  }
+
+  try {
+    const { getMemoryClient } = await import("@/config/memory")
+    const client = await getMemoryClient()
+
+    await client.delete(memoryId)
+
+    recordSuccess()
+  } catch (error) {
+    recordFailure()
+    throw error
+  }
+}
+
 // --- Prompt Formatting ---
 
 const MAX_MEMORY_CHARS = 4000

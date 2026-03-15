@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
+import { MemoryManagementDialog } from "./memory-management-dialog"
 
 const MAX_LENGTH = 2000
 
@@ -43,6 +44,7 @@ export function CustomInstructionsDialog({ open, onOpenChange }: CustomInstructi
   const [models, setModels] = useState<ModelInfo[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
+  const [memoryDialogOpen, setMemoryDialogOpen] = useState(false)
 
   const loadData = useCallback(async () => {
     setIsLoading(true)
@@ -132,20 +134,36 @@ export function CustomInstructionsDialog({ open, onOpenChange }: CustomInstructi
             </div>
 
             {memoryAvailable && (
-              <div className="flex items-center justify-between gap-4 rounded-md border p-3">
-                <div className="flex flex-col gap-0.5">
-                  <Label htmlFor="memory-toggle">Memory</Label>
-                  <p className="text-xs text-muted-foreground">
-                    Kontext aus früheren Chats bei neuen Gesprächen einbeziehen.
-                  </p>
+              <div className="rounded-md border p-3">
+                <div className="flex items-center justify-between gap-4">
+                  <div className="flex flex-col gap-0.5">
+                    <Label htmlFor="memory-toggle">Memory</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Kontext aus früheren Chats bei neuen Gesprächen einbeziehen.
+                    </p>
+                  </div>
+                  <Switch
+                    id="memory-toggle"
+                    checked={memoryEnabled}
+                    onCheckedChange={setMemoryEnabled}
+                  />
                 </div>
-                <Switch
-                  id="memory-toggle"
-                  checked={memoryEnabled}
-                  onCheckedChange={setMemoryEnabled}
-                />
+                {memoryEnabled && (
+                  <Button
+                    variant="link"
+                    size="sm"
+                    className="mt-1 h-auto p-0 text-xs"
+                    onClick={() => setMemoryDialogOpen(true)}
+                  >
+                    Memories verwalten
+                  </Button>
+                )}
               </div>
             )}
+            <MemoryManagementDialog
+              open={memoryDialogOpen}
+              onOpenChange={setMemoryDialogOpen}
+            />
 
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="custom-instructions">Eigene Anweisungen</Label>

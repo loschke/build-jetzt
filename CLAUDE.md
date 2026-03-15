@@ -829,7 +829,7 @@ Skills leben jetzt in der `skills`-Tabelle statt nur im Filesystem. Die Discover
 
 Persistenter Memory-Layer über Chat-Sessions hinweg. Technologie: Mem0 Cloud (`mem0ai` npm). Memories werden bei Chat-Start gesucht und in den System-Prompt injiziert.
 
-### Aktueller Stand: Phase 1-3 (Retrieval + Write + Recall)
+### Aktueller Stand: Phase 1-4 (Retrieval + Write + Recall + Management UI)
 
 **Phase 1 — Retrieval:**
 - **Memory-Pool:** Flach pro User, kein Expert-Scoping. Semantische Suche liefert kontextrelevante Memories.
@@ -849,12 +849,18 @@ Persistenter Memory-Layer über Chat-Sessions hinweg. Technologie: Mem0 Cloud (`
 **Phase 3 — Recall:**
 - **`recall_memory` Tool:** On-demand Memory-Suche mitten im Chat. Brain-Icon in der Tool-Status-Anzeige. Nutzt bestehende `searchMemories()`.
 
+**Phase 4 — Management UI:**
+- **Memory-Dialog:** Erreichbar über Settings → "Memories verwalten" (nur sichtbar wenn Memory aktiviert).
+- **Funktionen:** Alle Memories auflisten, client-seitig filtern, einzeln löschen (mit Bestätigungsdialog).
+- **API:** `/api/user/memories` (GET list), `/api/user/memories/[memoryId]` (DELETE).
+- **Mem0 SDK:** `client.getAll({ user_id })` und `client.delete(memoryId)`.
+
 ### Dateien
 
 | Datei | Beschreibung |
 |-------|-------------|
 | `src/config/memory.ts` | Mem0 Config + Singleton Client, minMessages |
-| `src/lib/memory/index.ts` | searchMemories, extractMemories, saveMemory, Circuit Breaker, formatMemoriesForPrompt |
+| `src/lib/memory/index.ts` | searchMemories, extractMemories, saveMemory, listMemories, deleteMemory, Circuit Breaker, formatMemoriesForPrompt |
 | `src/lib/ai/tools/save-memory.ts` | Explizites save_memory Tool (Factory mit userId) |
 | `src/lib/ai/tools/recall-memory.ts` | Explizites recall_memory Tool (Factory mit userId) |
 | `src/config/features.ts` | `memory.enabled` Feature-Flag |
@@ -862,11 +868,14 @@ Persistenter Memory-Layer über Chat-Sessions hinweg. Technologie: Mem0 Cloud (`
 | `src/app/api/chat/resolve-context.ts` | Memory-Search parallel in Phase A, `memoriesLoaded` + `userMemoryEnabled` in ChatContext |
 | `src/app/api/chat/build-tools.ts` | save_memory + recall_memory Tool-Registrierung (wenn memory enabled + user opt-in) |
 | `src/app/api/chat/persist.ts` | Auto-Extraktion in onFinish (fire-and-forget, nach Message-Save) |
+| `src/app/api/user/memories/route.ts` | GET — Liste aller Memories |
+| `src/app/api/user/memories/[memoryId]/route.ts` | DELETE — Einzelne Memory löschen |
+| `src/components/chat/memory-management-dialog.tsx` | Memory-Verwaltungs-Dialog (Liste, Suche, Löschen) |
+| `src/components/chat/custom-instructions-dialog.tsx` | Settings-Dialog mit "Memories verwalten" Button |
 
-### Nächste Phasen
+### Nächste Schritte
 
-1. **DSGVO-Export:** Memory-Export im Admin-Bereich
-2. **Management UI:** Memory-Verwaltung (Liste, Suche, Löschen), On-Prem Option
+- **DSGVO-Export:** Bulk-Export aller Memories im Admin-Bereich
 
 Detail-PRD: `docs/milestone-memory-system.md`
 
@@ -1042,6 +1051,7 @@ In-Memory Rate Limiter in `src/lib/rate-limit.ts`. Alle API-Endpoints sind rate-
 | `/api/chats`, `/api/chats/[chatId]` | 60 req/min |
 | `/api/models` | 60 req/min |
 | `/api/user/instructions` | 60 req/min |
+| `/api/user/memories`, `/api/user/memories/[memoryId]` | 60 req/min |
 | `/api/artifacts/[artifactId]` | 60 req/min |
 | `/api/experts`, `/api/experts/[expertId]` | 60 req/min |
 
