@@ -8,7 +8,7 @@
 
 **Repository:** `loschke-chat`
 **Zweck:** AI Chat Plattform (wie Claude.ai/ChatGPT) mit Chat-Persistenz, Sidebar-History und Streaming.
-**Status:** M7 MCP Integration implementiert. Nächster Schritt: M8 Memory System.
+**Status:** M8 Memory System Phase 1 (Retrieval) implementiert. Nächster Schritt: M8 Phase 2 (Extraction + Toggle).
 **Roadmap:** 10 Meilensteine (M1: Foundation, M2: Chat Features, M3: Artifacts, M4: Experts, M5: File Upload & Multimodal, M6: Projekte MVP, M7: MCP Integration, M8: Memory System, M9: Business Mode, M10: Monetarisierung). Details in `docs/PRD-ai-chat-platform.md`.
 
 ### Architektur
@@ -827,34 +827,35 @@ Skills leben jetzt in der `skills`-Tabelle statt nur im Filesystem. Die Discover
 
 ## Memory System (M8)
 
-Persistenter Memory-Layer über Chat-Sessions hinweg. Technologie: Mem0 (Open Source, Apache 2.0). Memories werden automatisch extrahiert und können von Experts explizit geschrieben werden.
+Persistenter Memory-Layer über Chat-Sessions hinweg. Technologie: Mem0 Cloud (`mem0ai` npm). Memories werden bei Chat-Start gesucht und in den System-Prompt injiziert.
 
-### Architektur
+### Aktueller Stand: Phase 1 (Retrieval)
 
 - **Memory-Pool:** Flach pro User, kein Expert-Scoping. Semantische Suche liefert kontextrelevante Memories.
-- **Automatische Extraktion:** Nach jedem Chat sendet die Plattform die Konversation an Mem0 zur Faktenextraktion.
-- **Explizite Tools:** `save_memory` (strukturierte Memories mit Metadaten) und `recall_memory` (gezielte Suche).
-- **Prompt-Layer:** Memory-Kontext als Layer 5 im System-Prompt (nach Skills, vor Custom Instructions).
+- **Retrieval:** Bei jedem Chat wird die letzte User-Nachricht als Suchquery verwendet → Mem0 `client.search()` → Ergebnisse als System-Prompt-Layer injiziert.
+- **Prompt-Layer:** Memory-Kontext als Layer 4 im System-Prompt (nach Skills, vor Projekt-Instruktionen, vor Custom Instructions).
 - **Feature-Flag:** `MEM0_API_KEY` (opt-in, analog zu anderen Feature-Flags).
+- **Circuit Breaker:** 5 Failures → 5min Cooldown. Verhindert Log-Spam bei Mem0-Ausfällen.
+- **Timeout:** 3s Race-Condition — Chat funktioniert normal wenn Mem0 langsam/offline.
+- **Token-Budget:** Max 4000 chars (~1000 Tokens) für Memory-Kontext im Prompt.
 
-### Phasen
-
-1. **Phase 1 — MVP:** Automatische Extraktion nach Chat, Memory-Injektion bei Session-Start, Toggle in Settings, Memory-Verwaltung (Liste, Suche, Löschen)
-2. **Phase 2 — Explizite Tools:** `save_memory` + `recall_memory` Tools, Memory-Export (DSGVO)
-3. **Phase 3 — Optimierung:** Deduplizierung, Konflikterkennung, Memory-Limits
-4. **Phase 4 — On-Prem:** Optionaler Wechsel von Mem0 Cloud auf Self-Hosted
-
-### Dateien (geplant)
+### Dateien
 
 | Datei | Beschreibung |
 |-------|-------------|
-| `src/lib/memory/client.ts` | Mem0-Client (Cloud oder On-Prem) |
-| `src/lib/ai/tools/save-memory.ts` | save_memory Tool-Definition |
-| `src/lib/ai/tools/recall-memory.ts` | recall_memory Tool-Definition |
-| `src/app/api/memories/route.ts` | Memory CRUD API |
-| `src/components/settings/memory-settings.tsx` | Memory-Toggle + Verwaltung |
+| `src/config/memory.ts` | Mem0 Config + Singleton Client |
+| `src/lib/memory/index.ts` | searchMemories, Circuit Breaker, formatMemoriesForPrompt |
+| `src/config/features.ts` | `memory.enabled` Feature-Flag |
+| `src/config/prompts.ts` | `memoryContext` Option + Layer 4 |
+| `src/app/api/chat/resolve-context.ts` | Memory-Search parallel in Phase A, `memoriesLoaded` in ChatContext |
 
-Detail-PRD: `docs/prd-memory-system.md`
+### Nächste Phasen
+
+1. **Phase 2 — Extraktion + Toggle:** Automatische Extraktion nach Chat (`persist.ts`), `memoryEnabled` User-Toggle, `isIncognito` Chat-Flag
+2. **Phase 3 — Explizite Tools:** `save_memory` + `recall_memory` Tools, Memory-Export (DSGVO)
+3. **Phase 4 — Management UI:** Memory-Verwaltung (Liste, Suche, Löschen), On-Prem Option
+
+Detail-PRD: `docs/milestone-memory-system.md`
 
 ---
 

@@ -25,6 +25,9 @@ export const features = {
   admin: {
     enabled: !!process.env.ADMIN_EMAILS,
   },
+  memory: {
+    enabled: !!process.env.MEM0_API_KEY,
+  },
   businessMode: {
     enabled: process.env.NEXT_PUBLIC_BUSINESS_MODE === "true",
   },

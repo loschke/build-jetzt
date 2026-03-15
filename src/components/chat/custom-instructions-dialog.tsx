@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Switch } from "@/components/ui/switch"
 
 const MAX_LENGTH = 2000
 
@@ -37,6 +38,8 @@ interface CustomInstructionsDialogProps {
 export function CustomInstructionsDialog({ open, onOpenChange }: CustomInstructionsDialogProps) {
   const [instructions, setInstructions] = useState("")
   const [defaultModelId, setDefaultModelId] = useState<string | null>(null)
+  const [memoryEnabled, setMemoryEnabled] = useState(false)
+  const [memoryAvailable, setMemoryAvailable] = useState(false)
   const [models, setModels] = useState<ModelInfo[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
@@ -52,6 +55,8 @@ export function CustomInstructionsDialog({ open, onOpenChange }: CustomInstructi
         const data = await prefsRes.json()
         setInstructions(data.instructions ?? "")
         setDefaultModelId(data.defaultModelId ?? null)
+        setMemoryEnabled(data.memoryEnabled ?? true)
+        setMemoryAvailable(data.memoryAvailable ?? false)
       }
       if (modelsRes.ok) {
         const data = await modelsRes.json()
@@ -74,7 +79,7 @@ export function CustomInstructionsDialog({ open, onOpenChange }: CustomInstructi
       const res = await fetch("/api/user/instructions", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ instructions, defaultModelId }),
+        body: JSON.stringify({ instructions, defaultModelId, memoryEnabled }),
       })
       if (!res.ok) {
         console.warn("[Settings] Failed to save:", res.status)
@@ -125,6 +130,22 @@ export function CustomInstructionsDialog({ open, onOpenChange }: CustomInstructi
                 Wird verwendet wenn kein Experte oder Quicktask ein Modell vorgibt.
               </p>
             </div>
+
+            {memoryAvailable && (
+              <div className="flex items-center justify-between gap-4 rounded-md border p-3">
+                <div className="flex flex-col gap-0.5">
+                  <Label htmlFor="memory-toggle">Memory</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Kontext aus früheren Chats bei neuen Gesprächen einbeziehen.
+                  </p>
+                </div>
+                <Switch
+                  id="memory-toggle"
+                  checked={memoryEnabled}
+                  onCheckedChange={setMemoryEnabled}
+                />
+              </div>
+            )}
 
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="custom-instructions">Eigene Anweisungen</Label>

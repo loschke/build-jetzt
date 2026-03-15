@@ -100,12 +100,13 @@ export async function POST(req: Request) {
     requestProjectId,
     quicktaskSlug,
     quicktaskData,
+    messages,
   })
 
   // resolveContext returns Response on validation failure
   if (context instanceof Response) return context
 
-  const { resolvedChatId, isNewChat, expert, systemPrompt, finalModelId, effectiveTemperature, skills, quicktaskPrompt, projectId, projectName, mcpServerIds, allowedTools } = context
+  const { resolvedChatId, isNewChat, expert, systemPrompt, finalModelId, effectiveTemperature, skills, quicktaskPrompt, projectId, projectName, mcpServerIds, allowedTools, memoriesLoaded, memories } = context
 
   // Build model messages
   const modelMessages = await buildModelMessages(
@@ -152,6 +153,7 @@ export async function POST(req: Request) {
           modelName: getModelById(finalModelId)?.name ?? finalModelId.split("/").pop(),
           ...(expert && { expertId: expert.id, expertName: expert.name }),
           ...(projectId && { projectId, projectName }),
+          ...(memoriesLoaded > 0 && { memories }),
         }
       }
     },

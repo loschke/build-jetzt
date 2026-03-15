@@ -20,6 +20,7 @@ import {
 } from "@/components/ai-elements/reasoning"
 import { AskUser } from "@/components/generative-ui/ask-user"
 import { ToolStatus } from "./tool-status"
+import { MemoryIndicator } from "./memory-indicator"
 import { MessageAttachments } from "./message-attachment"
 import { isCreateArtifactPart, extractArtifactFromToolPart } from "@/hooks/use-artifact"
 import type { SelectedArtifact } from "@/hooks/use-artifact"
@@ -29,6 +30,7 @@ interface MessageMetadata {
   modelName?: string
   totalTokens?: number
   expertName?: string
+  memories?: Array<{ text: string; score?: number }>
 }
 
 interface ChatMessageProps {
@@ -191,6 +193,9 @@ export const ChatMessage = memo(function ChatMessage({
           </>
         ) : (
           <>
+            {meta?.memories && meta.memories.length > 0 && (
+              <MemoryIndicator memories={meta.memories} />
+            )}
             {message.parts?.map((part, i) => {
               if (part.type === "reasoning") {
                 const reasoningText = "text" in part ? String(part.text) : ""

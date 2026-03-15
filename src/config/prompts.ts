@@ -28,6 +28,7 @@ interface BuildSystemPromptOptions {
   expert?: { systemPrompt: string; skillSlugs?: string[] }
   skills?: SkillMetadata[]
   quicktask?: string | null
+  memoryContext?: string | null
   projectInstructions?: string | null
   customInstructions?: string | null
   webToolsEnabled?: boolean
@@ -96,12 +97,17 @@ export function buildSystemPrompt(options?: BuildSystemPromptOptions): string {
     )
   }
 
-  // 4. Project instructions
+  // 4. Memory context (from previous sessions)
+  if (options?.memoryContext?.trim()) {
+    sections.push(options.memoryContext.trim())
+  }
+
+  // 5. Project instructions
   if (options?.projectInstructions?.trim()) {
     sections.push(`## Projekt-Kontext\n\n${options.projectInstructions.trim()}`)
   }
 
-  // 5. Custom instructions (always last, highest priority)
+  // 6. Custom instructions (always last, highest priority)
   if (options?.customInstructions?.trim()) {
     sections.push(
       `## Nutzer-Anweisungen\nDer Nutzer hat folgende persönliche Anweisungen hinterlegt. Berücksichtige diese bei allen Antworten:\n\n${options.customInstructions.trim()}`

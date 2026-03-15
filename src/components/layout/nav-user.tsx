@@ -90,7 +90,7 @@ export function NavUser({ user, isAdmin }: NavUserProps) {
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={() => setInstructionsOpen(true)} className="cursor-pointer">
             <Settings className="size-4" />
-            <span>Anweisungen</span>
+            <span>Einstellungen</span>
           </DropdownMenuItem>
           {isAdmin && (
             <DropdownMenuItem asChild>

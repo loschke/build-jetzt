@@ -8,7 +8,9 @@ import { getProjectById } from "@/lib/db/queries/projects"
 import { getModelById, getModels } from "@/config/models"
 import { discoverSkills, getSkillContent } from "@/lib/ai/skills/discovery"
 import { renderTemplate } from "@/lib/ai/skills/template"
+import { searchMemories, formatMemoriesForPrompt } from "@/lib/memory"
 import type { SkillMetadata } from "@/lib/ai/skills/discovery"
+import type { MemoryEntry } from "@/lib/memory"
 
 export interface ChatContext {
   resolvedChatId: string
@@ -23,6 +25,8 @@ export interface ChatContext {
   projectName: string | null
   mcpServerIds: string[]
   allowedTools: string[]
+  memoriesLoaded: number
+  memories: Array<{ text: string; score?: number }>
 }
 
 interface ResolveContextParams {
@@ -33,6 +37,7 @@ interface ResolveContextParams {
   requestProjectId?: string
   quicktaskSlug?: string
   quicktaskData?: Record<string, string>
+  messages?: Array<{ role: string; parts?: Array<{ type: string; text?: string }> }>
 }
 
 /**
@@ -40,12 +45,27 @@ interface ResolveContextParams {
  * Chat/Expert/Model/Skills resolution, system prompt assembly.
  * Returns ChatContext on success, or a Response on validation failure.
  */
+/** Extract last user message text for memory search query, truncated to 500 chars */
+function extractSearchQuery(params: ResolveContextParams): string {
+  if (!params.messages?.length) return ""
+  for (let i = params.messages.length - 1; i >= 0; i--) {
+    const msg = params.messages[i]
+    if (msg.role !== "user") continue
+    const text = msg.parts
+      ?.filter((p) => p.type === "text" && p.text)
+      .map((p) => p.text!)
+      .join(" ") ?? ""
+    if (text.trim()) return text.slice(0, 500)
+  }
+  return ""
+}
+
 export async function resolveContext(params: ResolveContextParams): Promise<ChatContext | Response> {
   const { userId, requestChatId, requestExpertId, requestModelId, requestProjectId, quicktaskSlug, quicktaskData } = params
 
   const modelId = requestModelId ?? aiDefaults.model
 
-  // Phase A: Parallelize independent queries (chat lookup, user prefs, skills, models + MCP cache warm-up)
+  // Phase A: Parallelize independent queries (chat lookup, user prefs, skills, models + MCP cache warm-up + memory search)
   const mcpCacheWarmup = features.mcp.enabled
     ? import("@/config/mcp").then((m) => m.getMcpServers()).catch(() => [])
     : Promise.resolve([])
@@ -142,7 +162,22 @@ export async function resolveContext(params: ResolveContextParams): Promise<Chat
     }
   }
 
-  // Build system prompt with expert persona, quicktask, project instructions, and skills
+  // Memory search: only on new chats + user opt-in + instance feature enabled
+  let memories: MemoryEntry[] = []
+  if (isNewChat && features.memory.enabled && userPrefs.memoryEnabled) {
+    const searchQuery = extractSearchQuery(params)
+    if (searchQuery) {
+      memories = await Promise.race([
+        searchMemories(userId, searchQuery),
+        new Promise<MemoryEntry[]>((resolve) => setTimeout(() => resolve([]), 3000)),
+      ]).catch(() => [] as MemoryEntry[])
+    }
+  }
+
+  const memoryContext = memories.length > 0
+    ? formatMemoriesForPrompt(memories)
+    : null
+
   const systemPrompt = buildSystemPrompt({
     expert: expert ? {
       systemPrompt: expert.systemPrompt,
@@ -150,6 +185,7 @@ export async function resolveContext(params: ResolveContextParams): Promise<Chat
     } : undefined,
     skills: quicktaskPrompt ? undefined : skills,
     quicktask: quicktaskPrompt,
+    memoryContext,
     projectInstructions: project?.instructions,
     customInstructions,
     webToolsEnabled: features.search.enabled,
@@ -189,6 +225,11 @@ export async function resolveContext(params: ResolveContextParams): Promise<Chat
     projectName: project?.name ?? null,
     mcpServerIds: (expert?.mcpServerIds as string[]) ?? [],
     allowedTools: (expert?.allowedTools as string[]) ?? [],
+    memoriesLoaded: memories.length,
+    memories: memories.map((m) => ({
+      text: m.memory,
+      score: m.score,
+    })),
   }
 }
 
