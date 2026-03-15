@@ -17,10 +17,27 @@ interface AskUserProps {
   previousAnswers?: Record<string, string | string[]>
 }
 
+// Extract comment from a previously submitted answer string
+function extractComment(answer: string | string[] | undefined): string {
+  if (typeof answer !== "string") return ""
+  const marker = "\n\nAnmerkung: "
+  const idx = typeof answer === "string" ? answer.indexOf(marker) : -1
+  return idx >= 0 ? answer.slice(idx + marker.length) : ""
+}
+
 export function AskUser({ questions, onSubmit, isReadOnly, previousAnswers }: AskUserProps) {
   const [answers, setAnswers] = useState<Record<string, string | string[]>>(
     previousAnswers ?? {}
   )
+  const [comments, setComments] = useState<Record<number, string>>(() => {
+    if (!previousAnswers) return {}
+    const initial: Record<number, string> = {}
+    questions.forEach((q, i) => {
+      const comment = extractComment(previousAnswers[q.question])
+      if (comment) initial[i] = comment
+    })
+    return initial
+  })
 
   const handleSingleSelect = useCallback((questionIdx: number, option: string) => {
     setAnswers((prev) => ({ ...prev, [questionIdx]: option }))
@@ -40,24 +57,51 @@ export function AskUser({ questions, onSubmit, isReadOnly, previousAnswers }: As
     setAnswers((prev) => ({ ...prev, [questionIdx]: text }))
   }, [])
 
+  const handleComment = useCallback((questionIdx: number, text: string) => {
+    setComments((prev) => ({ ...prev, [questionIdx]: text }))
+  }, [])
+
   const handleSubmit = useCallback(() => {
     // Build a response mapping question text → answer
     const result: Record<string, string | string[]> = {}
     questions.forEach((q, i) => {
+      const comment = comments[i]?.trim()
       const answer = answers[i]
-      if (answer !== undefined) {
-        result[q.question] = answer
+
+      if (q.type === "free_text") {
+        if (answer !== undefined) result[q.question] = answer
+        return
+      }
+
+      // For single_select / multi_select: use comment as fallback or append
+      if (!answer && comment) {
+        // Only comment, no option selected
+        result[q.question] = comment
+      } else if (answer !== undefined) {
+        if (comment) {
+          // Option + comment: append to answer string
+          const base = Array.isArray(answer) ? answer.join(", ") : answer
+          result[q.question] = `${base}\n\nAnmerkung: ${comment}`
+        } else {
+          result[q.question] = answer
+        }
       }
     })
     onSubmit(result)
-  }, [answers, questions, onSubmit])
+  }, [answers, comments, questions, onSubmit])
 
   const allAnswered = questions.every((q, i) => {
     const answer = answers[i]
-    if (!answer) return false
-    if (q.type === "multi_select") return (answer as string[]).length > 0
-    if (q.type === "free_text") return (answer as string).trim().length > 0
-    return true
+    const comment = comments[i]?.trim()
+
+    if (q.type === "free_text") {
+      return answer ? (answer as string).trim().length > 0 : false
+    }
+    // single_select / multi_select: option OR comment is enough
+    const hasOption = q.type === "multi_select"
+      ? Array.isArray(answer) && answer.length > 0
+      : !!answer
+    return hasOption || !!comment
   })
 
   return (
@@ -113,6 +157,20 @@ export function AskUser({ questions, onSubmit, isReadOnly, previousAnswers }: As
                 )
               })}
             </div>
+          )}
+
+          {(q.type === "single_select" || q.type === "multi_select") && (
+            <label className="block">
+              <span className="text-xs text-muted-foreground">Eigene Antwort / Anmerkung (optional)</span>
+              <textarea
+                value={comments[i] ?? ""}
+                onChange={(e) => handleComment(i, e.target.value)}
+                disabled={isReadOnly}
+                placeholder="Falls keine Option passt oder du etwas ergänzen möchtest..."
+                className="mt-1 w-full resize-none rounded-lg border bg-background px-3 py-2 text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary disabled:cursor-default disabled:opacity-70"
+                rows={2}
+              />
+            </label>
           )}
 
           {q.type === "free_text" && (
