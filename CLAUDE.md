@@ -8,7 +8,7 @@
 
 **Repository:** `loschke-chat`
 **Zweck:** AI Chat Plattform (wie Claude.ai/ChatGPT) mit Chat-Persistenz, Sidebar-History und Streaming.
-**Status:** M8 Memory System Phase 1 (Retrieval) implementiert. Nächster Schritt: M8 Phase 2 (Extraction + Toggle).
+**Status:** M8 Memory System komplett (Phase 1-4). Nächster Schritt: M9 Business Mode.
 **Roadmap:** 10 Meilensteine (M1: Foundation, M2: Chat Features, M3: Artifacts, M4: Experts, M5: File Upload & Multimodal, M6: Projekte MVP, M7: MCP Integration, M8: Memory System, M9: Business Mode, M10: Monetarisierung). Details in `docs/PRD-ai-chat-platform.md`.
 
 ### Architektur
@@ -26,6 +26,8 @@
 - `/api/admin/models` — Admin Models CRUD + Import (JSON)
 - `/api/admin/mcp-servers` — Admin MCP Servers CRUD + Import (JSON)
 - `/api/admin/export/skills|experts|models|mcp-servers` — Bulk-Export
+- `/api/user/instructions` — User-Einstellungen (Model, Custom Instructions, Memory-Toggle)
+- `/api/user/memories` — Memory-Liste (GET), `/api/user/memories/[memoryId]` — Memory löschen (DELETE)
 - Auth über Logto, DB über Neon, Storage über R2 (optional), Admin über ADMIN_EMAILS ENV
 
 ---
@@ -130,6 +132,7 @@ function AppButton({ children, ...props }: ButtonProps) {
 - `src/lib/web/` — Firecrawl-Client und Types (Search, Scrape, Crawl, Extract, Map).
 - `src/lib/search/` — Provider-agnostische Search-Abstraktion fuer Chat-Tools (Firecrawl, Jina, Tavily, Perplexity).
 - `src/lib/storage/` — R2-Client, Upload-Validierung und Types.
+- `src/lib/memory/` — Mem0 Integration (Search, Extract, Save, List, Delete, Circuit Breaker).
 - `src/lib/db/schema/` — Drizzle Schema (users, chats, messages, artifacts, usage-logs, experts, skills, models, mcp-servers).
 - `src/lib/db/queries/` — DB Query-Funktionen (chats, messages, usage, artifacts, experts, skills, models, mcp-servers).
 - `src/lib/ai/tools/` — AI Tool-Definitionen (create-artifact, parse-fake-artifact, load-skill, ask-user, web-search, web-fetch, save-memory, recall-memory).
@@ -137,7 +140,7 @@ function AppButton({ children, ...props }: ButtonProps) {
 - `src/components/admin/` — Admin-UI Komponenten (Skills/Experts Import, Editor, Listen).
 - `src/hooks/` — Custom React Hooks (use-artifact).
 - `src/components/generative-ui/` — Generative UI Komponenten (ask-user).
-- `src/config/` — Konfigurationsdateien (Features, Chat, AI, Brand, MCP).
+- `src/config/` — Konfigurationsdateien (Features, Chat, AI, Brand, MCP, Memory).
 - `src/types/` — Geteilte TypeScript-Definitionen.
 
 ### Naming
@@ -873,10 +876,6 @@ Persistenter Memory-Layer über Chat-Sessions hinweg. Technologie: Mem0 Cloud (`
 | `src/components/chat/memory-management-dialog.tsx` | Memory-Verwaltungs-Dialog (Liste, Suche, Löschen) |
 | `src/components/chat/custom-instructions-dialog.tsx` | Settings-Dialog mit "Memories verwalten" Button |
 
-### Nächste Schritte
-
-- **DSGVO-Export:** Bulk-Export aller Memories im Admin-Bereich
-
 Detail-PRD: `docs/milestone-memory-system.md`
 
 ---
@@ -889,7 +888,7 @@ Opt-in Datenschutz-Modus für regulierte Umgebungen. Wird schrittweise aufgebaut
 - **Privacy Notice:** `src/components/chat/file-privacy-notice.tsx` — Nicht-blockierender Inline-Hinweis im Attachment-Bereich
 - **Model-Metadaten:** Provider + Region werden aus `/api/models` gecacht und im Notice angezeigt
 - **M7 Erweiterung:** Privacy-Routing in Chat-Route (EU-/lokales Modell bei aktivem Business Mode)
-- **M9 Vollausbau:** PII-Detection, Consent-Logging, Audit-Trail
+- **M9 Vollausbau:** PII-Detection, Consent-Logging, Audit-Trail, Memory DSGVO (Bulk-Export, Alle-Löschen)
 
 Detail-PRD: `docs/prd-business-mode.md`
 
