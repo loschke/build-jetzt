@@ -316,6 +316,20 @@ Primärfarben werden über shadcn/ui CSS Custom Properties gesteuert. Für lerne
 - Akzent: Kann pro App variieren
 - Sidebar: Leicht getönter Hintergrund, nicht reinweiß
 
+### Elevation & Interaction Utilities
+
+`globals.css` definiert wiederverwendbare CSS-Klassen für konsistente Tiefenwirkung:
+
+| Klasse | Verwendung |
+|--------|-----------|
+| `.card-elevated` | Subtiler Shadow für statische Cards, Chips, Tool-Status |
+| `.card-interactive` | Hover-Lift + Shadow-Transition für klickbare Cards (Expert, Quicktask, Suggestion) |
+| `.input-prominent` | Prominenter Shadow für den Chat-Input-Bereich |
+| `.glass-card` | Glasmorphism (Blur + Border + Shadow), z.B. Landing Page |
+| `.transition-lift` | Stärkerer Hover-Lift (Landing Page Cards) |
+
+Bei neuen Komponenten: `.card-interactive` für klickbare Elemente, `.card-elevated` für passive Container. Keine inline `box-shadow` Werte.
+
 ### Responsive Breakpoints
 
 - Mobile: `< 768px` (Sidebar als Sheet)
