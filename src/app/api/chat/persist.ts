@@ -11,6 +11,8 @@ import { parseFakeArtifactCall } from "@/lib/ai/tools/parse-fake-artifact"
 import { uploadBuffer } from "@/lib/storage"
 import { sanitizeFilename } from "@/lib/storage/validation"
 import { nanoid } from "nanoid"
+import { calculateCredits } from "@/lib/credits"
+import { deductCredits } from "@/lib/db/queries/credits"
 
 /** MIME types allowed for chat file attachments (mirrors chatConfig.upload.accept) */
 const ALLOWED_PERSIST_TYPES = new Set([
@@ -329,9 +331,9 @@ export function createOnFinish(params: CreateOnFinishParams): StreamTextOnFinish
         // Fire-and-forget touchChat for existing chats
         touchChat(resolvedChatId, userId).catch(console.error)
       }
-      // Credit deduction: fire-and-forget (after usage is logged)
+      // Credit deduction: awaited (after usage is logged, before fire-and-forget tasks)
       if (features.credits.enabled && totalUsage) {
-        import("@/lib/credits").then(({ calculateCredits }) => {
+        try {
           const creditCost = calculateCredits({
             modelId: finalModelId,
             inputTokens: totalUsage.inputTokens ?? 0,
@@ -339,16 +341,14 @@ export function createOnFinish(params: CreateOnFinishParams): StreamTextOnFinish
             reasoningTokens: totalUsage.reasoningTokens ?? undefined,
             cachedInputTokens: totalUsage.cachedInputTokens ?? undefined,
           })
-          return import("@/lib/db/queries/credits").then(({ deductCredits }) =>
-            deductCredits(userId, creditCost, {
-              modelId: finalModelId,
-              chatId: resolvedChatId,
-              description: `Chat: ${getModelById(finalModelId)?.name ?? finalModelId}`,
-            })
-          )
-        }).catch((err) => {
-          console.warn("[credits] Deduction failed:", err instanceof Error ? err.message : err)
-        })
+          await deductCredits(userId, creditCost, {
+            modelId: finalModelId,
+            chatId: resolvedChatId,
+            description: `Chat: ${getModelById(finalModelId)?.name ?? finalModelId}`,
+          })
+        } catch (err) {
+          console.error("[credits] Deduction failed:", err instanceof Error ? err.message : err)
+        }
       }
 
       // Memory extraction: fire-and-forget (after messages are saved)

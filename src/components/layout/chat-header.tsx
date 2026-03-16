@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Folder, Plus, MessageSquare, FolderPlus, Users, BookOpen, Sparkles, Code, Search, BarChart3, PenLine, Bot, type LucideIcon } from "lucide-react"
+import { Folder, Plus, MessageSquare, FolderPlus, Users, BookOpen } from "lucide-react"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
 import { Button } from "@/components/ui/button"
@@ -14,10 +14,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { useProject } from "@/components/chat/project-context"
 import { useExpert } from "@/components/chat/expert-context"
-
-const EXPERT_ICON_MAP: Record<string, LucideIcon> = {
-  Sparkles, Code, Search, BarChart3, BookOpen, PenLine, Bot, Users,
-}
+import { EXPERT_ICON_MAP, DEFAULT_EXPERT_ICON } from "@/lib/icon-map"
 import { ProjectSettingsDialog } from "@/components/chat/project-settings-dialog"
 import { CreditIndicator } from "./credit-indicator"
 import { NavUser } from "./nav-user"
@@ -109,7 +106,7 @@ export function ChatHeader({ isAdmin, user }: ChatHeaderProps) {
           </div>
         )}
         {expertName && (() => {
-          const ExpertIcon = EXPERT_ICON_MAP[expertIcon ?? ""] ?? Bot
+          const ExpertIcon = EXPERT_ICON_MAP[expertIcon ?? ""] ?? DEFAULT_EXPERT_ICON
           return (
             <div className="flex items-center gap-1.5 rounded-md bg-primary-foreground/10 px-2.5 py-1 text-xs font-medium text-primary-foreground">
               <ExpertIcon className="size-3" />

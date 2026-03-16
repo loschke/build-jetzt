@@ -2,6 +2,7 @@ import { z } from "zod"
 import { requireAdmin } from "@/lib/admin-guard"
 import { features } from "@/config/features"
 import { grantCredits, getUsersWithBalances } from "@/lib/db/queries/credits"
+import { checkRateLimit, RATE_LIMITS, rateLimitResponse } from "@/lib/rate-limit"
 
 const grantSchema = z.object({
   logtoId: z.string().min(1),
@@ -14,10 +15,17 @@ export async function GET() {
     return Response.json({ error: "Credits sind deaktiviert" }, { status: 404 })
   }
 
+  let admin: { userId: string }
   try {
-    await requireAdmin()
-  } catch (res) {
-    return res as Response
+    admin = await requireAdmin()
+  } catch (err) {
+    if (err instanceof Response) return err
+    throw err
+  }
+
+  const rateCheck = checkRateLimit(admin.userId, RATE_LIMITS.api)
+  if (!rateCheck.allowed) {
+    return rateLimitResponse(rateCheck.retryAfterMs)
   }
 
   const users = await getUsersWithBalances()
@@ -29,10 +37,17 @@ export async function POST(req: Request) {
     return Response.json({ error: "Credits sind deaktiviert" }, { status: 404 })
   }
 
+  let admin: { userId: string }
   try {
-    await requireAdmin()
-  } catch (res) {
-    return res as Response
+    admin = await requireAdmin()
+  } catch (err) {
+    if (err instanceof Response) return err
+    throw err
+  }
+
+  const rateCheck = checkRateLimit(admin.userId, RATE_LIMITS.api)
+  if (!rateCheck.allowed) {
+    return rateLimitResponse(rateCheck.retryAfterMs)
   }
 
   let body: unknown

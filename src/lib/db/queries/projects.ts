@@ -72,11 +72,11 @@ export async function updateProject(id: string, userId: string, data: UpdateProj
 export async function deleteProject(id: string, userId: string) {
   const db = getDb()
 
-  // Unassign chats from project
+  // Unassign chats from project (userId-scoped for defense-in-depth)
   await db
     .update(chats)
     .set({ projectId: null, updatedAt: new Date() })
-    .where(eq(chats.projectId, id))
+    .where(and(eq(chats.projectId, id), eq(chats.userId, userId)))
 
   // Delete project
   const [deleted] = await db

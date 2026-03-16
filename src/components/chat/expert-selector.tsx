@@ -1,29 +1,9 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import {
-  Sparkles,
-  Code,
-  Search,
-  BarChart3,
-  BookOpen,
-  PenLine,
-  Bot,
-  Check,
-  type LucideIcon,
-} from "lucide-react"
+import { Check } from "lucide-react"
 import type { ExpertPublic } from "@/types/expert"
-
-/** Map icon name strings to Lucide components */
-const ICON_MAP: Record<string, LucideIcon> = {
-  Sparkles,
-  Code,
-  Search,
-  BarChart3,
-  BookOpen,
-  PenLine,
-  Bot,
-}
+import { EXPERT_ICON_MAP, DEFAULT_EXPERT_ICON } from "@/lib/icon-map"
 
 interface ExpertSelectorProps {
   selectedExpertId: string | null
@@ -69,7 +49,7 @@ export function ExpertSelector({ selectedExpertId, onExpertSelect }: ExpertSelec
   return (
     <div className="grid w-full max-w-2xl grid-cols-2 gap-3 sm:grid-cols-3">
       {experts.map((expert) => {
-        const Icon = ICON_MAP[expert.icon ?? ""] ?? Bot
+        const Icon = EXPERT_ICON_MAP[expert.icon ?? ""] ?? DEFAULT_EXPERT_ICON
         const isSelected = selectedExpertId === expert.id
 
         return (

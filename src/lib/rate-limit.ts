@@ -21,13 +21,16 @@ const buckets = new Map<string, TokenBucket>()
 const CLEANUP_INTERVAL = 5 * 60 * 1000
 let lastCleanup = Date.now()
 
-function cleanup(windowMs: number) {
+/** Max window across all configs — used for conservative stale entry cleanup */
+const MAX_WINDOW_MS = 120_000
+
+function cleanup() {
   const now = Date.now()
   if (now - lastCleanup < CLEANUP_INTERVAL) return
   lastCleanup = now
 
   for (const [key, bucket] of buckets) {
-    if (now - bucket.lastRefill > windowMs * 2) {
+    if (now - bucket.lastRefill > MAX_WINDOW_MS) {
       buckets.delete(key)
     }
   }
@@ -38,7 +41,7 @@ export function checkRateLimit(
   config: RateLimitConfig
 ): { allowed: boolean; retryAfterMs: number } {
   const now = Date.now()
-  cleanup(config.windowMs)
+  cleanup()
 
   const key = `${identifier}`
   const bucket = buckets.get(key)

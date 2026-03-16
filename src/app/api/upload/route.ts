@@ -1,4 +1,4 @@
-import { getUser } from "@/lib/auth"
+import { requireAuth } from "@/lib/api-guards"
 import { features } from "@/config/features"
 import { checkRateLimit, RATE_LIMITS, rateLimitResponse } from "@/lib/rate-limit"
 import { uploadFile } from "@/lib/storage"
@@ -9,10 +9,9 @@ export async function POST(req: Request) {
     return new Response("Storage is disabled", { status: 404 })
   }
 
-  const user = await getUser()
-  if (!user) {
-    return new Response("Unauthorized", { status: 401 })
-  }
+  const auth = await requireAuth()
+  if (auth.error) return auth.error
+  const { user } = auth
 
   const rateCheck = checkRateLimit(user.id, RATE_LIMITS.upload)
   if (!rateCheck.allowed) {

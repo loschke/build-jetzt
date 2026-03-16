@@ -1,7 +1,8 @@
 import path from "node:path"
 
-import { getUser } from "@/lib/auth"
+import { requireAuth } from "@/lib/api-guards"
 import { features } from "@/config/features"
+import { checkRateLimit, RATE_LIMITS, rateLimitResponse } from "@/lib/rate-limit"
 import { getSignedDownloadUrl, deleteFile } from "@/lib/storage"
 
 const KEY_PATTERN = /^[a-zA-Z0-9/_.-]+$/
@@ -24,9 +25,13 @@ export async function GET(_req: Request, { params }: RouteParams) {
     return new Response("Storage is disabled", { status: 404 })
   }
 
-  const user = await getUser()
-  if (!user) {
-    return new Response("Unauthorized", { status: 401 })
+  const auth = await requireAuth()
+  if (auth.error) return auth.error
+  const { user } = auth
+
+  const rateCheck = checkRateLimit(user.id, RATE_LIMITS.api)
+  if (!rateCheck.allowed) {
+    return rateLimitResponse(rateCheck.retryAfterMs)
   }
 
   const { key } = await params
@@ -54,9 +59,13 @@ export async function DELETE(_req: Request, { params }: RouteParams) {
     return new Response("Storage is disabled", { status: 404 })
   }
 
-  const user = await getUser()
-  if (!user) {
-    return new Response("Unauthorized", { status: 401 })
+  const auth = await requireAuth()
+  if (auth.error) return auth.error
+  const { user } = auth
+
+  const rateCheck = checkRateLimit(user.id, RATE_LIMITS.api)
+  if (!rateCheck.allowed) {
+    return rateLimitResponse(rateCheck.retryAfterMs)
   }
 
   const { key } = await params

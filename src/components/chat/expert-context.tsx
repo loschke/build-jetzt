@@ -1,11 +1,14 @@
 "use client"
 
-import { createContext, useContext, useState, useCallback, type ReactNode } from "react"
+import { createContext, useContext, useState, useCallback, useMemo, type ReactNode } from "react"
 
-interface ExpertContextValue {
+interface ExpertState {
   expertId: string | null
   expertName: string | null
   expertIcon: string | null
+}
+
+interface ExpertContextValue extends ExpertState {
   setExpert: (id: string | null, name: string | null, icon: string | null) => void
 }
 
@@ -17,18 +20,23 @@ const ExpertContext = createContext<ExpertContextValue>({
 })
 
 export function ExpertProvider({ children }: { children: ReactNode }) {
-  const [expertId, setExpertId] = useState<string | null>(null)
-  const [expertName, setExpertName] = useState<string | null>(null)
-  const [expertIcon, setExpertIcon] = useState<string | null>(null)
+  const [state, setState] = useState<ExpertState>({
+    expertId: null,
+    expertName: null,
+    expertIcon: null,
+  })
 
   const setExpert = useCallback((id: string | null, name: string | null, icon: string | null) => {
-    setExpertId(id)
-    setExpertName(name)
-    setExpertIcon(icon)
+    setState({ expertId: id, expertName: name, expertIcon: icon })
   }, [])
 
+  const value = useMemo(
+    () => ({ ...state, setExpert }),
+    [state, setExpert]
+  )
+
   return (
-    <ExpertContext.Provider value={{ expertId, expertName, expertIcon, setExpert }}>
+    <ExpertContext.Provider value={value}>
       {children}
     </ExpertContext.Provider>
   )

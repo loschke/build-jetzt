@@ -91,7 +91,7 @@ export function ChatView({ chatId, initialModelId, initialProjectId, userName }:
         .then((project) => {
           if (project) setProject(initialProjectId, project.name)
         })
-        .catch(() => {})
+        .catch((e) => console.warn("[chat-view]", e instanceof Error ? e.message : e))
     } else if (!chatId) {
       // New chat without project — clear context
       projectIdRef.current = null
@@ -128,7 +128,7 @@ export function ChatView({ chatId, initialModelId, initialProjectId, userName }:
                 setModelMeta({ provider: m.provider, region })
               }
             })
-            .catch(() => {})
+            .catch((e) => console.warn("[chat-view]", e instanceof Error ? e.message : e))
         }
       }
       return
@@ -191,6 +191,9 @@ export function ChatView({ chatId, initialModelId, initialProjectId, userName }:
         prepareSendMessagesRequest: ({ messages, body }) => {
           const qt = quicktaskRef.current
           const pr = privacyRouteRef.current
+          // Clear one-shot refs after reading (prevents stale data on next message)
+          quicktaskRef.current = null
+          privacyRouteRef.current = undefined
           return {
             body: {
               ...body,
@@ -287,7 +290,7 @@ export function ChatView({ chatId, initialModelId, initialProjectId, userName }:
             .then((expert) => {
               if (expert) setExpert(data.expertId, expert.name, expert.icon ?? null)
             })
-            .catch(() => {})
+            .catch((e) => console.warn("[chat-view]", e instanceof Error ? e.message : e))
         }
         if (data.projectId) {
           projectIdRef.current = data.projectId
@@ -297,7 +300,7 @@ export function ChatView({ chatId, initialModelId, initialProjectId, userName }:
             .then((project) => {
               if (project) setProject(data.projectId, project.name)
             })
-            .catch(() => {})
+            .catch((e) => console.warn("[chat-view]", e instanceof Error ? e.message : e))
         }
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") return
@@ -392,16 +395,11 @@ export function ChatView({ chatId, initialModelId, initialProjectId, userName }:
         quicktaskRef.current = { slug, data }
         const sendText = decision.action === "send_redacted" ? decision.text : text
         sendMessage({ text: sendText })
-        // Refs stay set — cleared at start of next submit
         return
       }
 
       quicktaskRef.current = { slug, data }
       sendMessage({ text })
-
-      queueMicrotask(() => {
-        quicktaskRef.current = null
-      })
     },
     [sendMessage, businessMode]
   )

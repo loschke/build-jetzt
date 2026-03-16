@@ -72,7 +72,7 @@ export async function resolveContext(params: ResolveContextParams): Promise<Chat
     : Promise.resolve([])
 
   const [existingChat, userPrefs, allSkills] = await Promise.all([
-    requestChatId ? getChatById(requestChatId) : null,
+    requestChatId ? getChatById(requestChatId, userId) : null,
     getUserPreferences(userId),
     discoverSkills(),
     getModels(), // Warm model cache from DB for sync getModelById() calls below

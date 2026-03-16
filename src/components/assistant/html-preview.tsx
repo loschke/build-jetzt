@@ -5,12 +5,14 @@ import { useMemo, useState } from "react"
 const CSP_META = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data: blob:; font-src data:;">`
 
 function injectCsp(html: string): string {
-  const headMatch = html.match(/<head(\s[^>]*)?>/i)
+  // Strip any existing CSP meta tags to prevent override
+  const stripped = html.replace(/<meta\s+http-equiv\s*=\s*["']Content-Security-Policy["'][^>]*>/gi, "")
+  const headMatch = stripped.match(/<head(\s[^>]*)?>/i)
   if (headMatch && headMatch.index != null) {
     const insertPos = headMatch.index + headMatch[0].length
-    return html.slice(0, insertPos) + CSP_META + html.slice(insertPos)
+    return stripped.slice(0, insertPos) + CSP_META + stripped.slice(insertPos)
   }
-  return CSP_META + html
+  return CSP_META + stripped
 }
 
 interface HtmlPreviewProps {

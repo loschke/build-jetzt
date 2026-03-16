@@ -30,12 +30,15 @@ export async function getUserChats(userId: string) {
     .orderBy(desc(chats.updatedAt))
 }
 
-export async function getChatById(chatId: string) {
+export async function getChatById(chatId: string, userId?: string) {
   const db = getDb()
+  const condition = userId
+    ? and(eq(chats.id, chatId), eq(chats.userId, userId))
+    : eq(chats.id, chatId)
   const [chat] = await db
     .select()
     .from(chats)
-    .where(eq(chats.id, chatId))
+    .where(condition)
     .limit(1)
   return chat ?? null
 }

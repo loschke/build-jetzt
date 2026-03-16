@@ -1,7 +1,6 @@
 import { NextRequest } from "next/server"
 
-import { checkBodySize } from "@/lib/api-guards"
-import { getUser } from "@/lib/auth"
+import { checkBodySize, requireAuth } from "@/lib/api-guards"
 import { features } from "@/config/features"
 import { checkRateLimit, RATE_LIMITS, rateLimitResponse } from "@/lib/rate-limit"
 import { webCrawlSchema, parseBody } from "@/lib/schemas"
@@ -18,10 +17,9 @@ export async function POST(req: Request) {
     return new Response("Web services disabled", { status: 404 })
   }
 
-  const user = await getUser()
-  if (!user) {
-    return new Response("Unauthorized", { status: 401 })
-  }
+  const auth = await requireAuth()
+  if (auth.error) return auth.error
+  const { user } = auth
 
   const rateCheck = checkRateLimit(user.id, RATE_LIMITS.web)
   if (!rateCheck.allowed) {
@@ -69,10 +67,9 @@ export async function GET(req: NextRequest) {
     return new Response("Web services disabled", { status: 404 })
   }
 
-  const user = await getUser()
-  if (!user) {
-    return new Response("Unauthorized", { status: 401 })
-  }
+  const auth = await requireAuth()
+  if (auth.error) return auth.error
+  const { user } = auth
 
   const statusCheck = checkRateLimit(user.id, RATE_LIMITS.web)
   if (!statusCheck.allowed) {
