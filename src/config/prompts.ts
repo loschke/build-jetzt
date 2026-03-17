@@ -18,7 +18,26 @@ Du hast ein \`create_artifact\` Tool zur Verfügung. Nutze es wenn der User nach
 - **Vor dem Tool-Call:** Schreibe immer eine kurze einleitende Nachricht, was du erstellst
 - **HTML-Artifacts:** Erstelle vollständige, selbstständige HTML-Dokumente mit eingebettetem CSS und optional JS
 - **Code-Artifacts:** Setze das \`language\` Feld (z.B. "python", "typescript", "javascript", "css"). Schreibe sauberen, professionellen Code ohne Emojis in Strings oder Kommentaren
-- **Markdown-Artifacts:** Für strukturierte Dokumente, Berichte, Anleitungen`,
+- **Markdown-Artifacts:** Für strukturierte Dokumente, Berichte, Anleitungen
+
+## Interaktive Tools
+
+### Quiz (\`create_quiz\`)
+Erstelle interaktive Quizzes um Wissen abzufragen oder Verständnis zu prüfen. Nutze es wenn:
+- Der User einen Wissenstest will ("Teste mein Wissen über...")
+- Du Verständnis prüfen willst nach einer Erklärung
+- Ein Expert Lernfortschritt messen soll
+- Fragetypen: \`single_choice\` (eine richtige Antwort), \`multiple_choice\` (mehrere richtige), \`free_text\` (offene Antwort die du nach Abgabe bewertest)
+- Schreibe immer eine kurze Einleitung bevor du das Quiz erstellst
+- Bei \`correctAnswer\`: Verwende den 0-basierten Index der Option (z.B. 0 für die erste Option)
+- Nach der Abgabe bekommst du die Ergebnisse und sollst Feedback geben
+
+### Varianten (\`content_alternatives\`)
+Präsentiere 2-5 inhaltliche Alternativen zur Auswahl. Nutze es wenn:
+- Du mehrere Varianten generiert hast (Überschriften, Textversionen, Ansätze)
+- Der User zwischen Optionen wählen soll bevor du weiterarbeitest
+- Jede Alternative braucht ein kurzes Label und den vollständigen Inhalt als Markdown
+- Nutze es NICHT für triviale Ja/Nein-Fragen (dafür \`ask_user\`)`,
 
   /** Instruction for auto-generating chat titles */
   titleGeneration: `Generiere einen kurzen Titel (max 50 Zeichen) für diese Chat-Konversation basierend auf der ersten Nachricht. Antworte NUR mit dem Titel als reinen Text. Kein Markdown, keine Anführungszeichen, keine Sonderzeichen am Anfang.`,

@@ -19,6 +19,7 @@ import {
   ReasoningContent,
 } from "@/components/ai-elements/reasoning"
 import { AskUser } from "@/components/generative-ui/ask-user"
+import { ContentAlternatives } from "@/components/generative-ui/content-alternatives"
 import { ToolStatus } from "./tool-status"
 import { MemoryIndicator } from "./memory-indicator"
 import { MessageAttachments } from "./message-attachment"
@@ -52,11 +53,11 @@ interface ChatMessageProps {
     id?: string
     version?: number
   }) => void
-  onToolResult?: (toolCallId: string, result: unknown) => void
+  onToolResult?: (toolCallId: string, toolName: string, result: unknown) => void
 }
 
 /** Tools that have their own dedicated rendering (not shown as ToolStatus) */
-const CUSTOM_RENDERED_TOOLS = new Set(["ask_user", "create_artifact"])
+const CUSTOM_RENDERED_TOOLS = new Set(["ask_user", "create_artifact", "create_quiz", "content_alternatives"])
 
 /** Check if a part is a generic tool part that should show a ToolStatus */
 function isGenericToolPart(part: { type: string; [key: string]: unknown }): boolean {
@@ -144,6 +145,42 @@ function extractAskUserData(part: { type: string; [key: string]: unknown }) {
     }
   }
   return null
+}
+
+/**
+ * Generic helper for inline tool part detection and extraction.
+ * Reusable for any tool that follows the typed-part pattern.
+ */
+function extractInlineToolData(part: { type: string; [key: string]: unknown }, toolName: string) {
+  const expectedType = `tool-${toolName}`
+  if (part.type === expectedType) {
+    return {
+      state: part.state as string | undefined,
+      input: part.input as Record<string, unknown> | undefined,
+      output: part.output as Record<string, unknown> | undefined,
+      toolCallId: part.toolCallId as string | undefined,
+    }
+  }
+  if (part.type === "tool-invocation" && (part as { toolName?: string }).toolName === toolName) {
+    const inv = part as { state?: string; input?: unknown; output?: unknown; toolCallId?: string }
+    return {
+      state: inv.state,
+      input: inv.input as Record<string, unknown> | undefined,
+      output: inv.output as Record<string, unknown> | undefined,
+      toolCallId: inv.toolCallId,
+    }
+  }
+  return null
+}
+
+/** Check if a part is a content_alternatives tool part */
+function isContentAlternativesPart(part: { type: string }): boolean {
+  return part.type === "tool-content_alternatives"
+}
+
+/** Check if a part is a create_quiz tool part */
+function isCreateQuizPart(part: { type: string }): boolean {
+  return part.type === "tool-create_quiz"
 }
 
 export const ChatMessage = memo(function ChatMessage({
@@ -278,8 +315,69 @@ export const ChatMessage = memo(function ChatMessage({
                     previousAnswers={isAnswered && data.output ? data.output as Record<string, string | string[]> : undefined}
                     onSubmit={(answers) => {
                       if (onToolResult && data.toolCallId) {
-                        onToolResult(data.toolCallId, answers)
+                        onToolResult(data.toolCallId, "ask_user", answers)
                       }
+                    }}
+                  />
+                )
+              }
+              if (isContentAlternativesPart(part)) {
+                const data = extractInlineToolData(part, "content_alternatives")
+                const input = data?.input as { prompt?: string; alternatives?: Array<{ label: string; content: string }> } | undefined
+                if (!data || !input?.alternatives) return null
+
+                const isAnswered = data.state === "output-available" || data.state === "result"
+                const output = data.output as { index?: number; feedback?: string } | undefined
+
+                return (
+                  <ContentAlternatives
+                    key={`${message.id}-alternatives-${i}`}
+                    prompt={input.prompt}
+                    alternatives={input.alternatives}
+                    isReadOnly={isAnswered}
+                    selectedIndex={isAnswered ? output?.index : undefined}
+                    previousFeedback={isAnswered ? output?.feedback : undefined}
+                    onSubmit={(selection) => {
+                      if (onToolResult && data.toolCallId) {
+                        onToolResult(data.toolCallId, "content_alternatives", selection)
+                      }
+                    }}
+                  />
+                )
+              }
+              if (isCreateQuizPart(part)) {
+                const data = extractInlineToolData(part, "create_quiz")
+                if (!data) return null
+
+                // Quiz uses the artifact system — render as ArtifactCard
+                const input = data.input as { title?: string; questions?: unknown[] } | undefined
+                const output = data.output as { artifactId?: string; type?: string; version?: number; questionCount?: number } | undefined
+                const quizTitle = input?.title ?? "Quiz"
+                const questionCount = output?.questionCount ?? input?.questions?.length ?? 0
+                const preview = `${questionCount} Frage${questionCount !== 1 ? "n" : ""}`
+
+                return (
+                  <ArtifactCard
+                    key={`${message.id}-quiz-${i}`}
+                    title={quizTitle}
+                    preview={preview}
+                    icon={artifactTypeToIcon("quiz")}
+                    isActive={
+                      selectedArtifact?.id === output?.artifactId ||
+                      (selectedArtifact?.title === quizTitle && !selectedArtifact?.id && !output?.artifactId)
+                    }
+                    onClick={() => {
+                      // Build content from input for streaming, or fetch from DB via artifact click
+                      const content = input?.questions
+                        ? JSON.stringify({ title: quizTitle, description: (input as { description?: string }).description, questions: (input.questions as Array<Record<string, unknown>>).map((q, idx) => ({ id: `q${idx + 1}`, ...q })) })
+                        : ""
+                      onArtifactClick({
+                        id: output?.artifactId,
+                        title: quizTitle,
+                        content,
+                        type: "quiz",
+                        version: output?.version,
+                      })
                     }}
                   />
                 )

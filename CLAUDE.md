@@ -467,6 +467,7 @@ Eigenständige Outputs (HTML-Seiten, Dokumente, Code-Dateien) werden als Artifac
 - `markdown` — Dokumente, Berichte, Anleitungen → Streamdown-Rendering
 - `html` — Interaktive Web-Seiten → iframe Preview mit `sandbox="allow-scripts"`, CSP blockiert fetch/XHR/WebSocket
 - `code` — Source Code → Syntax-Highlighting via Shiki (JavaScript RegExp Engine, kein WASM)
+- `quiz` — Interaktive Quizzes → QuizRenderer im Artifact Panel
 
 ### Security
 
@@ -488,6 +489,34 @@ Server-definierte Tools kommen als typed parts an: `type: "tool-{toolName}"` (z.
 - Desktop: Chat 50% | Panel 50% (nebeneinander)
 - Mobile: Panel als Overlay (Chat hidden)
 - Ohne Artifact: Chat volle Breite
+
+---
+
+## Generative UI Tools
+
+Interaktive Tools die über reinen Text hinausgehen. Zwei Patterns: **Inline-Tools** (im Chat-Flow) und **Artifact-Tools** (im Side-Panel).
+
+### Inline-Tools (kein execute, addToolResult Rückkanal)
+
+| Tool | Zweck | Component |
+|------|-------|-----------|
+| `ask_user` | Strukturierte Rückfragen | `src/components/generative-ui/ask-user.tsx` |
+| `content_alternatives` | Varianten-Auswahl (2-5 Tabs) | `src/components/generative-ui/content-alternatives.tsx` |
+
+### Artifact-Tools (mit execute, User-Message Rückkanal)
+
+| Tool | Artifact-Type | Zweck | Renderer |
+|------|---------------|-------|----------|
+| `create_artifact` | markdown, html, code | Dokumente, HTML, Code | ArtifactPanel (existierend) |
+| `create_quiz` | quiz | Interaktive Wissenstests | `src/components/assistant/quiz-renderer.tsx` |
+
+### Neue Tools hinzufügen
+
+Vollständiger Entwickler-Guide mit Checklisten, Code-Beispielen und Datei-Referenz: `docs/generative-ui-tools-guide.md`
+
+Kurzfassung:
+- **Inline:** Tool (kein execute) → Component in `generative-ui/` → `CUSTOM_RENDERED_TOOLS` in chat-message.tsx → `extractInlineToolData()` Helper
+- **Artifact:** Tool (Factory mit execute) → Types → Detection in use-artifact.ts → Renderer → Branch in artifact-panel.tsx → Icon in artifact-utils.ts
 
 ---
 

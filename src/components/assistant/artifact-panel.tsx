@@ -13,8 +13,10 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { MessageResponse } from "@/components/ai-elements/message"
 import type { ArtifactContentType } from "@/types/artifact"
+import type { QuizDefinition, QuizResults } from "@/types/quiz"
 import { HtmlPreview } from "./html-preview"
 import { CodePreview } from "./code-preview"
+import { QuizRenderer } from "./quiz-renderer"
 import { languageToExtension } from "./artifact-utils"
 
 const ArtifactEditor = dynamic(
@@ -44,6 +46,8 @@ interface ArtifactPanelProps {
   version?: number
   onClose: () => void
   onSave?: (content: string) => void
+  /** Callback when a quiz is completed — passes updated quiz + results for back-channel */
+  onQuizComplete?: (quiz: QuizDefinition, results: QuizResults) => void
 }
 
 function sanitizeFilename(title: string): string {
@@ -65,6 +69,7 @@ export function ArtifactPanel({
   version,
   onClose,
   onSave,
+  onQuizComplete,
 }: ArtifactPanelProps) {
   const [mode, setMode] = useState<"view" | "edit">("view")
   const [editContent, setEditContent] = useState(content)
@@ -265,82 +270,87 @@ export function ArtifactPanel({
           )}
         </div>
         <div className="flex items-center gap-1">
-          {mode === "edit" && onSave && artifactId && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="size-7"
-              onClick={handleSave}
-              disabled={saving}
-              title="Speichern"
-            >
-              <Save className="size-3.5" />
-            </Button>
-          )}
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="size-7"
-            onClick={handleToggleMode}
-            title={mode === "view" ? "Bearbeiten" : "Vorschau"}
-          >
-            {mode === "view" ? (
-              <Pencil className="size-3.5" />
-            ) : (
-              <Eye className="size-3.5" />
-            )}
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="size-7"
-            onClick={handleCopy}
-            title="Kopieren"
-          >
-            {copied ? (
-              <Check className="size-3.5" />
-            ) : (
-              <Copy className="size-3.5" />
-            )}
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
+          {/* Hide edit/copy/download for quiz artifacts */}
+          {contentType !== "quiz" && (
+            <>
+              {mode === "edit" && onSave && artifactId && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="size-7"
+                  onClick={handleSave}
+                  disabled={saving}
+                  title="Speichern"
+                >
+                  <Save className="size-3.5" />
+                </Button>
+              )}
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
                 className="size-7"
-                title="Herunterladen"
+                onClick={handleToggleMode}
+                title={mode === "view" ? "Bearbeiten" : "Vorschau"}
               >
-                <Download className="size-3.5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={handleDownloadFile}>
-                {contentType === "code" ? (
-                  <Code className="size-3.5" />
-                ) : contentType === "html" ? (
-                  <Code className="size-3.5" />
+                {mode === "view" ? (
+                  <Pencil className="size-3.5" />
                 ) : (
-                  <FileText className="size-3.5" />
+                  <Eye className="size-3.5" />
                 )}
-                {contentType === "html"
-                  ? "HTML (.html)"
-                  : contentType === "code"
-                    ? `Code (${languageToExtension(language)})`
-                    : "Markdown (.md)"}
-              </DropdownMenuItem>
-              {contentType !== "code" && (
-                <DropdownMenuItem onClick={handleDownloadPdf}>
-                  <Printer className="size-3.5" />
-                  Als PDF drucken
-                </DropdownMenuItem>
-              )}
-            </DropdownMenuContent>
-          </DropdownMenu>
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="size-7"
+                onClick={handleCopy}
+                title="Kopieren"
+              >
+                {copied ? (
+                  <Check className="size-3.5" />
+                ) : (
+                  <Copy className="size-3.5" />
+                )}
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="size-7"
+                    title="Herunterladen"
+                  >
+                    <Download className="size-3.5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={handleDownloadFile}>
+                    {contentType === "code" ? (
+                      <Code className="size-3.5" />
+                    ) : contentType === "html" ? (
+                      <Code className="size-3.5" />
+                    ) : (
+                      <FileText className="size-3.5" />
+                    )}
+                    {contentType === "html"
+                      ? "HTML (.html)"
+                      : contentType === "code"
+                        ? `Code (${languageToExtension(language)})`
+                        : "Markdown (.md)"}
+                  </DropdownMenuItem>
+                  {contentType !== "code" && (
+                    <DropdownMenuItem onClick={handleDownloadPdf}>
+                      <Printer className="size-3.5" />
+                      Als PDF drucken
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </>
+          )}
           <Button
             type="button"
             variant="ghost"
@@ -356,7 +366,21 @@ export function ArtifactPanel({
 
       {/* Content */}
       <div className="flex-1 overflow-auto">
-        {mode === "view" ? (
+        {contentType === "quiz" ? (
+          (() => {
+            let quizData: QuizDefinition | null = null
+            try { quizData = JSON.parse(content) as QuizDefinition } catch { /* invalid JSON */ }
+            if (!quizData) return <div className="p-6 text-sm text-muted-foreground">Quiz-Daten konnten nicht geladen werden.</div>
+            return (
+              <QuizRenderer
+                quiz={quizData}
+                artifactId={artifactId}
+                isStreaming={isStreaming}
+                onComplete={onQuizComplete}
+              />
+            )
+          })()
+        ) : mode === "view" ? (
           contentType === "html" ? (
             isStreaming ? (
               <HtmlStreamingPlaceholder title={title} />

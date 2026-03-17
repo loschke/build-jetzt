@@ -40,6 +40,7 @@ import { ChatMessage } from "./chat-message"
 import { ArtifactErrorBoundary } from "./artifact-error-boundary"
 import { SpeechButton } from "./speech-button"
 import { useArtifact, mapSavedPartsToUI } from "@/hooks/use-artifact"
+import type { QuizDefinition, QuizResults } from "@/types/quiz"
 import { DropZoneOverlay } from "./drop-zone-overlay"
 import { FilePrivacyNotice } from "./file-privacy-notice"
 import { BusinessModePiiDialog } from "./business-mode-pii-dialog"
@@ -322,10 +323,41 @@ export function ChatView({ chatId, initialModelId, initialProjectId, userName }:
   )
 
   const handleToolResult = useCallback(
-    (toolCallId: string, result: unknown) => {
-      addToolOutput({ toolCallId, tool: "ask_user", output: result })
+    (toolCallId: string, toolName: string, result: unknown) => {
+      addToolOutput({ toolCallId, tool: toolName, output: result })
     },
     [addToolOutput]
+  )
+
+  /** Quiz completion: save results to artifact + send summary message for model feedback */
+  const handleQuizComplete = useCallback(
+    async (quiz: QuizDefinition, results: QuizResults) => {
+      // 1. Persist completed quiz (answers + results) to artifact via PATCH
+      if (selectedArtifact?.id) {
+        const completedContent = JSON.stringify({ ...quiz, answers: quiz.answers, results })
+        await handleArtifactSave(completedContent)
+      }
+
+      // 2. Build result summary message for model evaluation
+      const autoGraded = results.correct + results.incorrect
+      const freeTextDetails = results.details
+        .filter((d) => d.needsReview && d.userAnswer)
+        .map((d) => {
+          const q = quiz.questions.find((q) => q.id === d.questionId)
+          return q ? `- "${q.question}": "${d.userAnswer}"` : null
+        })
+        .filter(Boolean)
+
+      let summary = `Quiz "${quiz.title}" abgeschlossen: ${results.correct}/${autoGraded} automatisch bewertete Fragen richtig (${results.percentage}%).`
+
+      if (freeTextDetails.length > 0) {
+        summary += `\n\nBitte bewerte diese offenen Antworten:\n${freeTextDetails.join("\n")}`
+      }
+
+      // 3. Send as user message — model reacts
+      sendMessage({ text: summary })
+    },
+    [selectedArtifact?.id, handleArtifactSave, sendMessage]
   )
 
   const handleSubmit = useCallback(
@@ -531,6 +563,7 @@ export function ChatView({ chatId, initialModelId, initialProjectId, userName }:
               version={selectedArtifact.version}
               onClose={closeArtifact}
               onSave={selectedArtifact.id ? handleArtifactSave : undefined}
+              onQuizComplete={selectedArtifact.type === "quiz" ? handleQuizComplete : undefined}
             />
           </ArtifactErrorBoundary>
         </div>

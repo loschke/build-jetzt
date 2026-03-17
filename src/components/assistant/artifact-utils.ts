@@ -214,6 +214,8 @@ export function artifactTypeToIcon(type: string): string {
       return "GalleryHorizontalEnd"
     case "code":
       return "Code"
+    case "quiz":
+      return "ClipboardCheck"
     default:
       return "FileText"
   }

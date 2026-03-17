@@ -51,6 +51,16 @@ export function isCreateArtifactPart(part: { type: string }): boolean {
 }
 
 /**
+ * Check if a message part is a create_quiz tool invocation.
+ */
+export function isCreateQuizPart(part: { type: string }): boolean {
+  return part.type === "tool-create_quiz"
+}
+
+/** Artifact-producing tools — used for auto-opening the panel during streaming */
+const ARTIFACT_TOOL_TYPES = new Set(["tool-create_artifact", "tool-create_quiz"])
+
+/**
  * Map saved DB parts (tool-call, tool-result) to AI SDK 6 typed tool UI parts.
  * This enables artifact cards to render when reloading a chat.
  */
@@ -142,6 +152,59 @@ export function extractArtifactFromToolPart(part: { type: string; [key: string]:
   return null
 }
 
+/**
+ * Extract artifact data from a create_quiz tool part.
+ * Constructs a SelectedArtifact with the quiz JSON as content.
+ */
+export function extractQuizFromToolPart(part: { type: string; [key: string]: unknown }): {
+  artifact: Omit<SelectedArtifact, "isStreaming">
+  isStreaming: boolean
+} | null {
+  if (!isCreateQuizPart(part)) return null
+
+  const toolPart = part as unknown as {
+    state: string
+    input?: { title?: string; description?: string; questions?: unknown[] }
+    output?: { artifactId?: string; version?: number }
+  }
+  const inp = toolPart.input
+  if (!inp?.questions || inp.questions.length === 0) return null
+
+  const quizJson = JSON.stringify({
+    title: inp.title ?? "Quiz",
+    description: inp.description,
+    questions: (inp.questions as Array<Record<string, unknown>>).map((q, i) => ({ id: `q${i + 1}`, ...q })),
+  })
+
+  if (toolPart.state === "input-streaming" || toolPart.state === "input-available") {
+    return {
+      artifact: {
+        title: inp.title ?? "Quiz",
+        content: quizJson,
+        type: "quiz",
+        version: 1,
+      },
+      isStreaming: toolPart.state === "input-streaming",
+    }
+  }
+
+  if (toolPart.state === "output-available") {
+    const out = toolPart.output
+    return {
+      artifact: {
+        id: out?.artifactId,
+        title: inp.title ?? "Quiz",
+        content: quizJson,
+        type: "quiz",
+        version: out?.version ?? 1,
+      },
+      isStreaming: false,
+    }
+  }
+
+  return null
+}
+
 interface UseArtifactOptions {
   messages: MessageLike[]
   status: string
@@ -154,14 +217,15 @@ interface UseArtifactOptions {
 export function useArtifact({ messages, status }: UseArtifactOptions) {
   const [selectedArtifact, setSelectedArtifact] = useState<SelectedArtifact | null>(null)
 
-  // Watch for create_artifact tool parts in the latest message during streaming
+  // Watch for artifact-producing tool parts in the latest message during streaming
   useEffect(() => {
     if (messages.length === 0) return
     const lastMsg = messages[messages.length - 1]
     if (lastMsg.role !== "assistant") return
 
     for (const part of lastMsg.parts ?? []) {
-      const extracted = extractArtifactFromToolPart(part)
+      // Try create_artifact first, then create_quiz
+      const extracted = extractArtifactFromToolPart(part) ?? extractQuizFromToolPart(part)
       if (extracted) {
         setSelectedArtifact({ ...extracted.artifact, isStreaming: extracted.isStreaming })
       }
@@ -179,7 +243,7 @@ export function useArtifact({ messages, status }: UseArtifactOptions) {
     const lastMsg = messages[messages.length - 1]
     if (lastMsg?.role !== "assistant") return
 
-    const hasRealToolPart = lastMsg.parts?.some((p) => isCreateArtifactPart(p))
+    const hasRealToolPart = lastMsg.parts?.some((p) => ARTIFACT_TOOL_TYPES.has(p.type))
     if (hasRealToolPart) return
 
     const fullText = lastMsg.parts
