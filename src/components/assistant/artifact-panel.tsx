@@ -14,9 +14,11 @@ import {
 import { MessageResponse } from "@/components/ai-elements/message"
 import type { ArtifactContentType } from "@/types/artifact"
 import type { QuizDefinition, QuizResults } from "@/types/quiz"
+import type { ReviewDefinition, SectionFeedback } from "@/types/review"
 import { HtmlPreview } from "./html-preview"
 import { CodePreview } from "./code-preview"
 import { QuizRenderer } from "./quiz-renderer"
+import { ReviewRenderer } from "./review-renderer"
 import { languageToExtension } from "./artifact-utils"
 
 const ArtifactEditor = dynamic(
@@ -48,6 +50,8 @@ interface ArtifactPanelProps {
   onSave?: (content: string) => void
   /** Callback when a quiz is completed — passes updated quiz + results for back-channel */
   onQuizComplete?: (quiz: QuizDefinition, results: QuizResults) => void
+  /** Callback when a review is completed — passes updated review + feedback for back-channel */
+  onReviewComplete?: (review: ReviewDefinition, feedback: SectionFeedback[]) => void
 }
 
 function sanitizeFilename(title: string): string {
@@ -70,6 +74,7 @@ export function ArtifactPanel({
   onClose,
   onSave,
   onQuizComplete,
+  onReviewComplete,
 }: ArtifactPanelProps) {
   const [mode, setMode] = useState<"view" | "edit">("view")
   const [editContent, setEditContent] = useState(content)
@@ -270,8 +275,8 @@ export function ArtifactPanel({
           )}
         </div>
         <div className="flex items-center gap-1">
-          {/* Hide edit/copy/download for quiz artifacts */}
-          {contentType !== "quiz" && (
+          {/* Hide edit/copy/download for interactive artifact types */}
+          {contentType !== "quiz" && contentType !== "review" && (
             <>
               {mode === "edit" && onSave && artifactId && (
                 <Button
@@ -377,6 +382,20 @@ export function ArtifactPanel({
                 artifactId={artifactId}
                 isStreaming={isStreaming}
                 onComplete={onQuizComplete}
+              />
+            )
+          })()
+        ) : contentType === "review" ? (
+          (() => {
+            let reviewData: ReviewDefinition | null = null
+            try { reviewData = JSON.parse(content) as ReviewDefinition } catch { /* invalid JSON */ }
+            if (!reviewData) return <div className="p-6 text-sm text-muted-foreground">Review-Daten konnten nicht geladen werden.</div>
+            return (
+              <ReviewRenderer
+                review={reviewData}
+                artifactId={artifactId}
+                isStreaming={isStreaming}
+                onComplete={onReviewComplete}
               />
             )
           })()

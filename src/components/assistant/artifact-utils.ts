@@ -216,6 +216,8 @@ export function artifactTypeToIcon(type: string): string {
       return "Code"
     case "quiz":
       return "ClipboardCheck"
+    case "review":
+      return "MessageSquareMore"
     default:
       return "FileText"
   }

@@ -1,6 +1,7 @@
 import { features } from "@/config/features"
 import { createArtifactTool } from "@/lib/ai/tools/create-artifact"
 import { createQuizTool } from "@/lib/ai/tools/create-quiz"
+import { createReviewTool } from "@/lib/ai/tools/create-review"
 import { askUserTool } from "@/lib/ai/tools/ask-user"
 import { contentAlternativesTool } from "@/lib/ai/tools/content-alternatives"
 import { webSearchTool } from "@/lib/ai/tools/web-search"
@@ -40,6 +41,7 @@ export async function buildTools(params: BuildToolsParams): Promise<BuildToolsRe
   const tools: Record<string, any> = {
     create_artifact: createArtifactTool(chatId),
     create_quiz: createQuizTool(chatId),
+    create_review: createReviewTool(chatId),
     ask_user: askUserTool,
     content_alternatives: contentAlternativesTool,
   }

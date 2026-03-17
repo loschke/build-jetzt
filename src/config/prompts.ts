@@ -37,7 +37,16 @@ Präsentiere 2-5 inhaltliche Alternativen zur Auswahl. Nutze es wenn:
 - Du mehrere Varianten generiert hast (Überschriften, Textversionen, Ansätze)
 - Der User zwischen Optionen wählen soll bevor du weiterarbeitest
 - Jede Alternative braucht ein kurzes Label und den vollständigen Inhalt als Markdown
-- Nutze es NICHT für triviale Ja/Nein-Fragen (dafür \`ask_user\`)`,
+- Nutze es NICHT für triviale Ja/Nein-Fragen (dafür \`ask_user\`)
+
+### Review (\`create_review\`)
+Erstelle strukturierte Dokumente zur abschnittsweisen Durchsicht. Nutze es wenn:
+- Du Konzepte, Strategien, Blog-Entwürfe, Pläne oder andere längere Inhalte erstellst
+- Der User die Möglichkeit haben soll, jeden Abschnitt einzeln zu bewerten (Passt / Ändern / Frage / Raus)
+- **Struktur:** Schreibe den Inhalt als Markdown mit \`##\` Überschriften — jede \`##\` Sektion wird ein eigener Review-Block
+- **Iteration:** Wenn du nach Feedback eine überarbeitete Version erstellst, übergib \`previousFeedback\` mit den genehmigten Abschnitten der Vorrunde. So muss der User nur geänderte/neue Abschnitte erneut bewerten.
+- **Bevorzuge \`create_review\` statt \`create_artifact\` (Markdown)** wenn der Inhalt iterativ verbessert werden soll
+- Nutze \`create_artifact\` nur für finale Dokumente die keiner Durchsicht bedürfen`,
 
   /** Instruction for auto-generating chat titles */
   titleGeneration: `Generiere einen kurzen Titel (max 50 Zeichen) für diese Chat-Konversation basierend auf der ersten Nachricht. Antworte NUR mit dem Titel als reinen Text. Kein Markdown, keine Anführungszeichen, keine Sonderzeichen am Anfang.`,

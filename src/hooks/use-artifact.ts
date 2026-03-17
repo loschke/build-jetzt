@@ -57,8 +57,15 @@ export function isCreateQuizPart(part: { type: string }): boolean {
   return part.type === "tool-create_quiz"
 }
 
+/**
+ * Check if a message part is a create_review tool invocation.
+ */
+export function isCreateReviewPart(part: { type: string }): boolean {
+  return part.type === "tool-create_review"
+}
+
 /** Artifact-producing tools — used for auto-opening the panel during streaming */
-const ARTIFACT_TOOL_TYPES = new Set(["tool-create_artifact", "tool-create_quiz"])
+const ARTIFACT_TOOL_TYPES = new Set(["tool-create_artifact", "tool-create_quiz", "tool-create_review"])
 
 /**
  * Map saved DB parts (tool-call, tool-result) to AI SDK 6 typed tool UI parts.
@@ -205,6 +212,58 @@ export function extractQuizFromToolPart(part: { type: string; [key: string]: unk
   return null
 }
 
+/**
+ * Extract artifact data from a create_review tool part.
+ */
+export function extractReviewFromToolPart(part: { type: string; [key: string]: unknown }): {
+  artifact: Omit<SelectedArtifact, "isStreaming">
+  isStreaming: boolean
+} | null {
+  if (!isCreateReviewPart(part)) return null
+
+  const toolPart = part as unknown as {
+    state: string
+    input?: { title?: string; content?: string; previousFeedback?: unknown[] }
+    output?: { artifactId?: string; version?: number }
+  }
+  const inp = toolPart.input
+  if (!inp?.content) return null
+
+  const reviewJson = JSON.stringify({
+    title: inp.title ?? "Review",
+    content: inp.content,
+    ...(inp.previousFeedback && { previousFeedback: inp.previousFeedback }),
+  })
+
+  if (toolPart.state === "input-streaming" || toolPart.state === "input-available") {
+    return {
+      artifact: {
+        title: inp.title ?? "Review",
+        content: reviewJson,
+        type: "review",
+        version: 1,
+      },
+      isStreaming: toolPart.state === "input-streaming",
+    }
+  }
+
+  if (toolPart.state === "output-available") {
+    const out = toolPart.output
+    return {
+      artifact: {
+        id: out?.artifactId,
+        title: inp.title ?? "Review",
+        content: reviewJson,
+        type: "review",
+        version: out?.version ?? 1,
+      },
+      isStreaming: false,
+    }
+  }
+
+  return null
+}
+
 interface UseArtifactOptions {
   messages: MessageLike[]
   status: string
@@ -224,8 +283,8 @@ export function useArtifact({ messages, status }: UseArtifactOptions) {
     if (lastMsg.role !== "assistant") return
 
     for (const part of lastMsg.parts ?? []) {
-      // Try create_artifact first, then create_quiz
-      const extracted = extractArtifactFromToolPart(part) ?? extractQuizFromToolPart(part)
+      // Try artifact-producing tools in order
+      const extracted = extractArtifactFromToolPart(part) ?? extractQuizFromToolPart(part) ?? extractReviewFromToolPart(part)
       if (extracted) {
         setSelectedArtifact({ ...extracted.artifact, isStreaming: extracted.isStreaming })
       }

@@ -468,6 +468,7 @@ Eigenständige Outputs (HTML-Seiten, Dokumente, Code-Dateien) werden als Artifac
 - `html` — Interaktive Web-Seiten → iframe Preview mit `sandbox="allow-scripts"`, CSP blockiert fetch/XHR/WebSocket
 - `code` — Source Code → Syntax-Highlighting via Shiki (JavaScript RegExp Engine, kein WASM)
 - `quiz` — Interaktive Quizzes → QuizRenderer im Artifact Panel
+- `review` — Abschnittsweises Review → ReviewRenderer im Artifact Panel
 
 ### Security
 
@@ -509,6 +510,7 @@ Interaktive Tools die über reinen Text hinausgehen. Zwei Patterns: **Inline-Too
 |------|---------------|-------|----------|
 | `create_artifact` | markdown, html, code | Dokumente, HTML, Code | ArtifactPanel (existierend) |
 | `create_quiz` | quiz | Interaktive Wissenstests | `src/components/assistant/quiz-renderer.tsx` |
+| `create_review` | review | Abschnittsweises Feedback auf Konzepte/Texte | `src/components/assistant/review-renderer.tsx` |
 
 ### Neue Tools hinzufügen
 

@@ -41,6 +41,7 @@ import { ArtifactErrorBoundary } from "./artifact-error-boundary"
 import { SpeechButton } from "./speech-button"
 import { useArtifact, mapSavedPartsToUI } from "@/hooks/use-artifact"
 import type { QuizDefinition, QuizResults } from "@/types/quiz"
+import type { ReviewDefinition, SectionFeedback } from "@/types/review"
 import { DropZoneOverlay } from "./drop-zone-overlay"
 import { FilePrivacyNotice } from "./file-privacy-notice"
 import { BusinessModePiiDialog } from "./business-mode-pii-dialog"
@@ -360,6 +361,32 @@ export function ChatView({ chatId, initialModelId, initialProjectId, userName }:
     [selectedArtifact?.id, handleArtifactSave, sendMessage]
   )
 
+  /** Review completion: save feedback to artifact + send structured summary for model */
+  const handleReviewComplete = useCallback(
+    async (review: ReviewDefinition, feedback: SectionFeedback[]) => {
+      // 1. Persist completed review to artifact
+      if (selectedArtifact?.id) {
+        const completedContent = JSON.stringify({ ...review, feedback, completedAt: new Date().toISOString() })
+        await handleArtifactSave(completedContent)
+      }
+
+      // 2. Build structured feedback message
+      const LABEL_EMOJI: Record<string, string> = { approve: "✓", change: "✏️", question: "❓", remove: "✗" }
+      const lines = feedback.map((fb) => {
+        const emoji = LABEL_EMOJI[fb.label] ?? "•"
+        const base = `- "${fb.title}": ${emoji} ${fb.label === "approve" ? "Passt" : fb.label === "change" ? "Ändern" : fb.label === "question" ? "Frage" : "Raus"}`
+        return fb.comment ? `${base} — ${fb.comment}` : base
+      })
+
+      const approvedCount = feedback.filter((f) => f.label === "approve").length
+      const summary = `Review für "${review.title}" (${approvedCount}/${feedback.length} Abschnitte genehmigt):\n${lines.join("\n")}`
+
+      // 3. Send as user message — model reacts
+      sendMessage({ text: summary })
+    },
+    [selectedArtifact?.id, handleArtifactSave, sendMessage]
+  )
+
   const handleSubmit = useCallback(
     async (message: PromptInputMessage) => {
       if (!message.text.trim() && message.files.length === 0) return
@@ -564,6 +591,7 @@ export function ChatView({ chatId, initialModelId, initialProjectId, userName }:
               onClose={closeArtifact}
               onSave={selectedArtifact.id ? handleArtifactSave : undefined}
               onQuizComplete={selectedArtifact.type === "quiz" ? handleQuizComplete : undefined}
+              onReviewComplete={selectedArtifact.type === "review" ? handleReviewComplete : undefined}
             />
           </ArtifactErrorBoundary>
         </div>

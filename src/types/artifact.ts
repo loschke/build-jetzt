@@ -1,5 +1,5 @@
 /** Content types the Artifact panel can render */
-export type ArtifactContentType = "markdown" | "html" | "code" | "quiz"
+export type ArtifactContentType = "markdown" | "html" | "code" | "quiz" | "review"
 
 /** Registered output format in the format registry */
 export interface OutputFormat {

@@ -57,7 +57,7 @@ interface ChatMessageProps {
 }
 
 /** Tools that have their own dedicated rendering (not shown as ToolStatus) */
-const CUSTOM_RENDERED_TOOLS = new Set(["ask_user", "create_artifact", "create_quiz", "content_alternatives"])
+const CUSTOM_RENDERED_TOOLS = new Set(["ask_user", "create_artifact", "create_quiz", "create_review", "content_alternatives"])
 
 /** Check if a part is a generic tool part that should show a ToolStatus */
 function isGenericToolPart(part: { type: string; [key: string]: unknown }): boolean {
@@ -181,6 +181,11 @@ function isContentAlternativesPart(part: { type: string }): boolean {
 /** Check if a part is a create_quiz tool part */
 function isCreateQuizPart(part: { type: string }): boolean {
   return part.type === "tool-create_quiz"
+}
+
+/** Check if a part is a create_review tool part */
+function isCreateReviewPart(part: { type: string }): boolean {
+  return part.type === "tool-create_review"
 }
 
 export const ChatMessage = memo(function ChatMessage({
@@ -376,6 +381,39 @@ export const ChatMessage = memo(function ChatMessage({
                         title: quizTitle,
                         content,
                         type: "quiz",
+                        version: output?.version,
+                      })
+                    }}
+                  />
+                )
+              }
+              if (isCreateReviewPart(part)) {
+                const data = extractInlineToolData(part, "create_review")
+                if (!data) return null
+
+                const input = data.input as { title?: string; content?: string } | undefined
+                const output = data.output as { artifactId?: string; version?: number } | undefined
+                const reviewTitle = input?.title ?? "Review"
+
+                return (
+                  <ArtifactCard
+                    key={`${message.id}-review-${i}`}
+                    title={reviewTitle}
+                    preview="Abschnitte zur Durchsicht"
+                    icon={artifactTypeToIcon("review")}
+                    isActive={
+                      selectedArtifact?.id === output?.artifactId ||
+                      (selectedArtifact?.title === reviewTitle && !selectedArtifact?.id && !output?.artifactId)
+                    }
+                    onClick={() => {
+                      const content = input?.content
+                        ? JSON.stringify({ title: reviewTitle, content: input.content })
+                        : ""
+                      onArtifactClick({
+                        id: output?.artifactId,
+                        title: reviewTitle,
+                        content,
+                        type: "review",
                         version: output?.version,
                       })
                     }}
