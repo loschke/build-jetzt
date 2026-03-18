@@ -1,4 +1,4 @@
-import { eq, desc, and, count } from "drizzle-orm"
+import { eq, desc, and, count, lt } from "drizzle-orm"
 import { nanoid } from "nanoid"
 import { getDb } from "@/lib/db"
 import { chats } from "@/lib/db/schema/chats"
@@ -21,13 +21,36 @@ export async function createChat(userId: string, options?: { title?: string; mod
   return chat
 }
 
-export async function getUserChats(userId: string) {
+export async function getUserChats(
+  userId: string,
+  options?: { limit?: number; cursor?: string }
+) {
   const db = getDb()
-  return db
+  const limit = options?.limit ?? 50
+
+  // Build conditions
+  const conditions = [eq(chats.userId, userId)]
+
+  // Cursor-based pagination: cursor is an updatedAt ISO string
+  if (options?.cursor) {
+    conditions.push(lt(chats.updatedAt, new Date(options.cursor)))
+  }
+
+  // Fetch limit+1 to determine if there are more
+  const results = await db
     .select()
     .from(chats)
-    .where(eq(chats.userId, userId))
+    .where(and(...conditions))
     .orderBy(desc(chats.updatedAt))
+    .limit(limit + 1)
+
+  const hasMore = results.length > limit
+  const items = hasMore ? results.slice(0, limit) : results
+  const nextCursor = hasMore && items.length > 0
+    ? items[items.length - 1].updatedAt.toISOString()
+    : null
+
+  return { chats: items, hasMore, nextCursor }
 }
 
 export async function getChatById(chatId: string, userId?: string) {

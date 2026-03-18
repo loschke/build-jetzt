@@ -128,9 +128,13 @@ export async function deleteModel(id: string) {
 
 /** Upsert model by gateway model ID. Used for seeding and imports. */
 export async function upsertModelByModelId(data: CreateModelInput) {
-  const existing = await getModelByModelId(data.modelId)
-  if (existing) {
-    const updated = await updateModel(existing.id, {
+  const db = getDb()
+  const id = nanoid(12)
+  const [model] = await db
+    .insert(models)
+    .values({
+      id,
+      modelId: data.modelId,
       name: data.name,
       provider: data.provider,
       categories: data.categories,
@@ -144,10 +148,24 @@ export async function upsertModelByModelId(data: CreateModelInput) {
       isActive: data.isActive ?? true,
       sortOrder: data.sortOrder ?? 0,
     })
-    if (!updated) {
-      return createModel(data)
-    }
-    return updated
-  }
-  return createModel(data)
+    .onConflictDoUpdate({
+      target: models.modelId,
+      set: {
+        name: data.name,
+        provider: data.provider,
+        categories: data.categories,
+        region: data.region,
+        contextWindow: data.contextWindow,
+        maxOutputTokens: data.maxOutputTokens,
+        isDefault: data.isDefault ?? false,
+        capabilities: data.capabilities ?? {},
+        inputPrice: data.inputPrice ?? null,
+        outputPrice: data.outputPrice ?? null,
+        isActive: data.isActive ?? true,
+        sortOrder: data.sortOrder ?? 0,
+        updatedAt: new Date(),
+      },
+    })
+    .returning()
+  return model
 }

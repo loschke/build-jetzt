@@ -25,5 +25,6 @@ export const artifacts = pgTable(
   },
   (table) => [
     index("artifacts_chat_id_idx").on(table.chatId),
+    index("artifacts_chat_created_idx").on(table.chatId, table.createdAt),
   ]
 )

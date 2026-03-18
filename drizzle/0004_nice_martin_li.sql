@@ -1,0 +1,2 @@
+ALTER TABLE "users" ADD COLUMN "suggested_replies_enabled" boolean DEFAULT true NOT NULL;--> statement-breakpoint
+CREATE INDEX "artifacts_chat_created_idx" ON "artifacts" USING btree ("chat_id","created_at");

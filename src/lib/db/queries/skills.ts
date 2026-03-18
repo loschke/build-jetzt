@@ -139,9 +139,13 @@ export async function deleteSkill(id: string) {
 
 /** Upsert skill by slug. Used for seeding and imports. */
 export async function upsertSkillBySlug(data: CreateSkillInput) {
-  const existing = await getSkillBySlug(data.slug)
-  if (existing) {
-    const updated = await updateSkill(existing.id, {
+  const db = getDb()
+  const id = nanoid(12)
+  const [skill] = await db
+    .insert(skills)
+    .values({
+      id,
+      slug: data.slug,
       name: data.name,
       description: data.description,
       content: data.content,
@@ -155,11 +159,24 @@ export async function upsertSkillBySlug(data: CreateSkillInput) {
       isActive: data.isActive ?? true,
       sortOrder: data.sortOrder ?? 0,
     })
-    if (!updated) {
-      // Race condition: skill was deleted between check and update
-      return createSkill(data)
-    }
-    return updated
-  }
-  return createSkill(data)
+    .onConflictDoUpdate({
+      target: skills.slug,
+      set: {
+        name: data.name,
+        description: data.description,
+        content: data.content,
+        mode: data.mode ?? "skill",
+        category: data.category ?? null,
+        icon: data.icon ?? null,
+        fields: data.fields ?? [],
+        outputAsArtifact: data.outputAsArtifact ?? false,
+        temperature: data.temperature ?? null,
+        modelId: data.modelId ?? null,
+        isActive: data.isActive ?? true,
+        sortOrder: data.sortOrder ?? 0,
+        updatedAt: new Date(),
+      },
+    })
+    .returning()
+  return skill
 }

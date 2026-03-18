@@ -88,11 +88,28 @@ export async function deleteExpert(id: string, userId: string) {
 /** Upsert expert by slug. Used for idempotent seeding. */
 export async function upsertExpertBySlug(data: CreateExpertInput) {
   const db = getDb()
-  const existing = await getExpertBySlug(data.slug)
-  if (existing) {
-    const [updated] = await db
-      .update(experts)
-      .set({
+  const id = nanoid(12)
+  const [expert] = await db
+    .insert(experts)
+    .values({
+      id,
+      userId: null,
+      name: data.name,
+      slug: data.slug,
+      description: data.description,
+      icon: data.icon ?? null,
+      systemPrompt: data.systemPrompt,
+      skillSlugs: data.skillSlugs ?? [],
+      modelPreference: data.modelPreference ?? null,
+      temperature: data.temperature ?? null,
+      allowedTools: data.allowedTools ?? [],
+      mcpServerIds: data.mcpServerIds ?? [],
+      isPublic: data.isPublic ?? true,
+      sortOrder: data.sortOrder ?? 0,
+    })
+    .onConflictDoUpdate({
+      target: experts.slug,
+      set: {
         name: data.name,
         description: data.description,
         icon: data.icon ?? null,
@@ -105,10 +122,8 @@ export async function upsertExpertBySlug(data: CreateExpertInput) {
         isPublic: data.isPublic ?? true,
         sortOrder: data.sortOrder ?? 0,
         updatedAt: new Date(),
-      })
-      .where(eq(experts.slug, data.slug))
-      .returning()
-    return updated
-  }
-  return createExpert(null, data)
+      },
+    })
+    .returning()
+  return expert
 }
