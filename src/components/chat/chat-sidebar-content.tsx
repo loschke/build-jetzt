@@ -237,8 +237,25 @@ export function ChatSidebarContent() {
 
   const deferredSearchQuery = useDeferredValue(searchQuery)
 
-  // Filtered and grouped chats
-  const { pinnedChats, projectGroups, groupedChats, isSearching } = useMemo(() => {
+  // Project groups — always computed (independent of search, used in nav section)
+  const projectGroups = useMemo(() => {
+    const unpinned = chats.filter((c) => !c.isPinned)
+    const projectMap = new Map<string, ChatItem[]>()
+    for (const chat of unpinned) {
+      if (chat.projectId) {
+        const list = projectMap.get(chat.projectId) ?? []
+        list.push(chat)
+        projectMap.set(chat.projectId, list)
+      }
+    }
+    return projects.map((project) => ({
+      project,
+      chats: projectMap.get(project.id) ?? [],
+    }))
+  }, [chats, projects])
+
+  // Filtered and grouped chats (search-dependent)
+  const { pinnedChats, groupedChats, isSearching } = useMemo(() => {
     const query = deferredSearchQuery.trim().toLowerCase()
     const isSearching = query.length > 0
 
@@ -252,40 +269,20 @@ export function ChatSidebarContent() {
     if (isSearching) {
       return {
         pinnedChats: pinned,
-        projectGroups: [] as Array<{ project: ProjectItem; chats: ChatItem[] }>,
         groupedChats: [{ label: "Ergebnisse", items: unpinned }],
         isSearching,
       }
     }
 
-    // Split into project chats and unassigned chats
-    const projectMap = new Map<string, ChatItem[]>()
-    const unassigned: ChatItem[] = []
-
-    for (const chat of unpinned) {
-      if (chat.projectId) {
-        const list = projectMap.get(chat.projectId) ?? []
-        list.push(chat)
-        projectMap.set(chat.projectId, list)
-      } else {
-        unassigned.push(chat)
-      }
-    }
-
-    // Build project groups (show all projects, even empty ones)
-    const projectGroups = projects
-      .map((project) => ({
-        project,
-        chats: projectMap.get(project.id) ?? [],
-      }))
+    // Only unassigned chats in chronological groups
+    const unassigned = unpinned.filter((c) => !c.projectId)
 
     return {
       pinnedChats: pinned,
-      projectGroups,
       groupedChats: groupChatsByDate(unassigned),
       isSearching,
     }
-  }, [chats, projects, deferredSearchQuery])
+  }, [chats, deferredSearchQuery])
 
   if (isLoading) {
     return (
@@ -368,7 +365,7 @@ export function ChatSidebarContent() {
 
   return (
     <>
-      {/* Artifacts link */}
+      {/* Navigation links — hidden when sidebar is collapsed */}
       {!isCollapsed && (
         <SidebarGroup>
           <SidebarMenu>
@@ -385,12 +382,89 @@ export function ChatSidebarContent() {
               </SidebarMenuButton>
             </SidebarMenuItem>
           </SidebarMenu>
+
+          {/* Projects accordion */}
+          {projects.length > 0 && (
+            <Collapsible defaultOpen>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <CollapsibleTrigger asChild>
+                    <SidebarMenuButton className="[&[data-state=open]>svg:last-child]:rotate-90">
+                      <Folder className="size-4" />
+                      <span>Meine Projekte</span>
+                      <ChevronRight className="ml-auto size-4 transition-transform" />
+                    </SidebarMenuButton>
+                  </CollapsibleTrigger>
+                </SidebarMenuItem>
+              </SidebarMenu>
+              <CollapsibleContent>
+                {projectGroups.map(({ project, chats: projectChats }) => (
+                  <Collapsible key={project.id} defaultOpen={projectChats.length > 0}>
+                    <div className="group/project flex w-full items-center pl-4 pr-2">
+                      <CollapsibleTrigger className="flex flex-1 items-center gap-1.5 rounded-md px-2 py-1.5 text-[13px] font-medium text-muted-foreground hover:text-foreground [&[data-state=open]>svg:first-child]:rotate-90">
+                        <ChevronRight className="size-3 shrink-0 transition-transform" />
+                        <span className="truncate">{project.name}</span>
+                      </CollapsibleTrigger>
+                      <div className="flex shrink-0 items-center gap-0.5 opacity-0 group-hover/project:opacity-100">
+                        <button
+                          type="button"
+                          className="rounded p-0.5 text-muted-foreground hover:text-foreground"
+                          onClick={() => window.location.href = `/?project=${project.id}`}
+                          title="Neuer Chat im Projekt"
+                        >
+                          <Plus className="size-3" />
+                        </button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button
+                              type="button"
+                              className="rounded p-0.5 text-muted-foreground hover:text-foreground"
+                            >
+                              <Settings className="size-3" />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent side="right" align="start">
+                            <DropdownMenuItem onClick={() => setProjectDialogState({ open: true, project })}>
+                              <Settings className="mr-2 size-4" /> Bearbeiten
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-destructive focus:text-destructive"
+                              onClick={() => setDeleteProjectId(project.id)}
+                            >
+                              <Trash2 className="mr-2 size-4" /> Löschen
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </div>
+                    <CollapsibleContent>
+                      {projectChats.length > 0 ? (
+                        <SidebarMenu className="pl-4">
+                          {projectChats.map(renderChatItem)}
+                        </SidebarMenu>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => window.location.href = `/?project=${project.id}`}
+                          className="mx-3 my-1 ml-8 flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                        >
+                          <Plus className="size-3" />
+                          Chat starten
+                        </button>
+                      )}
+                    </CollapsibleContent>
+                  </Collapsible>
+                ))}
+              </CollapsibleContent>
+            </Collapsible>
+          )}
         </SidebarGroup>
       )}
 
       {/* Search — hidden when sidebar is collapsed */}
       {!isCollapsed && (
-        <div className="px-3 pb-2">
+        <div className="px-3 pb-2 pt-3">
           <div className="relative">
             <Search className="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -413,71 +487,6 @@ export function ChatSidebarContent() {
           </SidebarMenu>
         </SidebarGroup>
       )}
-
-      {/* Project groups */}
-      {projectGroups.map(({ project, chats: projectChats }) => (
-        <Collapsible key={project.id} defaultOpen>
-          <SidebarGroup>
-            <SidebarGroupLabel asChild>
-              <div className="flex w-full items-center">
-                <CollapsibleTrigger className="flex flex-1 items-center gap-1 [&[data-state=open]>svg:first-child]:rotate-90">
-                  <ChevronRight className="size-3 transition-transform" />
-                  <Folder className="size-3" />
-                  <span className="truncate">{project.name}</span>
-                </CollapsibleTrigger>
-                <div className="flex items-center gap-0.5">
-                  <button
-                    type="button"
-                    className="rounded p-0.5 text-muted-foreground hover:text-foreground"
-                    onClick={() => window.location.href = `/?project=${project.id}`}
-                    title="Neuer Chat im Projekt"
-                  >
-                    <Plus className="size-3" />
-                  </button>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <button
-                        type="button"
-                        className="rounded p-0.5 text-muted-foreground hover:text-foreground"
-                      >
-                        <Settings className="size-3" />
-                      </button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent side="right" align="start">
-                      <DropdownMenuItem onClick={() => setProjectDialogState({ open: true, project })}>
-                        <Settings className="mr-2 size-4" /> Bearbeiten
-                      </DropdownMenuItem>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        className="text-destructive focus:text-destructive"
-                        onClick={() => setDeleteProjectId(project.id)}
-                      >
-                        <Trash2 className="mr-2 size-4" /> Löschen
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              </div>
-            </SidebarGroupLabel>
-            <CollapsibleContent>
-              {projectChats.length > 0 ? (
-                <SidebarMenu>
-                  {projectChats.map(renderChatItem)}
-                </SidebarMenu>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => window.location.href = `/?project=${project.id}`}
-                  className="mx-3 my-1 flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                >
-                  <Plus className="size-3" />
-                  Chat starten
-                </button>
-              )}
-            </CollapsibleContent>
-          </SidebarGroup>
-        </Collapsible>
-      ))}
 
       {/* Ungrouped chats (chronological) */}
       {groupedChats.map((group) => (

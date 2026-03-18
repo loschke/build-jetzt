@@ -1,5 +1,11 @@
 import { getDefaultModel, getModelById } from "./models"
 
+/** Project documents limits (ENV-configurable with sensible defaults) */
+export const PROJECT_DOCS_MAX_COUNT = parseInt(process.env.PROJECT_DOCS_MAX_COUNT ?? "10", 10)
+export const PROJECT_DOCS_TOKEN_BUDGET = parseInt(process.env.PROJECT_DOCS_TOKEN_BUDGET ?? "8000", 10)
+export const PROJECT_DOCS_MAX_FILE_SIZE = parseInt(process.env.PROJECT_DOCS_MAX_FILE_SIZE ?? "512000", 10)
+export const PROJECT_DOCS_ALLOWED_EXTENSIONS = [".md", ".txt"]
+
 /**
  * Shared AI defaults used by both chat and assistant configs.
  *

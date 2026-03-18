@@ -38,3 +38,25 @@ export interface ProjectPublic {
   chatCount: number
   updatedAt: string
 }
+
+/** Project document as stored in the database */
+export interface ProjectDocument {
+  id: string
+  projectId: string
+  title: string
+  content: string
+  mimeType: string | null
+  tokenCount: number
+  sortOrder: number
+  createdAt: Date
+  updatedAt: Date
+}
+
+/** Public-facing document data (without content, for list views) */
+export interface ProjectDocumentPublic {
+  id: string
+  title: string
+  mimeType: string | null
+  tokenCount: number
+  createdAt: Date
+}

@@ -5,6 +5,7 @@ import { createChat, getChatById } from "@/lib/db/queries/chats"
 import { getUserPreferences } from "@/lib/db/queries/users"
 import { getExpertById } from "@/lib/db/queries/experts"
 import { getProjectById } from "@/lib/db/queries/projects"
+import { getProjectDocumentsForPrompt } from "@/lib/db/queries/project-documents"
 import { getModelById, getModels } from "@/config/models"
 import { discoverSkills, getSkillContent } from "@/lib/ai/skills/discovery"
 import { renderTemplate } from "@/lib/ai/skills/template"
@@ -186,6 +187,11 @@ export async function resolveContext(params: ResolveContextParams): Promise<Chat
     }
   }
 
+  // Load project documents (parallel with memory, but after project resolution)
+  const projectDocuments = project
+    ? await getProjectDocumentsForPrompt(project.id)
+    : null
+
   const memoryContext = memories.length > 0
     ? formatMemoriesForPrompt(memories)
     : null
@@ -200,6 +206,7 @@ export async function resolveContext(params: ResolveContextParams): Promise<Chat
     wrapup: wrapupPrompt,
     memoryContext,
     projectInstructions: project?.instructions,
+    projectDocuments: projectDocuments?.length ? projectDocuments : null,
     customInstructions,
     webToolsEnabled: features.search.enabled,
   })

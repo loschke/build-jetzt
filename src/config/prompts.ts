@@ -60,6 +60,7 @@ interface BuildSystemPromptOptions {
   wrapup?: string | null
   memoryContext?: string | null
   projectInstructions?: string | null
+  projectDocuments?: Array<{ title: string; content: string }> | null
   customInstructions?: string | null
   webToolsEnabled?: boolean
   mcpToolNames?: string[]
@@ -134,9 +135,22 @@ export function buildSystemPrompt(options?: BuildSystemPromptOptions): string {
     sections.push(options.memoryContext.trim())
   }
 
-  // 5. Project instructions
-  if (options?.projectInstructions?.trim()) {
-    sections.push(`## Projekt-Kontext\n\n${options.projectInstructions.trim()}`)
+  // 5. Project instructions + documents
+  if (options?.projectInstructions?.trim() || (options?.projectDocuments && options.projectDocuments.length > 0)) {
+    const projectParts: string[] = ["## Projekt-Kontext"]
+
+    if (options?.projectInstructions?.trim()) {
+      projectParts.push(options.projectInstructions.trim())
+    }
+
+    if (options?.projectDocuments && options.projectDocuments.length > 0) {
+      projectParts.push("## Projekt-Dokumente")
+      for (const doc of options.projectDocuments) {
+        projectParts.push(`### ${doc.title}\n${doc.content}`)
+      }
+    }
+
+    sections.push(projectParts.join("\n\n"))
   }
 
   // 6. Custom instructions (always last, highest priority)
