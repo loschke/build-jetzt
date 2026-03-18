@@ -42,6 +42,8 @@ export const chatBodySchema = z.object({
     .optional(),
   projectId: z.string().max(20).regex(/^[a-zA-Z0-9_-]+$/).optional(),
   privacyRoute: z.enum(["eu", "local"]).optional(),
+  wrapupType: z.enum(["handoff", "summary", "prd", "action-items", "briefing"]).optional(),
+  wrapupContext: z.string().max(1000).optional(),
 })
 
 export type MessagePart = z.infer<typeof messagePartSchema>

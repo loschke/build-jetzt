@@ -57,6 +57,7 @@ interface BuildSystemPromptOptions {
   expert?: { systemPrompt: string; skillSlugs?: string[] }
   skills?: SkillMetadata[]
   quicktask?: string | null
+  wrapup?: string | null
   memoryContext?: string | null
   projectInstructions?: string | null
   customInstructions?: string | null
@@ -100,9 +101,11 @@ export function buildSystemPrompt(options?: BuildSystemPromptOptions): string {
     )
   }
 
-  // 3. Quicktask layer (replaces skills overview when active)
+  // 3. Quicktask / Wrapup layer (replaces skills overview when active)
   if (options?.quicktask) {
     sections.push(options.quicktask)
+  } else if (options?.wrapup) {
+    sections.push(options.wrapup)
   } else if (options?.skills && options.skills.length > 0) {
     const expertSkillSlugs = options.expert?.skillSlugs ?? []
 

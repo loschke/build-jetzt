@@ -86,7 +86,12 @@ export function CreditsAdmin({ initialUsers }: CreditsAdminProps) {
     }
   }
 
-  if (view === "grant" && grantTarget) {
+  // Derive current target from users array so balance stays fresh after grant
+  const currentTarget = grantTarget
+    ? users.find((u) => u.logtoId === grantTarget.logtoId) ?? grantTarget
+    : null
+
+  if (view === "grant" && currentTarget) {
     return (
       <div className="space-y-6">
         <div className="flex items-center gap-3">
@@ -99,13 +104,13 @@ export function CreditsAdmin({ initialUsers }: CreditsAdminProps) {
         <div className="max-w-md space-y-4 rounded-lg border p-4">
           <div>
             <Label className="text-muted-foreground">User</Label>
-            <p className="text-sm font-medium">{grantTarget.name || grantTarget.email || grantTarget.logtoId}</p>
-            <p className="text-xs text-muted-foreground">{grantTarget.email}</p>
+            <p className="text-sm font-medium">{currentTarget.name || currentTarget.email || currentTarget.logtoId}</p>
+            <p className="text-xs text-muted-foreground">{currentTarget.email}</p>
           </div>
 
           <div>
             <Label className="text-muted-foreground">Aktueller Stand</Label>
-            <p className="text-sm font-medium">{grantTarget.creditsBalance.toLocaleString("de-DE")} Credits</p>
+            <p className="text-sm font-medium">{currentTarget.creditsBalance.toLocaleString("de-DE")} Credits</p>
           </div>
 
           <div className="space-y-1.5">
