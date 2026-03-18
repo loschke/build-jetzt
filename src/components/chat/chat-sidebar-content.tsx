@@ -1,8 +1,8 @@
 "use client"
 
-import { useEffect, useState, useCallback, useMemo } from "react"
+import { useEffect, useState, useCallback, useMemo, useDeferredValue } from "react"
 import { usePathname, useRouter } from "next/navigation"
-import { MessageSquare, MoreHorizontal, Trash2, Pin, PinOff, FolderInput, Share2, Search, Folder, Plus, Settings, ChevronRight } from "lucide-react"
+import { MessageSquare, MoreHorizontal, Trash2, Pin, PinOff, FolderInput, Share2, Search, Folder, Plus, Settings, ChevronRight, Loader2, Layers } from "lucide-react"
 import {
   SidebarGroup,
   SidebarGroupLabel,
@@ -61,6 +61,9 @@ export function ChatSidebarContent() {
   const [projects, setProjects] = useState<ProjectItem[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
+  const [hasMore, setHasMore] = useState(false)
+  const [nextCursor, setNextCursor] = useState<string | null>(null)
+  const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [deleteChatId, setDeleteChatId] = useState<string | null>(null)
   const [moveChatId, setMoveChatId] = useState<string | null>(null)
   const [projectDialogState, setProjectDialogState] = useState<{
@@ -74,11 +77,14 @@ export function ChatSidebarContent() {
   const fetchData = useCallback(async () => {
     try {
       const [chatsRes, projectsRes] = await Promise.all([
-        fetch("/api/chats"),
+        fetch("/api/chats?limit=50"),
         fetch("/api/projects"),
       ])
       if (chatsRes.ok) {
-        setChats(await chatsRes.json())
+        const data = await chatsRes.json()
+        setChats(data.chats)
+        setHasMore(data.hasMore)
+        setNextCursor(data.nextCursor)
       }
       if (projectsRes.ok) {
         setProjects(await projectsRes.json())
@@ -89,6 +95,24 @@ export function ChatSidebarContent() {
       setIsLoading(false)
     }
   }, [])
+
+  const loadMore = useCallback(async () => {
+    if (!nextCursor || isLoadingMore) return
+    setIsLoadingMore(true)
+    try {
+      const res = await fetch(`/api/chats?limit=50&cursor=${encodeURIComponent(nextCursor)}`)
+      if (res.ok) {
+        const data = await res.json()
+        setChats((prev) => [...prev, ...data.chats])
+        setHasMore(data.hasMore)
+        setNextCursor(data.nextCursor)
+      }
+    } catch {
+      // Silently fail
+    } finally {
+      setIsLoadingMore(false)
+    }
+  }, [nextCursor, isLoadingMore])
 
   useEffect(() => {
     fetchData()
@@ -211,9 +235,11 @@ export function ChatSidebarContent() {
     ? pathname.split("/c/")[1]?.split("/")[0]
     : null
 
+  const deferredSearchQuery = useDeferredValue(searchQuery)
+
   // Filtered and grouped chats
   const { pinnedChats, projectGroups, groupedChats, isSearching } = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase()
+    const query = deferredSearchQuery.trim().toLowerCase()
     const isSearching = query.length > 0
 
     const filtered = isSearching
@@ -259,7 +285,7 @@ export function ChatSidebarContent() {
       groupedChats: groupChatsByDate(unassigned),
       isSearching,
     }
-  }, [chats, projects, searchQuery])
+  }, [chats, projects, deferredSearchQuery])
 
   if (isLoading) {
     return (
@@ -342,6 +368,26 @@ export function ChatSidebarContent() {
 
   return (
     <>
+      {/* Artifacts link */}
+      {!isCollapsed && (
+        <SidebarGroup>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton
+                asChild
+                isActive={pathname === "/artifacts"}
+                tooltip="Meine Dateien"
+              >
+                <a href="/artifacts">
+                  <Layers className="size-4" />
+                  <span>Meine Dateien</span>
+                </a>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarGroup>
+      )}
+
       {/* Search — hidden when sidebar is collapsed */}
       {!isCollapsed && (
         <div className="px-3 pb-2">
@@ -443,10 +489,35 @@ export function ChatSidebarContent() {
         </SidebarGroup>
       ))}
 
+      {/* Load more button */}
+      {hasMore && !isSearching && (
+        <div className="px-3 py-2">
+          <button
+            type="button"
+            onClick={loadMore}
+            disabled={isLoadingMore}
+            className="flex w-full items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
+          >
+            {isLoadingMore ? (
+              <><Loader2 className="size-3 animate-spin" /> Laden...</>
+            ) : (
+              "Ältere Chats laden"
+            )}
+          </button>
+        </div>
+      )}
+
       {/* No results */}
       {isSearching && pinnedChats.length === 0 && groupedChats.every((g) => g.items.length === 0) && (
         <div className="px-4 py-3 text-xs text-muted-foreground">
           Keine Ergebnisse.
+        </div>
+      )}
+
+      {/* Search hint when paginated */}
+      {isSearching && hasMore && (
+        <div className="px-4 py-1 text-xs text-muted-foreground/60">
+          Nur die letzten geladenen Chats werden durchsucht.
         </div>
       )}
 

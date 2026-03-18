@@ -325,6 +325,10 @@ export function useArtifact({ messages, status }: UseArtifactOptions) {
 
   const handleArtifactCardClick = useCallback(
     (artifact: { title: string; content: string; type: string; language?: string; id?: string; version?: number }) => {
+      // Skip fetch if same artifact is already loaded (saves a network request on re-click)
+      if (artifact.id && selectedArtifact?.id === artifact.id && !selectedArtifact?.isStreaming) {
+        return
+      }
       // If we have an artifactId, fetch latest from DB (content may have been edited)
       if (artifact.id) {
         fetch(`/api/artifacts/${artifact.id}`)
@@ -376,7 +380,7 @@ export function useArtifact({ messages, status }: UseArtifactOptions) {
         })
       }
     },
-    []
+    [selectedArtifact?.id, selectedArtifact?.isStreaming]
   )
 
   const handleArtifactSave = useCallback(
@@ -418,10 +422,35 @@ export function useArtifact({ messages, status }: UseArtifactOptions) {
 
   const closeArtifact = useCallback(() => setSelectedArtifact(null), [])
 
+  const openArtifactById = useCallback(
+    (artifactId: string) => {
+      fetch(`/api/artifacts/${artifactId}`)
+        .then((res) => (res.ok ? res.json() : null))
+        .then((data) => {
+          if (data) {
+            setSelectedArtifact({
+              id: data.id,
+              title: data.title,
+              content: data.content,
+              type: data.type as ArtifactContentType,
+              language: data.language ?? undefined,
+              version: data.version ?? 1,
+              isStreaming: false,
+            })
+          }
+        })
+        .catch(() => {
+          // Silently fail — artifact may not exist
+        })
+    },
+    []
+  )
+
   return {
     selectedArtifact,
     handleArtifactCardClick,
     handleArtifactSave,
     closeArtifact,
+    openArtifactById,
   }
 }

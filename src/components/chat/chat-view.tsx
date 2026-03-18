@@ -59,10 +59,11 @@ interface ChatViewProps {
   chatId?: string
   initialModelId?: string
   initialProjectId?: string
+  initialArtifactId?: string
   userName?: string
 }
 
-export function ChatView({ chatId, initialModelId, initialProjectId, userName }: ChatViewProps) {
+export function ChatView({ chatId, initialModelId, initialProjectId, initialArtifactId, userName }: ChatViewProps) {
   const [input, setInput] = useState("")
   const [initialMessagesLoaded, setInitialMessagesLoaded] = useState(!chatId)
   const [modelId, setModelId] = useState(initialModelId ?? "")
@@ -266,6 +267,7 @@ export function ChatView({ chatId, initialModelId, initialProjectId, userName }:
     handleArtifactCardClick,
     handleArtifactSave,
     closeArtifact,
+    openArtifactById,
   } = useArtifact({ messages, status })
 
   // Load existing messages when chatId is provided
@@ -325,6 +327,14 @@ export function ChatView({ chatId, initialModelId, initialProjectId, userName }:
     loadChat()
     return () => controller.abort()
   }, [chatId, setMessages])
+
+  // Deep-link: open artifact panel when initialArtifactId is provided
+  useEffect(() => {
+    if (initialArtifactId && initialMessagesLoaded) {
+      openArtifactById(initialArtifactId)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialArtifactId, initialMessagesLoaded])
 
   const handleExpertSelect = useCallback(
     (newExpertId: string | null, expertName?: string, expertIcon?: string | null) => {

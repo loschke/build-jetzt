@@ -1,4 +1,4 @@
-import { eq, and, sql } from "drizzle-orm"
+import { eq, and, sql, desc } from "drizzle-orm"
 import { nanoid } from "nanoid"
 import { getDb } from "@/lib/db"
 import { artifacts } from "@/lib/db/schema/artifacts"
@@ -73,6 +73,50 @@ export async function getArtifactsByChatId(chatId: string, userId: string) {
     .innerJoin(chats, eq(artifacts.chatId, chats.id))
     .where(and(eq(artifacts.chatId, chatId), eq(chats.userId, userId)))
     .orderBy(artifacts.createdAt)
+}
+
+interface GetArtifactsByUserIdOptions {
+  limit?: number
+  offset?: number
+  type?: string
+}
+
+export async function getArtifactsByUserId(
+  userId: string,
+  options: GetArtifactsByUserIdOptions = {}
+) {
+  const db = getDb()
+  const { limit = 24, offset = 0, type } = options
+
+  const conditions = [eq(chats.userId, userId)]
+  if (type) {
+    conditions.push(eq(artifacts.type, type))
+  }
+
+  const rows = await db
+    .select({
+      id: artifacts.id,
+      title: artifacts.title,
+      type: artifacts.type,
+      language: artifacts.language,
+      version: artifacts.version,
+      chatId: artifacts.chatId,
+      chatTitle: chats.title,
+      createdAt: artifacts.createdAt,
+      updatedAt: artifacts.updatedAt,
+    })
+    .from(artifacts)
+    .innerJoin(chats, eq(artifacts.chatId, chats.id))
+    .where(and(...conditions))
+    .orderBy(desc(artifacts.createdAt))
+    .limit(limit + 1)
+    .offset(offset)
+
+  const hasMore = rows.length > limit
+  return {
+    artifacts: hasMore ? rows.slice(0, limit) : rows,
+    hasMore,
+  }
 }
 
 export async function updateArtifactContent(
