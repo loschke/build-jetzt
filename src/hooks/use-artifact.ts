@@ -12,6 +12,7 @@ export interface SelectedArtifact {
   language?: string
   version: number
   isStreaming: boolean
+  reviewMode?: boolean
 }
 
 interface ArtifactInput {
@@ -214,6 +215,7 @@ export function extractQuizFromToolPart(part: { type: string; [key: string]: unk
 
 /**
  * Extract artifact data from a create_review tool part.
+ * Review is now a MODE of markdown artifacts — content is stored as raw markdown.
  */
 export function extractReviewFromToolPart(part: { type: string; [key: string]: unknown }): {
   artifact: Omit<SelectedArtifact, "isStreaming">
@@ -223,25 +225,20 @@ export function extractReviewFromToolPart(part: { type: string; [key: string]: u
 
   const toolPart = part as unknown as {
     state: string
-    input?: { title?: string; content?: string; previousFeedback?: unknown[] }
-    output?: { artifactId?: string; version?: number }
+    input?: { title?: string; content?: string }
+    output?: { artifactId?: string; version?: number; reviewMode?: boolean }
   }
   const inp = toolPart.input
   if (!inp?.content) return null
-
-  const reviewJson = JSON.stringify({
-    title: inp.title ?? "Review",
-    content: inp.content,
-    ...(inp.previousFeedback && { previousFeedback: inp.previousFeedback }),
-  })
 
   if (toolPart.state === "input-streaming" || toolPart.state === "input-available") {
     return {
       artifact: {
         title: inp.title ?? "Review",
-        content: reviewJson,
-        type: "review",
+        content: inp.content,
+        type: "markdown",
         version: 1,
+        reviewMode: true,
       },
       isStreaming: toolPart.state === "input-streaming",
     }
@@ -253,15 +250,58 @@ export function extractReviewFromToolPart(part: { type: string; [key: string]: u
       artifact: {
         id: out?.artifactId,
         title: inp.title ?? "Review",
-        content: reviewJson,
-        type: "review",
+        content: inp.content,
+        type: "markdown",
         version: out?.version ?? 1,
+        reviewMode: true,
       },
       isStreaming: false,
     }
   }
 
   return null
+}
+
+/**
+ * Backward compatibility for old review artifacts (type: "review", JSON content).
+ * Extracts markdown content from JSON wrapper and treats as markdown with reviewMode.
+ */
+function resolveReviewCompat(data: { id: string; title: string; content: string; type: string; language?: string; version?: number }): Omit<SelectedArtifact, "isStreaming"> {
+  if (data.type === "review") {
+    // Old format: JSON-wrapped review content
+    try {
+      const parsed = JSON.parse(data.content) as { content?: string; title?: string }
+      return {
+        id: data.id,
+        title: data.title,
+        content: parsed.content ?? data.content,
+        type: "markdown",
+        language: data.language ?? undefined,
+        version: data.version ?? 1,
+        reviewMode: true,
+      }
+    } catch {
+      // Invalid JSON — use raw content
+      return {
+        id: data.id,
+        title: data.title,
+        content: data.content,
+        type: "markdown",
+        language: data.language ?? undefined,
+        version: data.version ?? 1,
+        reviewMode: true,
+      }
+    }
+  }
+
+  return {
+    id: data.id,
+    title: data.title,
+    content: data.content,
+    type: data.type as ArtifactContentType,
+    language: data.language ?? undefined,
+    version: data.version ?? 1,
+  }
 }
 
 interface UseArtifactOptions {
@@ -324,7 +364,7 @@ export function useArtifact({ messages, status }: UseArtifactOptions) {
   }, [status, messages, selectedArtifact])
 
   const handleArtifactCardClick = useCallback(
-    (artifact: { title: string; content: string; type: string; language?: string; id?: string; version?: number }) => {
+    (artifact: { title: string; content: string; type: string; language?: string; id?: string; version?: number; reviewMode?: boolean }) => {
       // Skip fetch if same artifact is already loaded (saves a network request on re-click)
       if (artifact.id && selectedArtifact?.id === artifact.id && !selectedArtifact?.isStreaming) {
         return
@@ -335,14 +375,11 @@ export function useArtifact({ messages, status }: UseArtifactOptions) {
           .then((res) => res.ok ? res.json() : null)
           .then((data) => {
             if (data) {
+              const resolved = resolveReviewCompat(data)
               setSelectedArtifact({
-                id: data.id,
-                title: data.title,
-                content: data.content,
-                type: data.type as ArtifactContentType,
-                language: data.language ?? undefined,
-                version: data.version ?? 1,
+                ...resolved,
                 isStreaming: false,
+                reviewMode: artifact.reviewMode || resolved.reviewMode,
               })
             } else {
               // Fallback to tool part data
@@ -354,6 +391,7 @@ export function useArtifact({ messages, status }: UseArtifactOptions) {
                 language: artifact.language,
                 version: artifact.version ?? 1,
                 isStreaming: false,
+                reviewMode: artifact.reviewMode,
               })
             }
           })
@@ -367,6 +405,7 @@ export function useArtifact({ messages, status }: UseArtifactOptions) {
               language: artifact.language,
               version: artifact.version ?? 1,
               isStreaming: false,
+              reviewMode: artifact.reviewMode,
             })
           })
       } else {
@@ -377,6 +416,7 @@ export function useArtifact({ messages, status }: UseArtifactOptions) {
           language: artifact.language,
           version: artifact.version ?? 1,
           isStreaming: false,
+          reviewMode: artifact.reviewMode,
         })
       }
     },
@@ -428,13 +468,9 @@ export function useArtifact({ messages, status }: UseArtifactOptions) {
         .then((res) => (res.ok ? res.json() : null))
         .then((data) => {
           if (data) {
+            const resolved = resolveReviewCompat(data)
             setSelectedArtifact({
-              id: data.id,
-              title: data.title,
-              content: data.content,
-              type: data.type as ArtifactContentType,
-              language: data.language ?? undefined,
-              version: data.version ?? 1,
+              ...resolved,
               isStreaming: false,
             })
           }

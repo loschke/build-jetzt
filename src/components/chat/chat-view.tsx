@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useChat } from "@ai-sdk/react"
 import type { ChatStatus } from "ai"
 import {
@@ -33,16 +33,18 @@ import {
 } from "@/components/ai-elements/attachments"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
-import { PlusIcon } from "lucide-react"
+import { PlusIcon, Users } from "lucide-react"
 import { ArtifactPanel } from "@/components/assistant/artifact-panel"
 import { ChatEmptyState } from "./chat-empty-state"
 import { ChatMessage } from "./chat-message"
 import { ArtifactErrorBoundary } from "./artifact-error-boundary"
 import { SpeechButton } from "./speech-button"
 import { SuggestedReplies } from "./suggested-replies"
+import { ExpertSwitchPopover } from "./expert-switch-popover"
+import { ExpertSwitchDivider } from "./expert-switch-divider"
 import { useArtifact, mapSavedPartsToUI } from "@/hooks/use-artifact"
 import type { QuizDefinition, QuizResults } from "@/types/quiz"
-import type { ReviewDefinition, SectionFeedback } from "@/types/review"
+import type { SectionFeedback } from "@/types/review"
 import { DropZoneOverlay } from "./drop-zone-overlay"
 import { FilePrivacyNotice } from "./file-privacy-notice"
 import { BusinessModePiiDialog } from "./business-mode-pii-dialog"
@@ -51,6 +53,7 @@ import { useBusinessMode, type PrivacyRoute } from "@/hooks/use-business-mode"
 import { SessionWrapupPopover } from "./session-wrapup-popover"
 import { useProject } from "./project-context"
 import { useExpert } from "./expert-context"
+import { EXPERT_ICON_MAP, DEFAULT_EXPERT_ICON } from "@/lib/icon-map"
 import { chatConfig } from "@/config/chat"
 import { features } from "@/config/features"
 import { WRAPUP_TYPES } from "@/config/wrapup"
@@ -69,7 +72,7 @@ export function ChatView({ chatId, initialModelId, initialProjectId, initialArti
   const [modelId, setModelId] = useState(initialModelId ?? "")
   const [expertId, setExpertId] = useState<string | null>(null)
   const { setProject } = useProject()
-  const { setExpert } = useExpert()
+  const { expertName, expertIcon, setExpert } = useExpert()
   const [modelMeta, setModelMeta] = useState<{ provider?: string; region?: "eu" | "us" } | null>(null)
   const [hasAttachedFiles, setHasAttachedFiles] = useState(false)
   const [creditError, setCreditError] = useState<string | null>(null)
@@ -393,16 +396,9 @@ export function ChatView({ chatId, initialModelId, initialProjectId, initialArti
     [selectedArtifact?.id, handleArtifactSave, sendMessage]
   )
 
-  /** Review completion: save feedback to artifact + send structured summary for model */
+  /** Review completion: send structured feedback as user message (artifact stays clean markdown) */
   const handleReviewComplete = useCallback(
-    async (review: ReviewDefinition, feedback: SectionFeedback[]) => {
-      // 1. Persist completed review to artifact
-      if (selectedArtifact?.id) {
-        const completedContent = JSON.stringify({ ...review, feedback, completedAt: new Date().toISOString() })
-        await handleArtifactSave(completedContent)
-      }
-
-      // 2. Build structured feedback message
+    (feedback: SectionFeedback[]) => {
       const LABEL_EMOJI: Record<string, string> = { approve: "✓", change: "✏️", question: "❓", remove: "✗" }
       const lines = feedback.map((fb) => {
         const emoji = LABEL_EMOJI[fb.label] ?? "•"
@@ -410,13 +406,13 @@ export function ChatView({ chatId, initialModelId, initialProjectId, initialArti
         return fb.comment ? `${base} — ${fb.comment}` : base
       })
 
+      const reviewTitle = selectedArtifact?.title ?? "Dokument"
       const approvedCount = feedback.filter((f) => f.label === "approve").length
-      const summary = `Review für "${review.title}" (${approvedCount}/${feedback.length} Abschnitte genehmigt):\n${lines.join("\n")}`
+      const summary = `Review für "${reviewTitle}" (${approvedCount}/${feedback.length} Abschnitte genehmigt):\n${lines.join("\n")}`
 
-      // 3. Send as user message — model reacts
       sendMessage({ text: summary })
     },
-    [selectedArtifact?.id, handleArtifactSave, sendMessage]
+    [selectedArtifact?.title, sendMessage]
   )
 
   const handleSubmit = useCallback(
@@ -537,18 +533,40 @@ export function ChatView({ chatId, initialModelId, initialProjectId, initialArti
               />
             ) : (
               <>
-                {messages.map((message) => (
-                  <ChatMessage
-                    key={message.id}
-                    message={message}
-                    isLastMessage={message.id === messages[messages.length - 1]?.id}
-                    isStreaming={status === "streaming"}
-                    selectedArtifact={selectedArtifact}
-                    onArtifactClick={handleArtifactCardClick}
-                    onToolResult={handleToolResult}
-                    onEdit={handleEditMessage}
-                  />
-                ))}
+                {messages.map((message, idx) => {
+                  // Check for expert switch between messages
+                  let divider: React.ReactNode = null
+                  if (idx > 0 && message.role === "assistant") {
+                    const meta = message.metadata as { expertId?: string; expertName?: string } | undefined
+                    const prevAssistant = messages.slice(0, idx).reverse().find((m) => m.role === "assistant")
+                    const prevMeta = prevAssistant?.metadata as { expertId?: string; expertName?: string } | undefined
+                    const currentExpert = meta?.expertId ?? null
+                    const prevExpert = prevMeta?.expertId ?? null
+                    if (currentExpert !== prevExpert && (meta?.expertName || !currentExpert)) {
+                      divider = (
+                        <ExpertSwitchDivider
+                          key={`divider-${message.id}`}
+                          expertName={meta?.expertName ?? "Kein Experte"}
+                          expertIcon={null}
+                        />
+                      )
+                    }
+                  }
+                  return (
+                    <React.Fragment key={message.id}>
+                      {divider}
+                      <ChatMessage
+                        message={message}
+                        isLastMessage={message.id === messages[messages.length - 1]?.id}
+                        isStreaming={status === "streaming"}
+                        selectedArtifact={selectedArtifact}
+                        onArtifactClick={handleArtifactCardClick}
+                        onToolResult={handleToolResult}
+                        onEdit={handleEditMessage}
+                      />
+                    </React.Fragment>
+                  )
+                })}
                 {suggestedRepliesEnabled && status === "ready" && (() => {
                   const lastMsg = messages[messages.length - 1]
                   if (lastMsg?.role !== "assistant") return null
@@ -622,6 +640,12 @@ export function ChatView({ chatId, initialModelId, initialProjectId, initialArti
             <PromptInputFooter>
               <PromptInputTools>
                 <AttachButton />
+                <ExpertSwitchButton
+                  expertId={expertId}
+                  expertName={expertName}
+                  expertIcon={expertIcon}
+                  onSelect={handleExpertSelect}
+                />
               </PromptInputTools>
               <div className="flex items-center gap-1">
                 {messages.length > 0 && (
@@ -656,10 +680,11 @@ export function ChatView({ chatId, initialModelId, initialProjectId, initialArti
               isStreaming={selectedArtifact.isStreaming}
               artifactId={selectedArtifact.id}
               version={selectedArtifact.version}
+              reviewMode={selectedArtifact.reviewMode}
               onClose={closeArtifact}
               onSave={selectedArtifact.id ? handleArtifactSave : undefined}
               onQuizComplete={selectedArtifact.type === "quiz" ? handleQuizComplete : undefined}
-              onReviewComplete={selectedArtifact.type === "review" ? handleReviewComplete : undefined}
+              onReviewComplete={selectedArtifact.type === "markdown" ? handleReviewComplete : undefined}
             />
           </ArtifactErrorBoundary>
         </div>
@@ -767,6 +792,42 @@ function PendingIndicator({ messages }: { messages: Array<{ parts?: Array<{ type
         )}
       </div>
     </div>
+  )
+}
+
+/** Expert switch button in PromptInputTools */
+function ExpertSwitchButton({
+  expertId,
+  expertName,
+  expertIcon,
+  onSelect,
+}: {
+  expertId: string | null
+  expertName: string | null
+  expertIcon: string | null
+  onSelect: (id: string | null, name?: string, icon?: string | null) => void
+}) {
+  const Icon = expertIcon ? (EXPERT_ICON_MAP[expertIcon] ?? DEFAULT_EXPERT_ICON) : Users
+  const hasExpert = expertId !== null
+
+  return (
+    <ExpertSwitchPopover currentExpertId={expertId} onSelect={onSelect}>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        className={`size-8 rounded-lg ${hasExpert ? "text-primary" : ""}`}
+        title={expertName ?? "Experte wählen"}
+      >
+        <div className="relative">
+          <Icon className="size-4" />
+          {hasExpert && (
+            <span className="absolute -right-0.5 -top-0.5 size-2 rounded-full bg-primary" />
+          )}
+        </div>
+        <span className="sr-only">{expertName ?? "Experte wählen"}</span>
+      </Button>
+    </ExpertSwitchPopover>
   )
 }
 

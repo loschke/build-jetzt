@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import dynamic from "next/dynamic"
-import { X, Eye, Pencil, Copy, Download, Check, FileText, Printer, Code, Save } from "lucide-react"
+import { X, Eye, Pencil, Copy, Download, Check, FileText, Printer, Code, Save, ClipboardCheck } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -14,7 +14,7 @@ import {
 import { MessageResponse } from "@/components/ai-elements/message"
 import type { ArtifactContentType } from "@/types/artifact"
 import type { QuizDefinition, QuizResults } from "@/types/quiz"
-import type { ReviewDefinition, SectionFeedback } from "@/types/review"
+import type { SectionFeedback } from "@/types/review"
 import { HtmlPreview } from "./html-preview"
 import { CodePreview } from "./code-preview"
 import { QuizRenderer } from "./quiz-renderer"
@@ -46,12 +46,13 @@ interface ArtifactPanelProps {
   isStreaming: boolean
   artifactId?: string
   version?: number
+  reviewMode?: boolean
   onClose: () => void
   onSave?: (content: string) => void
   /** Callback when a quiz is completed — passes updated quiz + results for back-channel */
   onQuizComplete?: (quiz: QuizDefinition, results: QuizResults) => void
-  /** Callback when a review is completed — passes updated review + feedback for back-channel */
-  onReviewComplete?: (review: ReviewDefinition, feedback: SectionFeedback[]) => void
+  /** Callback when a review is completed — passes feedback for back-channel */
+  onReviewComplete?: (feedback: SectionFeedback[]) => void
 }
 
 function sanitizeFilename(title: string): string {
@@ -71,12 +72,13 @@ export function ArtifactPanel({
   isStreaming,
   artifactId,
   version,
+  reviewMode: initialReviewMode,
   onClose,
   onSave,
   onQuizComplete,
   onReviewComplete,
 }: ArtifactPanelProps) {
-  const [mode, setMode] = useState<"view" | "edit">("view")
+  const [mode, setMode] = useState<"view" | "review" | "edit">(initialReviewMode ? "review" : "view")
   const [editContent, setEditContent] = useState(content)
   const [copied, setCopied] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -244,11 +246,11 @@ export function ArtifactPanel({
   }, [mode, editContent, content, title, contentType])
 
   const handleToggleMode = useCallback(() => {
-    if (mode === "view") {
+    if (mode === "edit") {
+      setMode("view")
+    } else {
       setEditContent(content)
       setMode("edit")
-    } else {
-      setMode("view")
     }
   }, [mode, content])
 
@@ -275,8 +277,8 @@ export function ArtifactPanel({
           )}
         </div>
         <div className="flex items-center gap-1">
-          {/* Hide edit/copy/download for interactive artifact types */}
-          {contentType !== "quiz" && contentType !== "review" && (
+          {/* Hide edit/copy/download for quiz type */}
+          {contentType !== "quiz" && (
             <>
               {mode === "edit" && onSave && artifactId && (
                 <Button
@@ -291,18 +293,31 @@ export function ArtifactPanel({
                   <Save className="size-3.5" />
                 </Button>
               )}
+              {/* Three-way toggle for markdown with review capability */}
+              {contentType === "markdown" && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className={`size-7 ${mode === "review" ? "bg-muted" : ""}`}
+                  onClick={() => setMode(mode === "review" ? "view" : "review")}
+                  title={mode === "review" ? "Vorschau" : "Review-Modus"}
+                >
+                  <ClipboardCheck className="size-3.5" />
+                </Button>
+              )}
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
                 className="size-7"
                 onClick={handleToggleMode}
-                title={mode === "view" ? "Bearbeiten" : "Vorschau"}
+                title={mode === "edit" ? "Vorschau" : "Bearbeiten"}
               >
-                {mode === "view" ? (
-                  <Pencil className="size-3.5" />
-                ) : (
+                {mode === "edit" ? (
                   <Eye className="size-3.5" />
+                ) : (
+                  <Pencil className="size-3.5" />
                 )}
               </Button>
               <Button
@@ -385,20 +400,13 @@ export function ArtifactPanel({
               />
             )
           })()
-        ) : contentType === "review" ? (
-          (() => {
-            let reviewData: ReviewDefinition | null = null
-            try { reviewData = JSON.parse(content) as ReviewDefinition } catch { /* invalid JSON */ }
-            if (!reviewData) return <div className="p-6 text-sm text-muted-foreground">Review-Daten konnten nicht geladen werden.</div>
-            return (
-              <ReviewRenderer
-                review={reviewData}
-                artifactId={artifactId}
-                isStreaming={isStreaming}
-                onComplete={onReviewComplete}
-              />
-            )
-          })()
+        ) : mode === "review" && contentType === "markdown" ? (
+          <ReviewRenderer
+            content={content}
+            title={title}
+            isStreaming={isStreaming}
+            onComplete={onReviewComplete}
+          />
         ) : mode === "view" ? (
           contentType === "html" ? (
             isStreaming ? (

@@ -5,7 +5,7 @@ import { aiDefaults } from "@/config/ai"
 import { getModelById } from "@/config/models"
 import { saveMessages } from "@/lib/db/queries/messages"
 import { logUsage } from "@/lib/db/queries/usage"
-import { updateChatTitle, touchChat } from "@/lib/db/queries/chats"
+import { updateChatTitle, touchChat, updateChatExpert } from "@/lib/db/queries/chats"
 import { createArtifact } from "@/lib/db/queries/artifacts"
 import { parseFakeArtifactCall } from "@/lib/ai/tools/parse-fake-artifact"
 import { uploadBuffer } from "@/lib/storage"
@@ -117,6 +117,7 @@ interface CreateOnFinishParams {
   userId: string
   finalModelId: string
   expert: ChatContext["expert"]
+  existingExpertId?: string | null
   messages: Array<{
     role: string
     parts?: Array<Record<string, unknown>>
@@ -134,7 +135,7 @@ interface CreateOnFinishParams {
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function createOnFinish(params: CreateOnFinishParams): StreamTextOnFinishCallback<Record<string, any>> {
-  const { resolvedChatId, isNewChat, userId, finalModelId, expert, messages, mcpHandle, userMemoryEnabled, userSuggestedRepliesEnabled } = params
+  const { resolvedChatId, isNewChat, userId, finalModelId, expert, existingExpertId, messages, mcpHandle, userMemoryEnabled, userSuggestedRepliesEnabled } = params
 
   return async ({ response, totalUsage, steps }) => {
     try {
@@ -335,6 +336,16 @@ export function createOnFinish(params: CreateOnFinishParams): StreamTextOnFinish
         // Fire-and-forget touchChat for existing chats
         touchChat(resolvedChatId, userId).catch(console.error)
       }
+      // Expert switch persistence: update chat if expert changed mid-chat
+      if (!isNewChat) {
+        const newExpertId = expert?.id ?? null
+        const oldExpertId = existingExpertId ?? null
+        if (newExpertId !== oldExpertId) {
+          updateChatExpert(resolvedChatId, userId, newExpertId)
+            .catch((err) => console.warn("[persist] Expert update failed:", err instanceof Error ? err.message : err))
+        }
+      }
+
       // Credit deduction: awaited (after usage is logged, before fire-and-forget tasks)
       if (features.credits.enabled && totalUsage) {
         try {

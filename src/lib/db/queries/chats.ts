@@ -153,3 +153,11 @@ export async function updateChatProject(chatId: string, userId: string, projectI
     .set({ projectId, updatedAt: new Date() })
     .where(and(eq(chats.id, chatId), eq(chats.userId, userId)))
 }
+
+export async function updateChatExpert(chatId: string, userId: string, expertId: string | null) {
+  const db = getDb()
+  await db
+    .update(chats)
+    .set({ expertId, updatedAt: new Date() })
+    .where(and(eq(chats.id, chatId), eq(chats.userId, userId)))
+}

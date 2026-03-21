@@ -123,7 +123,7 @@ export async function POST(req: Request) {
   // resolveContext returns Response on validation failure
   if (context instanceof Response) return context
 
-  const { resolvedChatId, isNewChat, expert, systemPrompt, finalModelId, effectiveTemperature, skills, quicktaskPrompt, projectId, projectName, mcpServerIds, allowedTools, memoriesLoaded, memories, userMemoryEnabled, userSuggestedRepliesEnabled } = context
+  const { resolvedChatId, isNewChat, expert, existingExpertId, systemPrompt, finalModelId, effectiveTemperature, skills, quicktaskPrompt, projectId, projectName, mcpServerIds, allowedTools, memoriesLoaded, memories, userMemoryEnabled, userSuggestedRepliesEnabled } = context
 
   // Build model messages
   const modelMessages = await buildModelMessages(
@@ -198,6 +198,7 @@ export async function POST(req: Request) {
       userId: user.id,
       finalModelId: effectiveModelId,
       expert,
+      existingExpertId,
       messages,
       mcpHandle,
       userMemoryEnabled,

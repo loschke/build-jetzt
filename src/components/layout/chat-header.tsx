@@ -14,8 +14,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useProject } from "@/components/chat/project-context"
-import { useExpert } from "@/components/chat/expert-context"
-import { EXPERT_ICON_MAP, DEFAULT_EXPERT_ICON } from "@/lib/icon-map"
 import { ProjectSettingsDialog } from "@/components/chat/project-settings-dialog"
 import { ChatCreditBadge } from "@/components/chat/chat-credit-badge"
 import { CreditIndicator } from "./credit-indicator"
@@ -32,7 +30,6 @@ interface ChatHeaderProps {
 export function ChatHeader({ isAdmin, user }: ChatHeaderProps) {
   const pathname = usePathname()
   const { projectName } = useProject()
-  const { expertName, expertIcon } = useExpert()
   const [projectDialogOpen, setProjectDialogOpen] = useState(false)
 
   const chatId = pathname.startsWith("/c/")
@@ -112,15 +109,6 @@ export function ChatHeader({ isAdmin, user }: ChatHeaderProps) {
             <span className="max-w-[200px] truncate">{projectName}</span>
           </div>
         )}
-        {expertName && (() => {
-          const ExpertIcon = EXPERT_ICON_MAP[expertIcon ?? ""] ?? DEFAULT_EXPERT_ICON
-          return (
-            <div className="flex items-center gap-1.5 rounded-md bg-primary-foreground/10 px-2.5 py-1 text-xs font-medium text-primary-foreground">
-              <ExpertIcon className="size-3" />
-              <span className="max-w-[200px] truncate">{expertName}</span>
-            </div>
-          )
-        })()}
         {features.credits.enabled && chatId && (
           <ChatCreditBadge chatId={chatId} />
         )}

@@ -17,6 +17,7 @@ export interface ChatContext {
   resolvedChatId: string
   isNewChat: boolean
   expert: Awaited<ReturnType<typeof getExpertById>> | null
+  existingExpertId: string | null
   systemPrompt: string
   finalModelId: string
   effectiveTemperature: number
@@ -236,6 +237,7 @@ export async function resolveContext(params: ResolveContextParams): Promise<Chat
     resolvedChatId,
     isNewChat,
     expert,
+    existingExpertId: existingChat?.expertId ?? null,
     systemPrompt,
     finalModelId,
     effectiveTemperature,

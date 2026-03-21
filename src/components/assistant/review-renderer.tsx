@@ -4,13 +4,13 @@ import { useState, useCallback, useMemo } from "react"
 import { Button } from "@/components/ui/button"
 import { MessageResponse } from "@/components/ai-elements/message"
 import { Check, Pencil, HelpCircle, X, Send } from "lucide-react"
-import type { ReviewDefinition, ReviewLabel, SectionFeedback } from "@/types/review"
+import type { ReviewLabel, SectionFeedback } from "@/types/review"
 
 interface ReviewRendererProps {
-  review: ReviewDefinition
-  artifactId?: string
+  content: string
+  title: string
   isStreaming: boolean
-  onComplete?: (review: ReviewDefinition, feedback: SectionFeedback[]) => void
+  onComplete?: (feedback: SectionFeedback[]) => void
 }
 
 interface ParsedSection {
@@ -64,54 +64,21 @@ const LABEL_CONFIG: Record<ReviewLabel, { label: string; icon: typeof Check; var
   remove: { label: "Raus", icon: X, variant: "text-red-700 bg-red-100 border-red-200 dark:text-red-400 dark:bg-red-950/30 dark:border-red-900/50" },
 }
 
-export function ReviewRenderer({ review, artifactId, isStreaming, onComplete }: ReviewRendererProps) {
-  const sections = useMemo(() => splitSections(review.content), [review.content])
-  const isCompleted = !!review.completedAt
+export function ReviewRenderer({ content, title, isStreaming, onComplete }: ReviewRendererProps) {
+  const sections = useMemo(() => splitSections(content), [content])
 
-  // Build initial labels: only pre-fill "approve" from previousFeedback.
-  // Changed/questioned sections stay unlabeled so the user reviews them fresh.
-  // If already completed (reload), restore all feedback labels.
-  const initialLabels = useMemo(() => {
-    const labels: Record<string, ReviewLabel> = {}
-    if (review.feedback) {
-      // Completed review — restore everything for read-only display
-      for (const fb of review.feedback) {
-        labels[fb.title] = fb.label
-      }
-    } else if (review.previousFeedback) {
-      // New round — only carry forward approvals as pre-selection
-      for (const fb of review.previousFeedback) {
-        if (fb.label === "approve") {
-          const match = sections.find((s) => s.title === fb.title)
-          if (match) labels[match.title] = "approve"
-        }
-      }
-    }
-    return labels
-  }, [review.previousFeedback, review.feedback, sections])
-
-  const initialComments = useMemo(() => {
-    const comments: Record<string, string> = {}
-    if (review.feedback) {
-      for (const fb of review.feedback) {
-        if (fb.comment) comments[fb.title] = fb.comment
-      }
-    }
-    return comments
-  }, [review.feedback])
-
-  const [labels, setLabels] = useState<Record<string, ReviewLabel>>(initialLabels)
-  const [comments, setComments] = useState<Record<string, string>>(initialComments)
-  const [submitted, setSubmitted] = useState(isCompleted)
+  const [labels, setLabels] = useState<Record<string, ReviewLabel>>({})
+  const [comments, setComments] = useState<Record<string, string>>({})
+  const [submitted, setSubmitted] = useState(false)
 
   const allLabeled = sections.every((s) => labels[s.title] !== undefined)
 
-  const handleLabel = useCallback((title: string, label: ReviewLabel) => {
-    setLabels((prev) => ({ ...prev, [title]: label }))
+  const handleLabel = useCallback((sectionTitle: string, label: ReviewLabel) => {
+    setLabels((prev) => ({ ...prev, [sectionTitle]: label }))
   }, [])
 
-  const handleComment = useCallback((title: string, text: string) => {
-    setComments((prev) => ({ ...prev, [title]: text }))
+  const handleComment = useCallback((sectionTitle: string, text: string) => {
+    setComments((prev) => ({ ...prev, [sectionTitle]: text }))
   }, [])
 
   const handleSubmit = useCallback(() => {
@@ -120,17 +87,12 @@ export function ReviewRenderer({ review, artifactId, isStreaming, onComplete }: 
       label: labels[s.title] ?? "approve",
       ...(comments[s.title]?.trim() && { comment: comments[s.title].trim() }),
     }))
-    const completedReview: ReviewDefinition = {
-      ...review,
-      feedback,
-      completedAt: new Date().toISOString(),
-    }
     setSubmitted(true)
-    onComplete?.(completedReview, feedback)
-  }, [sections, labels, comments, review, onComplete])
+    onComplete?.(feedback)
+  }, [sections, labels, comments, onComplete])
 
   if (isStreaming) {
-    return <ReviewStreamingPlaceholder title={review.title} />
+    return <ReviewStreamingPlaceholder title={title} />
   }
 
   return (
@@ -138,7 +100,7 @@ export function ReviewRenderer({ review, artifactId, isStreaming, onComplete }: 
       <div className="flex-1 overflow-auto">
         {/* Header */}
         <div className="border-b px-6 py-4">
-          <h2 className="text-lg font-semibold">{review.title}</h2>
+          <h2 className="text-lg font-semibold">{title}</h2>
           {!submitted && (
             <p className="mt-1 text-xs text-muted-foreground">
               Bewerte jeden Abschnitt und gib optional Anmerkungen.
@@ -155,9 +117,6 @@ export function ReviewRenderer({ review, artifactId, isStreaming, onComplete }: 
         <div className="divide-y">
           {sections.map((section) => {
             const currentLabel = labels[section.title]
-            const isPreApproved = review.previousFeedback?.some(
-              (fb) => fb.title === section.title && fb.label === "approve"
-            )
 
             return (
               <SectionBlock
@@ -165,7 +124,6 @@ export function ReviewRenderer({ review, artifactId, isStreaming, onComplete }: 
                 section={section}
                 label={currentLabel}
                 comment={comments[section.title] ?? ""}
-                isPreApproved={!!isPreApproved}
                 isReadOnly={submitted}
                 onLabel={handleLabel}
                 onComment={handleComment}
@@ -201,7 +159,6 @@ function SectionBlock({
   section,
   label,
   comment,
-  isPreApproved,
   isReadOnly,
   onLabel,
   onComment,
@@ -209,7 +166,6 @@ function SectionBlock({
   section: ParsedSection
   label?: ReviewLabel
   comment: string
-  isPreApproved: boolean
   isReadOnly: boolean
   onLabel: (title: string, label: ReviewLabel) => void
   onComment: (title: string, text: string) => void
@@ -226,9 +182,6 @@ function SectionBlock({
             {(() => { const Icon = LABEL_CONFIG[label].icon; return <Icon className="size-3" /> })()}
             {LABEL_CONFIG[label].label}
           </span>
-        )}
-        {isPreApproved && !label && (
-          <span className="text-xs text-muted-foreground italic">Vorher genehmigt</span>
         )}
       </div>
 

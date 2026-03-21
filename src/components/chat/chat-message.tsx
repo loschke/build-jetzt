@@ -52,6 +52,7 @@ interface ChatMessageProps {
     language?: string
     id?: string
     version?: number
+    reviewMode?: boolean
   }) => void
   onToolResult?: (toolCallId: string, toolName: string, result: unknown) => void
   onEdit?: (messageId: string, messageText: string) => void
@@ -409,7 +410,7 @@ export const ChatMessage = memo(function ChatMessage({
                 if (!data) return null
 
                 const input = data.input as { title?: string; content?: string } | undefined
-                const output = data.output as { artifactId?: string; version?: number } | undefined
+                const output = data.output as { artifactId?: string; version?: number; reviewMode?: boolean } | undefined
                 const reviewTitle = input?.title ?? "Review"
 
                 return (
@@ -423,15 +424,13 @@ export const ChatMessage = memo(function ChatMessage({
                       (selectedArtifact?.title === reviewTitle && !selectedArtifact?.id && !output?.artifactId)
                     }
                     onClick={() => {
-                      const content = input?.content
-                        ? JSON.stringify({ title: reviewTitle, content: input.content })
-                        : ""
                       onArtifactClick({
                         id: output?.artifactId,
                         title: reviewTitle,
-                        content,
-                        type: "review",
+                        content: input?.content ?? "",
+                        type: "markdown",
                         version: output?.version,
+                        reviewMode: true,
                       })
                     }}
                   />
