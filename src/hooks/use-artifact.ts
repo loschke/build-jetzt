@@ -112,7 +112,7 @@ export function mapSavedPartsToUI(parts: unknown[]): unknown[] {
         type: `tool-${p.toolName}`,
         toolCallId: p.toolCallId,
         state: result !== undefined ? "output-available" : "input-available",
-        input: p.args,
+        input: p.args ?? {},
         output: result,
       })
     }

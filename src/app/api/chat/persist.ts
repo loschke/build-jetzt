@@ -172,7 +172,7 @@ export function createOnFinish(params: CreateOnFinishParams): StreamTextOnFinish
                 type: "tool-call",
                 toolCallId: c.toolCallId,
                 toolName: c.toolName,
-                args: c.input,
+                args: c.input ?? {},
               })
             }
           }
