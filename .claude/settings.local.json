@@ -129,7 +129,10 @@
       "Bash(grep:*)",
       "WebFetch(domain:context7.com)",
       "WebFetch(domain:docs.mem0.ai)",
-      "Bash(cd:*)"
+      "Bash(cd:*)",
+      "mcp__plugin_playwright_playwright__browser_press_key",
+      "Bash(taskkill //F //IM node.exe)",
+      "Bash(openssl rand:*)"
     ]
   }
 }
