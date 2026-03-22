@@ -72,10 +72,12 @@ pnpm db:seed
 Reihenfolge: Experts → Skills → Models → MCP-Server.
 Idempotent via upsert (by slug/modelId/serverId). Kann beliebig oft laufen.
 
-- Experts: `seed/default-experts.ts` (7 globale)
-- Skills: `seed/seed-skills.ts` (aus `skills/*/SKILL.md`)
-- Models: `seed/seed-models.ts` (aus `MODELS_CONFIG` ENV)
-- MCP: `seed/seed-mcp-servers.ts` (aus `MCP_SERVERS_CONFIG` ENV)
+Alle Entitaeten werden aus Markdown-Dateien in `seeds/` gelesen:
+
+- Experts: `seeds/experts/*.md` (Frontmatter + System-Prompt als Content)
+- Skills: `seeds/skills/*.md` (Frontmatter + Skill-Content als Content)
+- Models: `seeds/models/*.md` (nur Frontmatter)
+- MCP-Server: `seeds/mcp-servers/*.md` (nur Frontmatter)
 
 ## Connection
 

@@ -1,27 +1,21 @@
 /**
- * Idempotent seed script for default experts and skills.
+ * Unified seed script for all entities.
+ * Reads markdown files from seeds/ directory.
  * Run with: pnpm db:seed
  */
 
-import { upsertExpertBySlug } from "@/lib/db/queries/experts"
-import { DEFAULT_EXPERTS } from "./default-experts"
+import { seedExperts } from "./seed-experts-from-md"
 import { seedSkills } from "./seed-skills"
 import { seedModels } from "./seed-models"
 import { seedMcpServers } from "./seed-mcp-servers"
 
 async function main() {
-  console.log("Seeding default experts...")
+  console.log("=== Seeding from seeds/ directory ===\n")
 
-  for (const expert of DEFAULT_EXPERTS) {
-    try {
-      const result = await upsertExpertBySlug(expert)
-      console.log(`  ✓ ${expert.name} (${expert.slug}) → ${result.id}`)
-    } catch (err) {
-      console.error(`  ✗ ${expert.name} (${expert.slug}):`, err instanceof Error ? err.message : err)
-    }
-  }
+  console.log("Seeding experts...")
+  await seedExperts()
 
-  console.log("\nSeeding skills from filesystem...")
+  console.log("\nSeeding skills...")
   await seedSkills()
 
   console.log("\nSeeding models...")
@@ -30,7 +24,7 @@ async function main() {
   console.log("\nSeeding MCP servers...")
   await seedMcpServers()
 
-  console.log("\nDone.")
+  console.log("\n=== Done. ===")
   process.exit(0)
 }
 

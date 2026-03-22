@@ -1,0 +1,16 @@
+---
+name: Claude Haiku
+modelId: anthropic/claude-haiku-4-5
+provider: Anthropic
+categories:
+  - fast
+region: us
+contextWindow: 200000
+maxOutputTokens: 64000
+isDefault: false
+inputPrice:
+  per1m: 0.8
+outputPrice:
+  per1m: 4
+sortOrder: 1
+---

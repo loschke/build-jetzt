@@ -1,64 +1,39 @@
-import { z } from "zod"
+import fs from "node:fs"
+import path from "node:path"
 import { upsertMcpServerByServerId } from "@/lib/db/queries/mcp-servers"
-import type { CreateMcpServerInput } from "@/lib/db/queries/mcp-servers"
-
-const mcpServerConfigSchema = z.object({
-  serverId: z.string().min(1),
-  name: z.string().min(1),
-  description: z.string().optional(),
-  url: z.string().min(1),
-  transport: z.enum(["sse", "http"]).default("sse"),
-  headers: z.record(z.string(), z.string()).optional(),
-  envVar: z.string().optional(),
-  enabledTools: z.array(z.string()).optional(),
-  isActive: z.boolean().default(true),
-  sortOrder: z.number().int().default(0),
-})
+import { parseMcpServerMarkdown } from "./parse-mcp-server-markdown"
 
 /**
- * Seed MCP servers from MCP_SERVERS_CONFIG ENV into DB.
- * Does nothing if ENV is not set.
+ * Seed MCP servers from seeds/mcp-servers/*.md into database.
+ * Idempotent via upsertMcpServerByServerId.
  */
 export async function seedMcpServers() {
-  const envConfig = process.env.MCP_SERVERS_CONFIG
-  if (!envConfig) {
-    console.log("  ⊘ MCP_SERVERS_CONFIG not set, skipping MCP server seed")
+  const dir = path.join(process.cwd(), "seeds", "mcp-servers")
+
+  if (!fs.existsSync(dir)) {
+    console.log("  No seeds/mcp-servers/ directory found, skipping.")
     return
   }
 
-  let serversToSeed: CreateMcpServerInput[] = []
+  const files = fs.readdirSync(dir).filter((f) => f.endsWith(".md"))
+  let count = 0
 
-  try {
-    const raw = JSON.parse(envConfig)
-    const result = z.array(mcpServerConfigSchema).min(1).safeParse(raw)
-    if (result.success) {
-      serversToSeed = result.data.map((s, i) => ({
-        serverId: s.serverId,
-        name: s.name,
-        description: s.description,
-        url: s.url,
-        transport: s.transport,
-        headers: s.headers,
-        envVar: s.envVar,
-        enabledTools: s.enabledTools,
-        isActive: s.isActive,
-        sortOrder: s.sortOrder ?? i,
-      }))
-    } else {
-      console.warn("MCP_SERVERS_CONFIG validation failed:", result.error.flatten().fieldErrors)
-      return
-    }
-  } catch (e) {
-    console.error("Failed to parse MCP_SERVERS_CONFIG:", e)
-    return
-  }
-
-  for (const server of serversToSeed) {
+  for (const file of files) {
     try {
-      const result = await upsertMcpServerByServerId(server)
-      console.log(`  ✓ ${server.name} (${server.serverId}) → ${result.id}`)
+      const raw = fs.readFileSync(path.join(dir, file), "utf-8")
+      const parsed = parseMcpServerMarkdown(raw)
+      if (!parsed) {
+        console.log(`  - ${file}: Skipped (missing required fields)`)
+        continue
+      }
+
+      const result = await upsertMcpServerByServerId(parsed)
+      console.log(`  + ${parsed.name} (${parsed.serverId}) -> ${result.id}`)
+      count++
     } catch (err) {
-      console.error(`  ✗ ${server.name} (${server.serverId}):`, err instanceof Error ? err.message : err)
+      console.error(`  x ${file}:`, err instanceof Error ? err.message : err)
     }
   }
+
+  console.log(`Seeded ${count} mcp-servers.`)
 }
