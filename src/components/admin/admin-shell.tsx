@@ -38,7 +38,7 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
                 >
                   <Link href={item.href} className="flex items-center gap-2">
                     <item.icon className="size-4" />
-                    {item.label}
+                    <span className="hidden md:inline">{item.label}</span>
                   </Link>
                 </Button>
               )

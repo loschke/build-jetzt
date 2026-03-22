@@ -105,24 +105,24 @@ export function ExpertsAdmin({ initialExperts }: ExpertsAdminProps) {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b bg-muted/50">
-              <th className="px-4 py-2 text-left font-medium">Name</th>
-              <th className="px-4 py-2 text-left font-medium">Slug</th>
-              <th className="px-4 py-2 text-left font-medium">Icon</th>
-              <th className="px-4 py-2 text-left font-medium">Skills</th>
-              <th className="px-4 py-2 text-center font-medium">Typ</th>
-              <th className="px-4 py-2 text-center font-medium">Sortierung</th>
-              <th className="px-4 py-2 text-right font-medium">Aktionen</th>
+              <th className="px-3 py-2 text-left font-medium md:px-4">Name</th>
+              <th className="hidden px-4 py-2 text-left font-medium md:table-cell">Slug</th>
+              <th className="hidden px-4 py-2 text-left font-medium md:table-cell">Icon</th>
+              <th className="px-3 py-2 text-left font-medium md:px-4">Skills</th>
+              <th className="hidden px-4 py-2 text-center font-medium md:table-cell">Typ</th>
+              <th className="hidden px-4 py-2 text-center font-medium md:table-cell">Sortierung</th>
+              <th className="px-3 py-2 text-right font-medium md:px-4">Aktionen</th>
             </tr>
           </thead>
           <tbody>
             {experts.map((expert) => (
               <tr key={expert.id} className="border-b last:border-0 hover:bg-muted/25">
-                <td className="px-4 py-2 font-medium">{expert.name}</td>
-                <td className="px-4 py-2">
+                <td className="px-3 py-2 font-medium md:px-4">{expert.name}</td>
+                <td className="hidden px-4 py-2 md:table-cell">
                   <code className="rounded bg-muted px-1.5 py-0.5 text-xs">{expert.slug}</code>
                 </td>
-                <td className="px-4 py-2 text-muted-foreground">{expert.icon ?? "—"}</td>
-                <td className="px-4 py-2">
+                <td className="hidden px-4 py-2 text-muted-foreground md:table-cell">{expert.icon ?? "—"}</td>
+                <td className="px-3 py-2 md:px-4">
                   {expert.skillSlugs.length > 0
                     ? expert.skillSlugs.map((s) => (
                         <Badge key={s} variant="outline" className="mr-1 text-xs">{s}</Badge>
@@ -130,13 +130,13 @@ export function ExpertsAdmin({ initialExperts }: ExpertsAdminProps) {
                     : <span className="text-muted-foreground">—</span>
                   }
                 </td>
-                <td className="px-4 py-2 text-center">
+                <td className="hidden px-4 py-2 text-center md:table-cell">
                   <Badge variant={expert.userId === null ? "secondary" : "default"}>
                     {expert.userId === null ? "Global" : "User"}
                   </Badge>
                 </td>
-                <td className="px-4 py-2 text-center text-muted-foreground">{expert.sortOrder}</td>
-                <td className="px-4 py-2 text-right">
+                <td className="hidden px-4 py-2 text-center text-muted-foreground md:table-cell">{expert.sortOrder}</td>
+                <td className="px-3 py-2 text-right md:px-4">
                   <div className="flex items-center justify-end gap-1">
                     <Button
                       variant="ghost"

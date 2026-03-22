@@ -104,16 +104,16 @@ export function ChatHeader({ isAdmin, user }: ChatHeaderProps) {
         <Separator orientation="vertical" className="h-4 bg-primary-foreground/25" />
 
         {projectName && (
-          <div className="flex items-center gap-1.5 rounded-md bg-primary-foreground/10 px-2.5 py-1 text-xs font-medium text-primary-foreground">
+          <div className="flex items-center gap-1 rounded-md bg-primary-foreground/10 px-2 py-1 text-xs font-medium text-primary-foreground md:gap-1.5 md:px-2.5">
             <Folder className="size-3" />
-            <span className="max-w-[200px] truncate">{projectName}</span>
+            <span className="max-w-[120px] truncate md:max-w-[200px]">{projectName}</span>
           </div>
         )}
         {features.credits.enabled && chatId && (
           <ChatCreditBadge chatId={chatId} />
         )}
         <div className="flex-1" />
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-1 md:gap-1.5">
           {features.credits.enabled && <CreditIndicator />}
           <ThemeToggle />
           <NavUser user={user ?? null} isAdmin={isAdmin} />

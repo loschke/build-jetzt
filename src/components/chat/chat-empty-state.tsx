@@ -132,7 +132,7 @@ export function ChatEmptyState({
 
       {/* Tab content */}
       {activeTab === "chat" && (
-        <div className="grid w-full max-w-2xl grid-cols-2 gap-3">
+        <div className="grid w-full max-w-2xl grid-cols-1 gap-3 sm:grid-cols-2">
           {suggestions.map((suggestion) => (
             <button
               key={suggestion.text}

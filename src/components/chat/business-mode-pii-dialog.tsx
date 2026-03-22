@@ -39,7 +39,7 @@ export function BusinessModePiiDialog({
 }: BusinessModePiiDialogProps) {
   return (
     <AlertDialog open={open}>
-      <AlertDialogContent className="max-w-sm gap-0 p-0 overflow-hidden">
+      <AlertDialogContent className="max-w-[90vw] gap-0 overflow-hidden p-0 sm:max-w-sm">
         {/* Header */}
         <AlertDialogHeader className="px-5 pt-5 pb-3">
           <AlertDialogTitle className="flex items-center gap-2.5 text-base">

@@ -520,7 +520,7 @@ export function ChatView({ chatId, initialModelId, initialProjectId, initialArti
       <div className={`flex min-h-0 flex-col ${hasArtifact ? "w-1/2 border-r max-md:hidden" : "flex-1"}`}>
         {/* Messages area */}
         <Conversation className="flex-1">
-          <ConversationContent className={`mx-auto w-full gap-6 p-6 ${hasArtifact ? "max-w-2xl" : "max-w-3xl"}`}>
+          <ConversationContent className={`mx-auto w-full gap-4 p-4 md:gap-6 md:p-6 ${hasArtifact ? "max-w-2xl" : "max-w-3xl"}`}>
             {messages.length === 0 ? (
               <ChatEmptyState
                 onSuggestionSelect={handleSuggestionSelect}
@@ -603,7 +603,7 @@ export function ChatView({ chatId, initialModelId, initialProjectId, initialArti
         </Conversation>
 
         {/* Input area */}
-        <div className={`mx-auto w-full px-6 pb-6 ${hasArtifact ? "max-w-2xl" : "max-w-3xl"}`}>
+        <div className={`mx-auto w-full px-3 pb-3 md:px-6 md:pb-6 ${hasArtifact ? "max-w-2xl" : "max-w-3xl"}`}>
           {creditError && (
             <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-400">
               {creditError}

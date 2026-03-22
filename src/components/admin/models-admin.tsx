@@ -122,39 +122,39 @@ export function ModelsAdmin({ initialModels }: ModelsAdminProps) {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b bg-muted/50">
-              <th className="px-4 py-2 text-left font-medium">Name</th>
-              <th className="px-4 py-2 text-left font-medium">Model ID</th>
-              <th className="px-4 py-2 text-left font-medium">Provider</th>
-              <th className="px-4 py-2 text-left font-medium">Region</th>
-              <th className="px-4 py-2 text-left font-medium">Kategorien</th>
-              <th className="px-4 py-2 text-center font-medium">Aktiv</th>
-              <th className="px-4 py-2 text-right font-medium">Aktionen</th>
+              <th className="px-3 py-2 text-left font-medium md:px-4">Name</th>
+              <th className="hidden px-4 py-2 text-left font-medium md:table-cell">Model ID</th>
+              <th className="px-3 py-2 text-left font-medium md:px-4">Provider</th>
+              <th className="hidden px-4 py-2 text-left font-medium md:table-cell">Region</th>
+              <th className="hidden px-4 py-2 text-left font-medium md:table-cell">Kategorien</th>
+              <th className="px-3 py-2 text-center font-medium md:px-4">Aktiv</th>
+              <th className="px-3 py-2 text-right font-medium md:px-4">Aktionen</th>
             </tr>
           </thead>
           <tbody>
             {models.map((model) => (
               <tr key={model.id} className="border-b last:border-0 hover:bg-muted/25">
-                <td className="px-4 py-2 font-medium">
+                <td className="px-3 py-2 font-medium md:px-4">
                   {model.name}
                   {model.isDefault && (
                     <Badge variant="outline" className="ml-2 text-xs">Default</Badge>
                   )}
                 </td>
-                <td className="px-4 py-2">
+                <td className="hidden px-4 py-2 md:table-cell">
                   <code className="rounded bg-muted px-1.5 py-0.5 text-xs">{model.modelId}</code>
                 </td>
-                <td className="px-4 py-2 text-muted-foreground">{model.provider}</td>
-                <td className="px-4 py-2">
+                <td className="px-3 py-2 text-muted-foreground md:px-4">{model.provider}</td>
+                <td className="hidden px-4 py-2 md:table-cell">
                   <Badge variant="secondary">{model.region.toUpperCase()}</Badge>
                 </td>
-                <td className="px-4 py-2">
+                <td className="hidden px-4 py-2 md:table-cell">
                   <div className="flex flex-wrap gap-1">
                     {model.categories.map((cat) => (
                       <Badge key={cat} variant="outline" className="text-xs">{cat}</Badge>
                     ))}
                   </div>
                 </td>
-                <td className="px-4 py-2 text-center">
+                <td className="px-3 py-2 text-center md:px-4">
                   <Button
                     variant="ghost"
                     size="icon"
@@ -168,7 +168,7 @@ export function ModelsAdmin({ initialModels }: ModelsAdminProps) {
                     }
                   </Button>
                 </td>
-                <td className="px-4 py-2 text-right">
+                <td className="px-3 py-2 text-right md:px-4">
                   <div className="flex items-center justify-end gap-1">
                     <Button
                       variant="ghost"

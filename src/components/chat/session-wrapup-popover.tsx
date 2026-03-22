@@ -57,7 +57,7 @@ export function SessionWrapupPopover({ onSubmit, disabled }: SessionWrapupPopove
         </TooltipTrigger>
         <TooltipContent side="top">Session abschließen</TooltipContent>
       </Tooltip>
-      <PopoverContent side="top" align="start" className="w-[320px] p-4">
+      <PopoverContent side="top" align="start" className="w-[min(320px,calc(100vw-2rem))] p-4">
         <div className="space-y-3">
           <p className="text-sm font-medium">Session abschließen</p>
           <div className="flex flex-wrap gap-1.5">

@@ -137,13 +137,13 @@ export function McpServersAdmin({ initialServers }: McpServersAdminProps) {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b bg-muted/50">
-              <th className="px-4 py-2 text-left font-medium">Name</th>
-              <th className="px-4 py-2 text-left font-medium">Server ID</th>
-              <th className="px-4 py-2 text-left font-medium">Transport</th>
-              <th className="px-4 py-2 text-left font-medium">Env Gate</th>
-              <th className="px-4 py-2 text-center font-medium">Health</th>
-              <th className="px-4 py-2 text-center font-medium">Aktiv</th>
-              <th className="px-4 py-2 text-right font-medium">Aktionen</th>
+              <th className="px-3 py-2 text-left font-medium md:px-4">Name</th>
+              <th className="hidden px-4 py-2 text-left font-medium md:table-cell">Server ID</th>
+              <th className="px-3 py-2 text-left font-medium md:px-4">Transport</th>
+              <th className="hidden px-4 py-2 text-left font-medium md:table-cell">Env Gate</th>
+              <th className="hidden px-4 py-2 text-center font-medium md:table-cell">Health</th>
+              <th className="px-3 py-2 text-center font-medium md:px-4">Aktiv</th>
+              <th className="px-3 py-2 text-right font-medium md:px-4">Aktionen</th>
             </tr>
           </thead>
           <tbody>
@@ -151,26 +151,26 @@ export function McpServersAdmin({ initialServers }: McpServersAdminProps) {
               const health = healthResults[server.id]
               return (
                 <tr key={server.id} className="border-b last:border-0 hover:bg-muted/25">
-                  <td className="px-4 py-2 font-medium">
+                  <td className="px-3 py-2 font-medium md:px-4">
                     {server.name}
                     {server.description && (
                       <p className="text-xs text-muted-foreground">{server.description}</p>
                     )}
                   </td>
-                  <td className="px-4 py-2">
+                  <td className="hidden px-4 py-2 md:table-cell">
                     <code className="rounded bg-muted px-1.5 py-0.5 text-xs">{server.serverId}</code>
                   </td>
-                  <td className="px-4 py-2">
+                  <td className="px-3 py-2 md:px-4">
                     <Badge variant="secondary">{server.transport.toUpperCase()}</Badge>
                   </td>
-                  <td className="px-4 py-2 text-muted-foreground">
+                  <td className="hidden px-4 py-2 text-muted-foreground md:table-cell">
                     {server.envVar ? (
                       <code className="text-xs">{server.envVar}</code>
                     ) : (
                       <span className="text-xs">—</span>
                     )}
                   </td>
-                  <td className="px-4 py-2 text-center">
+                  <td className="hidden px-4 py-2 text-center md:table-cell">
                     {health?.status === "ok" ? (
                       <Badge variant="outline" className="text-xs text-green-600">
                         {health.toolCount} Tools
@@ -201,7 +201,7 @@ export function McpServersAdmin({ initialServers }: McpServersAdminProps) {
                       </Button>
                     )}
                   </td>
-                  <td className="px-4 py-2 text-center">
+                  <td className="px-3 py-2 text-center md:px-4">
                     <Button
                       variant="ghost"
                       size="icon"
@@ -215,7 +215,7 @@ export function McpServersAdmin({ initialServers }: McpServersAdminProps) {
                       }
                     </Button>
                   </td>
-                  <td className="px-4 py-2 text-right">
+                  <td className="px-3 py-2 text-right md:px-4">
                     <div className="flex items-center justify-end gap-1">
                       <Button
                         variant="ghost"

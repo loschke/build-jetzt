@@ -124,29 +124,29 @@ export function SkillsAdmin({ initialSkills }: SkillsAdminProps) {
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b bg-muted/50">
-              <th className="px-4 py-2 text-left font-medium">Name</th>
-              <th className="px-4 py-2 text-left font-medium">Slug</th>
-              <th className="px-4 py-2 text-left font-medium">Mode</th>
-              <th className="px-4 py-2 text-left font-medium">Kategorie</th>
-              <th className="px-4 py-2 text-center font-medium">Aktiv</th>
-              <th className="px-4 py-2 text-center font-medium">Sortierung</th>
-              <th className="px-4 py-2 text-right font-medium">Aktionen</th>
+              <th className="px-3 py-2 text-left font-medium md:px-4">Name</th>
+              <th className="hidden px-4 py-2 text-left font-medium md:table-cell">Slug</th>
+              <th className="px-3 py-2 text-left font-medium md:px-4">Mode</th>
+              <th className="hidden px-4 py-2 text-left font-medium md:table-cell">Kategorie</th>
+              <th className="px-3 py-2 text-center font-medium md:px-4">Aktiv</th>
+              <th className="hidden px-4 py-2 text-center font-medium md:table-cell">Sortierung</th>
+              <th className="px-3 py-2 text-right font-medium md:px-4">Aktionen</th>
             </tr>
           </thead>
           <tbody>
             {skills.map((skill) => (
               <tr key={skill.id} className="border-b last:border-0 hover:bg-muted/25">
-                <td className="px-4 py-2 font-medium">{skill.name}</td>
-                <td className="px-4 py-2">
+                <td className="px-3 py-2 font-medium md:px-4">{skill.name}</td>
+                <td className="hidden px-4 py-2 md:table-cell">
                   <code className="rounded bg-muted px-1.5 py-0.5 text-xs">{skill.slug}</code>
                 </td>
-                <td className="px-4 py-2">
+                <td className="px-3 py-2 md:px-4">
                   <Badge variant={skill.mode === "quicktask" ? "default" : "secondary"}>
                     {skill.mode}
                   </Badge>
                 </td>
-                <td className="px-4 py-2 text-muted-foreground">{skill.category ?? "—"}</td>
-                <td className="px-4 py-2 text-center">
+                <td className="hidden px-4 py-2 text-muted-foreground md:table-cell">{skill.category ?? "—"}</td>
+                <td className="px-3 py-2 text-center md:px-4">
                   <Button
                     variant="ghost"
                     size="icon"
@@ -160,8 +160,8 @@ export function SkillsAdmin({ initialSkills }: SkillsAdminProps) {
                     }
                   </Button>
                 </td>
-                <td className="px-4 py-2 text-center text-muted-foreground">{skill.sortOrder}</td>
-                <td className="px-4 py-2 text-right">
+                <td className="hidden px-4 py-2 text-center text-muted-foreground md:table-cell">{skill.sortOrder}</td>
+                <td className="px-3 py-2 text-right md:px-4">
                   <div className="flex items-center justify-end gap-1">
                     <Button
                       variant="ghost"

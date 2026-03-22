@@ -286,7 +286,7 @@ export function ArtifactPanel({
                   type="button"
                   variant="ghost"
                   size="icon"
-                  className="size-7"
+                  className="size-8 md:size-7"
                   onClick={handleSave}
                   disabled={saving}
                   title="Speichern"
@@ -311,7 +311,7 @@ export function ArtifactPanel({
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="size-7"
+                className="size-8 md:size-7"
                 onClick={handleToggleMode}
                 title={mode === "edit" ? "Vorschau" : "Bearbeiten"}
               >
@@ -325,7 +325,7 @@ export function ArtifactPanel({
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="size-7"
+                className="size-8 md:size-7"
                 onClick={handleCopy}
                 title="Kopieren"
               >
@@ -341,7 +341,7 @@ export function ArtifactPanel({
                     type="button"
                     variant="ghost"
                     size="icon"
-                    className="size-7"
+                    className="size-8 md:size-7"
                     title="Herunterladen"
                   >
                     <Download className="size-3.5" />
@@ -378,7 +378,7 @@ export function ArtifactPanel({
               type="button"
               variant="ghost"
               size="icon"
-              className="size-7"
+              className="size-8 md:size-7"
               onClick={async () => {
                 let url: string | undefined
                 try {
@@ -415,10 +415,10 @@ export function ArtifactPanel({
             type="button"
             variant="ghost"
             size="icon"
-            className="size-7"
+            className="size-8 md:size-7"
             onClick={onClose}
           >
-            <X className="size-3.5" />
+            <X className="size-4 md:size-3.5" />
             <span className="sr-only">Schliessen</span>
           </Button>
         </div>

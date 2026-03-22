@@ -94,11 +94,11 @@ export async function buildModelMessages(
           (p.state === "input-available" || p.state === "call") &&
           p.output === undefined
         ) {
-          return { ...p, state: "output-available", output: { skipped: true } }
+          return { ...p, state: "output-available" as const, output: { skipped: true } } as typeof part
         }
         return part
       }),
-  }))
+  })) satisfies UIMessage[]
 
   let modelMessages = fixFilePartsForGateway(
     await convertToModelMessages(cleanedMessages)

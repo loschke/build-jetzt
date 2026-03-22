@@ -55,7 +55,7 @@ export function ArtifactCard({
           </p>
         )}
       </div>
-      <div className="flex shrink-0 items-center gap-1.5 text-xs font-medium text-primary opacity-0 transition-opacity group-hover:opacity-100">
+      <div className="flex shrink-0 items-center gap-1.5 text-xs font-medium text-primary opacity-100 md:opacity-0 transition-opacity group-hover:opacity-100">
         <span>Oeffnen</span>
         <Maximize2 className="size-3.5" />
       </div>
