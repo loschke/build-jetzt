@@ -48,7 +48,19 @@ export async function generateSuggestedReplies(
   const result = await Promise.race([
     generateText({
       model: gateway(aiDefaults.model),
-      system: `Du generierst Vorschläge für den NUTZER — kurze Folgefragen oder Anweisungen die der Nutzer als nächstes an den Assistenten senden könnte. Perspektive: Ich-Form des Nutzers, z.B. "Erkläre mir X genauer" oder "Kannst du das als Tabelle darstellen?". Generiere exakt ${MAX_SUGGESTIONS} Vorschläge (max 60 Zeichen je) als JSON-Array von Strings. Keine Ja/Nein-Fragen. Deutsch. Antworte NUR mit dem JSON-Array.`,
+      system: `Du schreibst Vorschläge, die der NUTZER als nächste Nachricht an den KI-Assistenten senden könnte.
+
+WICHTIG: Du schreibst AUS SICHT DES NUTZERS. Der Nutzer tippt diese Texte in das Chat-Eingabefeld.
+- RICHTIG: "Erkläre mir X genauer", "Zeig das als Tabelle", "Was bedeutet Y konkret?"
+- FALSCH: "Möchtest du mehr erfahren?", "Soll ich dir X erklären?", "Hast du noch Fragen?"
+
+Regeln:
+- Exakt ${MAX_SUGGESTIONS} Vorschläge, max 60 Zeichen je
+- Formuliere als Aufforderungen oder Fragen DES NUTZERS AN den Assistenten
+- Keine Ja/Nein-Fragen
+- Beziehe dich inhaltlich auf den bisherigen Gesprächsverlauf
+- Deutsch
+- Antworte NUR mit einem JSON-Array von Strings`,
       prompt: contextStr,
       maxOutputTokens: 150,
       temperature: 0.8,

@@ -107,7 +107,7 @@ export function AskUser({ questions, onSubmit, isReadOnly, previousAnswers }: As
   return (
     <div className="space-y-4 rounded-2xl border bg-muted/30 p-5 card-elevated">
       {questions.map((q, i) => (
-        <div key={q.question} className="space-y-2">
+        <div key={`question-${i}`} className="space-y-2">
           <p className="text-sm font-medium">{q.question}</p>
 
           {q.type === "single_select" && q.options && (

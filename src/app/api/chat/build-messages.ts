@@ -50,13 +50,17 @@ export function addSystemCacheControl(messages: ModelMessage[], modelId: string)
   })
 }
 
+/** Client-side tools that have no server execute — tool results come via addToolOutput */
+const CLIENT_SIDE_TOOLS = new Set(["ask_user", "content_alternatives"])
+
 /**
  * Build model messages from raw UI messages:
  * 1. Filter non-standard parts
- * 2. Convert to model messages
- * 3. Fix file parts for gateway
- * 4. Prepend system message
- * 5. Add cache control for Anthropic
+ * 2. Fix orphaned client-side tool calls (no result persisted)
+ * 3. Convert to model messages
+ * 4. Fix file parts for gateway
+ * 5. Prepend system message
+ * 6. Add cache control for Anthropic
  */
 export async function buildModelMessages(
   rawMessages: UIMessage[],
@@ -66,12 +70,34 @@ export async function buildModelMessages(
   // Filter out non-standard parts (source-url etc.) before conversion.
   // Keep text, image, file, tool-invocation, step-start, and typed tool parts (tool-*).
   // step-start parts are CRITICAL: convertToModelMessages uses them to split multi-step
-  // responses into separate model messages, ensuring correct tool_use → tool_result pairing
+  // responses into separate model messages, ensuring correct tool_use → tool_result pairing.
+  //
+  // Fix orphaned client-side tool calls: ask_user and content_alternatives have no server
+  // execute, so their results come via addToolOutput and are never persisted to DB.
+  // When a chat is reloaded, these parts have state "input-available" with no output,
+  // causing AI_MissingToolResultsError in convertToModelMessages. We add a synthetic
+  // output so the model knows the tool was called and responded to.
   const cleanedMessages = rawMessages.map((msg) => ({
     ...msg,
-    parts: msg.parts?.filter((part) =>
-      ALLOWED_PART_TYPES.has(part.type) || part.type.startsWith("tool-")
-    ),
+    parts: msg.parts
+      ?.filter((part) =>
+        ALLOWED_PART_TYPES.has(part.type) || part.type.startsWith("tool-")
+      )
+      .map((part) => {
+        const p = part as Record<string, unknown>
+        // Detect orphaned client-side tool parts: type "tool-ask_user" / "tool-content_alternatives"
+        // with state "input-available" (= no result) or "call" (legacy)
+        if (
+          typeof p.type === "string" &&
+          p.type.startsWith("tool-") &&
+          CLIENT_SIDE_TOOLS.has(p.type.slice(5)) &&
+          (p.state === "input-available" || p.state === "call") &&
+          p.output === undefined
+        ) {
+          return { ...p, state: "output-available", output: { skipped: true } }
+        }
+        return part
+      }),
   }))
 
   let modelMessages = fixFilePartsForGateway(
