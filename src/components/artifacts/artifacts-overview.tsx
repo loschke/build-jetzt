@@ -11,6 +11,7 @@ import {
   Image as ImageIcon,
   Layers,
   Loader2,
+  Info,
   type LucideIcon,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -53,6 +54,15 @@ const TYPE_COLORS: Record<string, string> = {
   quiz: "bg-violet-500/15 text-violet-700 dark:text-violet-400",
   review: "bg-amber-500/15 text-amber-700 dark:text-amber-400",
   image: "bg-pink-500/15 text-pink-700 dark:text-pink-400",
+}
+
+const TYPE_PREVIEW_BG: Record<string, string> = {
+  markdown: "bg-blue-500/8 dark:bg-blue-500/10",
+  html: "bg-orange-500/8 dark:bg-orange-500/10",
+  code: "bg-emerald-500/8 dark:bg-emerald-500/10",
+  quiz: "bg-violet-500/8 dark:bg-violet-500/10",
+  review: "bg-amber-500/8 dark:bg-amber-500/10",
+  image: "bg-pink-500/8 dark:bg-pink-500/10",
 }
 
 const FILTER_TYPES = [
@@ -131,6 +141,10 @@ export function ArtifactsOverview() {
           <Layers className="size-5 text-muted-foreground" />
           <h1 className="text-lg font-semibold">Meine Dateien</h1>
         </div>
+        <div className="mt-3 flex items-center gap-2 rounded-md border border-border bg-secondary px-3 py-2 text-xs text-muted-foreground">
+          <Info className="size-3.5 shrink-0" />
+          Dateien werden aus Datenschutz- und Datenhygiene-Gründen automatisch nach 90 Tagen gelöscht.
+        </div>
       </div>
 
       {/* Content */}
@@ -152,9 +166,15 @@ export function ArtifactsOverview() {
 
         {/* Loading */}
         {isLoading && (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <div key={i} className="h-28 animate-pulse rounded-lg border bg-muted" />
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+              <div key={i} className="animate-pulse rounded-lg border bg-muted">
+                <div className="aspect-[4/3]" />
+                <div className="p-2.5">
+                  <div className="mb-1.5 h-3.5 w-3/4 rounded bg-muted-foreground/10" />
+                  <div className="h-3 w-1/2 rounded bg-muted-foreground/10" />
+                </div>
+              </div>
             ))}
           </div>
         )}
@@ -174,41 +194,47 @@ export function ArtifactsOverview() {
         {/* Grid */}
         {!isLoading && artifacts.length > 0 && (
           <>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
               {artifacts.map((artifact) => {
                 const Icon = TYPE_ICON_MAP[artifact.type] ?? FileText
+                const isImage = artifact.type === "image" && artifact.fileUrl
                 return (
                   <button
                     key={artifact.id}
                     type="button"
                     onClick={() => handleCardClick(artifact)}
-                    className="card-interactive flex flex-col items-start gap-2 rounded-lg border p-4 text-left transition-colors hover:bg-muted/50"
+                    className="card-interactive flex flex-col overflow-hidden rounded-lg border text-left transition-colors hover:bg-muted/50"
                   >
-                    {/* Image thumbnail */}
-                    {artifact.type === "image" && artifact.fileUrl && (
-                      <div className="mb-1 w-full overflow-hidden rounded-md bg-muted">
+                    {/* Preview area — uniform height for all types */}
+                    <div className={`relative aspect-[4/3] w-full overflow-hidden ${isImage ? "bg-muted" : TYPE_PREVIEW_BG[artifact.type] ?? "bg-muted"}`}>
+                      {isImage ? (
                         <img
-                          src={artifact.fileUrl}
+                          src={artifact.fileUrl!}
                           alt={artifact.title}
-                          className="aspect-video w-full object-cover"
+                          className="size-full object-cover"
                           loading="lazy"
                         />
-                      </div>
-                    )}
-                    <div className="flex w-full items-center gap-2">
-                      <Icon className="size-4 shrink-0 text-muted-foreground" />
-                      <span className="truncate text-sm font-medium">{artifact.title}</span>
-                    </div>
-                    {artifact.chatTitle && (
-                      <p className="truncate text-xs text-muted-foreground">
-                        {artifact.chatTitle}
-                      </p>
-                    )}
-                    <div className="flex w-full items-center justify-between text-xs">
-                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium ${TYPE_COLORS[artifact.type] ?? "bg-muted text-muted-foreground"}`}>
+                      ) : (
+                        <div className="flex size-full items-center justify-center">
+                          <Icon className="size-8 opacity-30" />
+                        </div>
+                      )}
+                      {/* Type badge overlay */}
+                      <span className={`absolute bottom-1.5 left-1.5 inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium backdrop-blur-sm ${TYPE_COLORS[artifact.type] ?? "bg-muted text-muted-foreground"}`}>
                         {TYPE_LABELS[artifact.type] ?? artifact.type}
                       </span>
-                      <span className="text-muted-foreground/70">{formatRelativeDate(artifact.createdAt)}</span>
+                    </div>
+                    {/* Info */}
+                    <div className="flex flex-col gap-0.5 p-2.5">
+                      <span className="line-clamp-1 text-xs font-medium">{artifact.title}</span>
+                      <div className="flex items-center justify-between">
+                        {artifact.chatTitle ? (
+                          <span className="line-clamp-1 text-[11px] text-muted-foreground">{artifact.chatTitle}</span>
+                        ) : (
+                          <span />
+                        )}
+                        <span className="shrink-0 text-[11px] text-muted-foreground/60">{formatRelativeDate(artifact.createdAt)}</span>
+                      </div>
                     </div>
                   </button>
                 )

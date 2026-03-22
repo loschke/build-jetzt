@@ -52,19 +52,19 @@ Der System-Prompt steht hier als Markdown-Content.
 
 ### Felder
 
-| Feld | Pflicht | Typ | Beschreibung |
-|------|---------|-----|-------------|
-| `name` | ja | String | Anzeigename in der UI |
-| `slug` | ja | String | Eindeutige ID, kebab-case, wird fuer Upsert verwendet |
-| `description` | ja | String | Kurzbeschreibung fuer die Experten-Auswahl |
-| `icon` | nein | String | Lucide Icon Name (z.B. `Code`, `Search`, `PenLine`, `BookOpen`, `Sparkles`, `BarChart3`, `ImageIcon`, `Brain`, `Lightbulb`, `Target`) |
-| `skillSlugs` | nein | String[] | Slugs der Skills die dieser Experte nutzen kann |
-| `modelPreference` | nein | String | Gateway Model-ID (z.B. `anthropic/claude-opus-4-6`). Null = User-Default |
-| `temperature` | nein | Number | 0.0 - 1.0. Niedriger = praeziser, hoeher = kreativer |
-| `allowedTools` | nein | String[] | Tool-Whitelist. Leer = alle Tools erlaubt |
-| `mcpServerIds` | nein | String[] | IDs der MCP-Server die dieser Experte nutzen darf |
-| `isPublic` | nein | Boolean | Default: true. False = nur fuer den Ersteller sichtbar |
-| `sortOrder` | nein | Number | Reihenfolge in der UI (0 = ganz oben) |
+| Feld              | Pflicht | Typ      | Beschreibung                                                                                                                          |
+| ----------------- | ------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `name`            | ja      | String   | Anzeigename in der UI                                                                                                                 |
+| `slug`            | ja      | String   | Eindeutige ID, kebab-case, wird fuer Upsert verwendet                                                                                 |
+| `description`     | ja      | String   | Kurzbeschreibung fuer die Experten-Auswahl                                                                                            |
+| `icon`            | nein    | String   | Lucide Icon Name (z.B. `Code`, `Search`, `PenLine`, `BookOpen`, `Sparkles`, `BarChart3`, `ImageIcon`, `Brain`, `Lightbulb`, `Target`) |
+| `skillSlugs`      | nein    | String[] | Slugs der Skills die dieser Experte nutzen kann                                                                                       |
+| `modelPreference` | nein    | String   | Gateway Model-ID (z.B. `anthropic/claude-opus-4-6`). Null = User-Default                                                              |
+| `temperature`     | nein    | Number   | 0.0 - 1.0. Niedriger = praeziser, hoeher = kreativer                                                                                  |
+| `allowedTools`    | nein    | String[] | Tool-Whitelist. Leer = alle Tools erlaubt                                                                                             |
+| `mcpServerIds`    | nein    | String[] | IDs der MCP-Server die dieser Experte nutzen darf                                                                                     |
+| `isPublic`        | nein    | Boolean  | Default: true. False = nur fuer den Ersteller sichtbar                                                                                |
+| `sortOrder`       | nein    | Number   | Reihenfolge in der UI (0 = ganz oben)                                                                                                 |
 
 ### Content (System-Prompt)
 
@@ -186,18 +186,18 @@ Beschreibung des gewuenschten Outputs.
 
 ### Felder
 
-| Feld | Pflicht | Typ | Beschreibung |
-|------|---------|-----|-------------|
-| `name` | ja | String | Anzeigename |
-| `slug` | ja | String | Eindeutige ID, kebab-case |
-| `description` | ja | String | Kurzbeschreibung |
-| `mode` | nein | `skill` oder `quicktask` | Default: `skill` |
-| `category` | nein | String | Nur Quicktasks: Gruppierung in der UI (z.B. `Content`, `Workflow`, `Social Media`) |
-| `icon` | nein | String | Nur Quicktasks: Lucide Icon Name |
-| `outputAsArtifact` | nein | Boolean | Nur Quicktasks: Ergebnis als Artifact anzeigen |
-| `temperature` | nein | Number | 0.0 - 1.0 |
-| `modelId` | nein | String | Spezifisches Modell erzwingen (Gateway-ID) |
-| `fields` | nein | Array | Nur Quicktasks: Formular-Felder (siehe unten) |
+| Feld               | Pflicht | Typ                      | Beschreibung                                                                       |
+| ------------------ | ------- | ------------------------ | ---------------------------------------------------------------------------------- |
+| `name`             | ja      | String                   | Anzeigename                                                                        |
+| `slug`             | ja      | String                   | Eindeutige ID, kebab-case                                                          |
+| `description`      | ja      | String                   | Kurzbeschreibung                                                                   |
+| `mode`             | nein    | `skill` oder `quicktask` | Default: `skill`                                                                   |
+| `category`         | nein    | String                   | Nur Quicktasks: Gruppierung in der UI (z.B. `Content`, `Workflow`, `Social Media`) |
+| `icon`             | nein    | String                   | Nur Quicktasks: Lucide Icon Name                                                   |
+| `outputAsArtifact` | nein    | Boolean                  | Nur Quicktasks: Ergebnis als Artifact anzeigen                                     |
+| `temperature`      | nein    | Number                   | 0.0 - 1.0                                                                          |
+| `modelId`          | nein    | String                   | Spezifisches Modell erzwingen (Gateway-ID)                                         |
+| `fields`           | nein    | Array                    | Nur Quicktasks: Formular-Felder (siehe unten)                                      |
 
 ### Field-Schema (Quicktasks)
 
@@ -220,13 +220,13 @@ fields:
 
 ### Skill vs. Quicktask
 
-| | Skill | Quicktask |
-|---|-------|-----------|
-| Aktivierung | KI laedt on-demand via `load_skill` Tool | User fuellt Formular aus |
-| Formular | Nein | Ja (`fields`) |
-| Template-Variablen | Nein (Content wird 1:1 geladen) | Ja (`{{var}}`) |
-| Zuordnung | Via Expert `skillSlugs` | Direkt in der UI waehlbar |
-| Typisch fuer | Methodenwissen, Analyse-Frameworks | Konkrete Aufgaben mit Input |
+|                    | Skill                                    | Quicktask                   |
+| ------------------ | ---------------------------------------- | --------------------------- |
+| Aktivierung        | KI laedt on-demand via `load_skill` Tool | User fuellt Formular aus    |
+| Formular           | Nein                                     | Ja (`fields`)               |
+| Template-Variablen | Nein (Content wird 1:1 geladen)          | Ja (`{{var}}`)              |
+| Zuordnung          | Via Expert `skillSlugs`                  | Direkt in der UI waehlbar   |
+| Typisch fuer       | Methodenwissen, Analyse-Frameworks       | Konkrete Aufgaben mit Input |
 
 ---
 
@@ -259,33 +259,33 @@ sortOrder: 0
 
 ### Felder
 
-| Feld | Pflicht | Typ | Beschreibung |
-|------|---------|-----|-------------|
-| `name` | ja | String | Anzeigename in der UI |
-| `modelId` | ja | String | Gateway-ID: `provider/modell` (z.B. `anthropic/claude-sonnet-4-6`) |
-| `provider` | ja | String | Anbietername: `Anthropic`, `Google`, `OpenAI`, `Mistral`, `xAI`, `DeepSeek` |
-| `categories` | ja | String[] | Mindestens eine aus: `enterprise`, `allrounder`, `creative`, `coding`, `analysis`, `fast`, `image` |
-| `region` | ja | `eu` oder `us` | Datenschutz-Region. EU-Modelle fuer Privacy-Routing |
-| `contextWindow` | ja | Number | Max. Input-Tokens |
-| `maxOutputTokens` | ja | Number | Max. Output-Tokens |
-| `isDefault` | nein | Boolean | Genau ein Modell sollte Default sein |
-| `capabilities` | nein | Object | `vision: true` und/oder `fileInput: true` |
-| `inputPrice` | nein | Object | `per1m: X.XX` — Preis pro 1M Input-Tokens in USD |
-| `outputPrice` | nein | Object | `per1m: X.XX` — Preis pro 1M Output-Tokens in USD |
-| `isActive` | nein | Boolean | Default: true. False = in DB aber nicht nutzbar |
-| `sortOrder` | nein | Number | Reihenfolge in der UI |
+| Feld              | Pflicht | Typ            | Beschreibung                                                                                       |
+| ----------------- | ------- | -------------- | -------------------------------------------------------------------------------------------------- |
+| `name`            | ja      | String         | Anzeigename in der UI                                                                              |
+| `modelId`         | ja      | String         | Gateway-ID: `provider/modell` (z.B. `anthropic/claude-sonnet-4-6`)                                 |
+| `provider`        | ja      | String         | Anbietername: `Anthropic`, `Google`, `OpenAI`, `Mistral`, `xAI`, `DeepSeek`                        |
+| `categories`      | ja      | String[]       | Mindestens eine aus: `enterprise`, `allrounder`, `creative`, `coding`, `analysis`, `fast`, `image` |
+| `region`          | ja      | `eu` oder `us` | Datenschutz-Region. EU-Modelle fuer Privacy-Routing                                                |
+| `contextWindow`   | ja      | Number         | Max. Input-Tokens                                                                                  |
+| `maxOutputTokens` | ja      | Number         | Max. Output-Tokens                                                                                 |
+| `isDefault`       | nein    | Boolean        | Genau ein Modell sollte Default sein                                                               |
+| `capabilities`    | nein    | Object         | `vision: true` und/oder `fileInput: true`                                                          |
+| `inputPrice`      | nein    | Object         | `per1m: X.XX` — Preis pro 1M Input-Tokens in USD                                                   |
+| `outputPrice`     | nein    | Object         | `per1m: X.XX` — Preis pro 1M Output-Tokens in USD                                                  |
+| `isActive`        | nein    | Boolean        | Default: true. False = in DB aber nicht nutzbar                                                    |
+| `sortOrder`       | nein    | Number         | Reihenfolge in der UI                                                                              |
 
 ### Kategorien erklaert
 
-| Kategorie | Bedeutung | Beispiel |
-|-----------|-----------|---------|
-| `enterprise` | Grosse, leistungsstarke Modelle | Claude Opus, Gemini Pro |
+| Kategorie    | Bedeutung                                      | Beispiel                     |
+| ------------ | ---------------------------------------------- | ---------------------------- |
+| `enterprise` | Grosse, leistungsstarke Modelle                | Claude Opus, Gemini Pro      |
 | `allrounder` | Gute Balance aus Qualitaet und Geschwindigkeit | Claude Sonnet, Mistral Large |
-| `creative` | Gut fuer Texte, Ideen, kreative Aufgaben | Claude Opus |
-| `coding` | Optimiert fuer Code-Generierung | Gemini Flash, Claude Opus |
-| `analysis` | Stark bei Analyse und Reasoning | Claude Opus, Gemini Pro |
-| `fast` | Schnelle, guenstige Modelle | Claude Haiku, Gemini Flash |
-| `image` | Bildgenerierung / Bildverstaendnis | Gemini Pro Image |
+| `creative`   | Gut fuer Texte, Ideen, kreative Aufgaben       | Claude Opus                  |
+| `coding`     | Optimiert fuer Code-Generierung                | Gemini Flash, Claude Opus    |
+| `analysis`   | Stark bei Analyse und Reasoning                | Claude Opus, Gemini Pro      |
+| `fast`       | Schnelle, guenstige Modelle                    | Claude Haiku, Gemini Flash   |
+| `image`      | Bildgenerierung / Bildverstaendnis             | Gemini Pro Image             |
 
 Ein Modell kann mehrere Kategorien haben.
 
@@ -318,18 +318,18 @@ sortOrder: 0
 
 ### Felder
 
-| Feld | Pflicht | Typ | Beschreibung |
-|------|---------|-----|-------------|
-| `name` | ja | String | Anzeigename |
-| `serverId` | ja | String | Eindeutige ID, wird als Tool-Prefix verwendet (z.B. `github` → `github__list_repos`) |
-| `url` | ja | String | MCP-Endpoint URL. Unterstuetzt `${VAR}` Syntax fuer ENV-Variablen |
-| `description` | nein | String | Beschreibung fuer Admin-UI |
-| `transport` | nein | `sse` oder `http` | Default: `sse` |
-| `headers` | nein | Object | Auth-Header. Werte unterstuetzen `${VAR}` Syntax |
-| `envVar` | nein | String | ENV-Variable die diesen Server aktiviert. Server nur aktiv wenn gesetzt |
-| `enabledTools` | nein | String[] | Tool-Whitelist. Null = alle Tools des Servers |
-| `isActive` | nein | Boolean | Default: true |
-| `sortOrder` | nein | Number | Reihenfolge |
+| Feld           | Pflicht | Typ               | Beschreibung                                                                         |
+| -------------- | ------- | ----------------- | ------------------------------------------------------------------------------------ |
+| `name`         | ja      | String            | Anzeigename                                                                          |
+| `serverId`     | ja      | String            | Eindeutige ID, wird als Tool-Prefix verwendet (z.B. `github` → `github__list_repos`) |
+| `url`          | ja      | String            | MCP-Endpoint URL. Unterstuetzt `${VAR}` Syntax fuer ENV-Variablen                    |
+| `description`  | nein    | String            | Beschreibung fuer Admin-UI                                                           |
+| `transport`    | nein    | `sse` oder `http` | Default: `sse`                                                                       |
+| `headers`      | nein    | Object            | Auth-Header. Werte unterstuetzen `${VAR}` Syntax                                     |
+| `envVar`       | nein    | String            | ENV-Variable die diesen Server aktiviert. Server nur aktiv wenn gesetzt              |
+| `enabledTools` | nein    | String[]          | Tool-Whitelist. Null = alle Tools des Servers                                        |
+| `isActive`     | nein    | Boolean           | Default: true                                                                        |
+| `sortOrder`    | nein    | Number            | Reihenfolge                                                                          |
 
 ### ENV-Variablen-Syntax
 
