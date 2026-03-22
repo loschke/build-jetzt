@@ -17,6 +17,8 @@ export const messagePartSchema = z.object({
   state: z.string().max(50).optional(),
   input: z.unknown().optional(),
   output: z.unknown().optional(),
+  args: z.unknown().optional(),
+  result: z.unknown().optional(),
   // Known fields for source parts
   url: z.string().max(6_000_000).optional(), // data-URLs can be large
   title: z.string().max(500).optional(),
