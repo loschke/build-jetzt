@@ -1,12 +1,12 @@
 ---
 name: Konkurrenzanalyse
 slug: competitor-research
-description: Systematische Wettbewerbsanalyse mit Recherche, Vergleich und visueller Aufbereitung als HTML-Artifact
+description: Systematische Wettbewerbsanalyse mit Recherche, Vergleich und visueller Aufbereitung als HTML-Report
 ---
 
-# Konkurrenzanalyse Skill
+# Konkurrenzanalyse
 
-Du führst eine strukturierte Wettbewerbsanalyse durch. Nutze die verfügbaren Tools aktiv.
+Du führst eine strukturierte Wettbewerbsanalyse durch. Nutze die verfügbaren Tools aktiv — recherchiere echte Daten, rate nicht.
 
 ## Schritt 1: Briefing
 
@@ -14,7 +14,7 @@ Nutze `ask_user` um folgende Informationen zu sammeln:
 
 - **Branche/Produkt:** Was genau wird verglichen?
 - **Eigenes Unternehmen:** Name und URL (falls vorhanden)
-- **Bekannte Wettbewerber:** Welche Konkurrenten kennt der User bereits? (Freitext)
+- **Bekannte Wettbewerber:** Welche Konkurrenten kennt der Nutzer bereits? (Freitext)
 
 ## Schritt 2: Recherche
 
@@ -25,16 +25,16 @@ Nutze `web_search` für jeden genannten Wettbewerber und das eigene Unternehmen:
 - Zielgruppe und Differenzierung
 - Stärken und Schwächen aus öffentlichen Quellen
 
-Wenn der User keine Wettbewerber nennt, recherchiere die Top 3-5 Wettbewerber in der genannten Branche.
+Wenn der Nutzer keine Wettbewerber nennt, recherchiere die Top 3-5 Wettbewerber in der genannten Branche.
 
-Nutze `web_fetch` um konkrete Details von den Websites der Wettbewerber zu extrahieren (Pricing-Seiten, About-Seiten, Feature-Listen).
+Nutze `web_fetch` um konkrete Details von den Websites der Wettbewerber zu extrahieren: Pricing-Seiten, About-Seiten, Feature-Listen. Lies die Seiten wirklich — arbeite nicht aus dem Snippet.
 
 ## Schritt 3: Analyse
 
 Bewerte jeden Wettbewerber nach:
 
 | Kriterium | Beschreibung |
-|-----------|-------------|
+|---|---|
 | Positionierung | Wie positionieren sie sich im Markt? |
 | Pricing | Preismodell und -niveau |
 | Stärken | Was machen sie besonders gut? |
@@ -44,28 +44,26 @@ Bewerte jeden Wettbewerber nach:
 
 ## Schritt 4: Ergebnis als Artifact
 
-Erstelle ein HTML-Artifact (`create_artifact` mit type `html`) das folgende Elemente enthält:
-
-### Aufbau des Dashboards
+Erstelle ein HTML-Artifact (`create_artifact` mit type `html`) mit:
 
 1. **Header** mit Titel der Analyse und Datum
-2. **Übersichtstabelle** — Alle Wettbewerber im Vergleich (Zeilen = Wettbewerber, Spalten = Kriterien)
-3. **Stärken/Schwächen-Matrix** — Visuelle Darstellung pro Wettbewerber (farbcodiert: grün = Stärke, rot = Schwäche, gelb = neutral)
-4. **Positionierungsvergleich** — Kurze Textblöcke die zeigen wie sich jeder Wettbewerber positioniert
-5. **Handlungsempfehlungen** — 3-5 konkrete Empfehlungen basierend auf den gefundenen Lücken
+2. **Übersichtstabelle** — Alle Wettbewerber im Vergleich
+3. **Stärken/Schwächen-Matrix** — Farbcodiert: grün = Stärke, rot = Schwäche, gelb = neutral
+4. **Positionierungsvergleich** — Wie positioniert sich jeder Wettbewerber?
+5. **Handlungsempfehlungen** — 3-5 konkrete Empfehlungen basierend auf gefundenen Lücken
 6. **Quellenverzeichnis** — Links zu allen recherchierten Seiten
 
-### Design-Vorgaben für das HTML
+### Design-Vorgaben
 
 - Dunkles, professionelles Design (dark background, helle Schrift)
 - Responsiv, lesbar auf Desktop und Mobile
 - Tabellen mit alternierenden Zeilenfarben
-- Farbcodierung für Bewertungen (CSS-Klassen, kein Inline-Style-Spam)
-- Keine externen Dependencies, alles inline (CSS im `<style>` Tag)
-- Saubere Typografie: System-Font-Stack
+- Farbcodierung für Bewertungen
+- Keine externen Dependencies, alles inline CSS
+- Der Report soll direkt als PDF exportierbar sein
 
 ## Wichtig
 
 - Recherchiere gründlich. Lieber weniger Wettbewerber mit echten Daten als viele mit Vermutungen.
 - Markiere klar was recherchiert und was geschätzt ist.
-- Das Artifact soll sofort nutzbar sein — der User soll es als PDF exportieren oder in einer Präsentation verwenden können.
+- Nenne die Quellen. Jede Aussage über einen Wettbewerber sollte nachprüfbar sein.
