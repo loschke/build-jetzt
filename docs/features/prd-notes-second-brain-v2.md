@@ -1,7 +1,8 @@
 # PRD: Notes / Second Brain System
 
 > Status: **Geplant**
-> Erstellt: 2026-03-21
+> Erstellt: 2026-03-21, aktualisiert: 2026-03-22
+> Voraussetzung für: lernen.diy Phase 4 (siehe `prd-lernen-diy-v1.md`)
 
 ---
 
@@ -17,6 +18,7 @@ Die Plattform hat mehrere Wissens-Schichten (Mem0 Memories, Project Documents, A
 | **Project Documents** | Injizierter Kontext für AI (projekt-gebunden) | Erfordert Projekt, `projectId` FK mit Cascade Delete, kein `userId` |
 | **Artifacts** | Chat-Outputs (per-Chat, versioniert) | Ephemer, an Chat gebunden, kein übergreifender Zugriff |
 | **Custom Instructions** | User-Präferenzen für KI-Verhalten | Ein einziges Textfeld, kein strukturiertes Wissen |
+| **Agent Skills** | Kuratiertes Systemwissen (read-only) | Admin-gepflegt, nicht user-owned |
 
 ### Verworfener Ansatz: Vercel Bash-Tool
 
@@ -48,6 +50,7 @@ Ein **DB-basiertes Notizsystem** (Postgres/Neon) mit user-globalen Notizen, opti
 | Notes vs. Project Documents? | Project Docs = Referenzmaterial für AI-Kontext-Injection. Notes = persönliche Wissensbasis die über Zeit wächst. |
 | Notes vs. Artifacts? | Artifacts = Chat-Outputs (per-Chat). Notes = übergreifend, persistent. Später: "Als Notiz speichern" Aktion. |
 | Notes vs. Projects? | Notes haben optionale `projectId` FK. Projekt-Chats wissen über zugehörige Notizen via Tools. |
+| Notes vs. Skills? | Skills = kuratiertes Systemwissen, admin-gepflegt, read-only für KI. Notes = persönliches Wissen, user-owned, read-write für KI. In lernen.diy: Skills sind das Lehrmaterial, Notes das Lern-Notizbuch. |
 
 ---
 
@@ -232,7 +235,93 @@ Opt-out Pattern (Default enabled), da Notes rein DB-basiert sind ohne externe De
 
 ---
 
-## 6. Phasenplan
+## 6. Use Case: lernen.diy
+
+> Dieser Abschnitt beschreibt die Integration von Notes in die lernen.diy-Instanz (siehe `prd-lernen-diy-v1.md`).
+
+### Zwei-Schichten-Wissensarchitektur
+
+In lernen.diy existieren zwei komplementäre Wissenssysteme:
+
+| Schicht | System | Ownership | Zugriff | Zweck |
+|---|---|---|---|---|
+| **Curriculum** | Agent Skills | Admin (kuratiert) | `load_skill` (read-only) | Was die Plattform lehrt |
+| **Lern-Notizbuch** | Notes | User (persönlich) | 5 Note-Tools (read-write) | Was der Lernende sich merkt |
+
+Skills sind das Lehrmaterial. Notes sind das persönliche Notizbuch. Beides zusammen ermöglicht eine Lernerfahrung, bei der die KI sowohl auf geprüftes Fachwissen als auch auf den individuellen Lernstand zugreifen kann.
+
+### Lernbegleiter-Integration
+
+Der Lernbegleiter-Expert (siehe lernen.diy PRD) erhält die 5 Note-Tools in seiner `allowedTools`-Liste. Sein System-Prompt wird um folgenden Absatz erweitert:
+
+```markdown
+## Lern-Notizbuch
+
+Der Lernende hat ein persönliches Notizbuch mit {noteCount} Notizen.
+
+Nutze Notes aktiv als Lernwerkzeug:
+- **Nach Erklärungen:** "Soll ich die wichtigsten Punkte als Notiz speichern?"
+- **Bei Übungen:** "Dein Prompt-Experiment könnte eine gute Notiz für später sein."
+- **Bei Wiederbesuchen:** Prüfe via search_notes ob der Lernende zu diesem Thema schon Notizen hat und knüpfe daran an.
+- **Bei Zusammenfassungen:** Biete an, eine strukturierte Zusammenfassung als Notiz anzulegen.
+
+Erstelle Notizen mit sinnvollen Tags:
+- Thematisch: #4k-framework, #prompting, #compliance
+- Typ: #zusammenfassung, #uebung, #prompt-experiment, #erkenntnis
+- Level: #grundlagen, #fortgeschritten
+```
+
+### Beispiel-Interaktion
+
+```
+User: "Erkläre mir das 4K Framework"
+
+Lernbegleiter:
+  → load_skill("4k-framework-overview")
+  → Erklärt die vier Dimensionen
+  → create_quiz (Verständnisfragen)
+  → User beantwortet Quiz
+
+Lernbegleiter:
+  "Du hast 3 von 4 richtig. Komposition war noch unsicher.
+   Soll ich dir eine Zusammenfassung als Notiz speichern?"
+
+User: "Ja bitte"
+
+Lernbegleiter:
+  → create_note(
+      title: "4K Framework — Zusammenfassung",
+      content: "## Die vier Dimensionen\n\n- **Konzept:** ...",
+      tags: ["4k-framework", "zusammenfassung", "grundlagen"]
+    )
+  "Gespeichert. Beim nächsten Mal können wir uns Komposition genauer anschauen."
+
+--- Nächste Session ---
+
+User: "Ich will heute Komposition lernen"
+
+Lernbegleiter:
+  → search_notes(query: "komposition", tags: ["4k-framework"])
+  → Findet die vorherige Notiz
+  → read_note(noteId)
+  "Letztes Mal hattest du dir notiert, dass Komposition noch unsicher war.
+   Lass uns da weitermachen..."
+```
+
+### Empfohlene Tagging-Konvention für lernen.diy
+
+Keine erzwungene Taxonomie, aber der Lernbegleiter folgt einer konsistenten Konvention:
+
+| Tag-Typ | Beispiele | Zweck |
+|---|---|---|
+| Thema | `#4k-framework`, `#prompting`, `#eakaf`, `#compliance` | Inhaltliche Zuordnung |
+| Typ | `#zusammenfassung`, `#uebung`, `#prompt-experiment`, `#erkenntnis`, `#cheatsheet` | Art der Notiz |
+| Level | `#grundlagen`, `#fortgeschritten` | Schwierigkeitsgrad |
+| Status | `#todo`, `#vertiefen` | Offene Punkte |
+
+---
+
+## 7. Phasenplan
 
 ### Phase 1: Schema + API + Feature Flag (Core CRUD)
 
@@ -284,9 +373,19 @@ Opt-out Pattern (Default enabled), da Notes rein DB-basiert sind ohne externe De
 
 **Ergebnis:** Schnelle Volltextsuche, nahtlose Integration mit Chat und Artifacts.
 
+### Phase 6: lernen.diy-Integration
+
+1. Note-Tools in Lernbegleiter-Expert `allowedTools` aufnehmen
+2. System-Prompt-Erweiterung (Lern-Notizbuch-Absatz, siehe Abschnitt 6)
+3. Tagging-Konvention in System-Prompt verankern
+4. Testen: Notiz-Erstellung nach Lerneinheit
+5. Testen: Fortführung basierend auf bestehenden Notizen
+
+**Ergebnis:** Notes funktionieren als persönliches Lern-Notizbuch in lernen.diy.
+
 ---
 
-## 7. Datei-Übersicht
+## 8. Datei-Übersicht
 
 ### Neue Dateien (19)
 
@@ -326,7 +425,7 @@ Opt-out Pattern (Default enabled), da Notes rein DB-basiert sind ohne externe De
 
 ---
 
-## 8. Bewusst nicht enthalten
+## 9. Bewusst nicht enthalten
 
 - **Kein Embedding-basierter Search.** Mem0 deckt semantische Suche ab. Notes nutzen Keyword/Tag-Suche.
 - **Kein Ordner-System.** Tags sind flexibler und vermeiden Single-Categorization-Problem.
@@ -335,10 +434,11 @@ Opt-out Pattern (Default enabled), da Notes rein DB-basiert sind ohne externe De
 - **Keine Backlinks / Graph-View.** Obsidian-Feature das in einer Chat-Plattform keinen Mehrwert bringt.
 - **Keine Import/Export-Funktion in Phase 1–3.** Kann später als Admin-Feature ergänzt werden.
 - **Kein Note-Versioning.** Anders als Artifacts — Notizen sind living documents, nicht versionierte Outputs.
+- **Keine System-Level Notes.** Alle Notes sind user-owned. Kuratierte Inhalte laufen über Skills.
 
 ---
 
-## 9. Referenz-Patterns
+## 10. Referenz-Patterns
 
 Bestehende Dateien die als Vorlage dienen:
 
@@ -351,3 +451,10 @@ Bestehende Dateien die als Vorlage dienen:
 | Übersichts-Page | `src/app/artifacts/page.tsx` |
 | Editor | `src/components/assistant/artifact-editor.tsx` |
 | Feature Flag | `src/config/features.ts` (bestehendes Pattern) |
+
+---
+
+## Querverweise
+
+- **lernen.diy PRD** (`prd-lernen-diy-v1.md`): Phase 4 referenziert dieses Dokument. Notes werden dort als "Lern-Notizbuch" integriert.
+- **Platform Overview** (`platform-overview.md`): Technische Interna der Plattform, auf der Notes aufbauen.

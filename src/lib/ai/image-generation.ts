@@ -1,12 +1,17 @@
 /**
  * Image generation wrapper around AI SDK generateImage().
  * Uses @ai-sdk/google direct provider (not gateway — generateImage is not supported via gateway).
+ *
+ * Model resolution: DB (category "image") → FALLBACK_IMAGE_MODEL.
+ * DB stores gateway-style IDs (e.g. "google/gemini-3.1-flash-image-preview"),
+ * the google/ prefix is stripped for the @ai-sdk/google provider.
  */
 
 import { generateImage } from "ai"
 import { google } from "@ai-sdk/google"
+import { getImageModel } from "@/config/models"
 
-const IMAGE_MODEL = "gemini-2.5-flash-image"
+const FALLBACK_IMAGE_MODEL = "gemini-2.5-flash-image"
 const IMAGE_TIMEOUT_MS = 60_000
 
 export interface GenerateImageParams {
@@ -23,6 +28,24 @@ export interface GenerateImageParams {
 export interface GenerateImageResult {
   base64: string
   mimeType: string
+  /** The resolved model ID (gateway format, e.g. "google/gemini-3.1-flash-image-preview") */
+  modelId: string
+}
+
+/**
+ * Resolve the image model ID from the model registry.
+ * Strips the "google/" prefix for the @ai-sdk/google provider (same pattern as Mistral in privacy-provider.ts).
+ */
+async function resolveImageModelId(): Promise<{ providerModelId: string; gatewayModelId: string }> {
+  const dbModel = await getImageModel()
+  if (dbModel) {
+    const providerModelId = dbModel.id.replace(/^google\//, "")
+    return { providerModelId, gatewayModelId: dbModel.id }
+  }
+  return {
+    providerModelId: FALLBACK_IMAGE_MODEL,
+    gatewayModelId: `google/${FALLBACK_IMAGE_MODEL}`,
+  }
 }
 
 /**
@@ -50,9 +73,11 @@ export async function generateImageFromPrompt(
       }
     : fullPrompt
 
+  const { providerModelId, gatewayModelId } = await resolveImageModelId()
+
   const result = await Promise.race([
     generateImage({
-      model: google.image(IMAGE_MODEL),
+      model: google.image(providerModelId),
       prompt,
       aspectRatio: params.aspectRatio ?? "1:1",
     }),
@@ -69,5 +94,6 @@ export async function generateImageFromPrompt(
   return {
     base64: image.base64,
     mimeType: "image/png",
+    modelId: gatewayModelId,
   }
 }

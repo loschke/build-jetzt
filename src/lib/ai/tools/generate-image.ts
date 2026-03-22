@@ -110,13 +110,14 @@ export function generateImageTool(chatId: string, userId: string, uploadedImages
         }
       }
 
-      // 2. Generate image
+      // 2. Generate image (model resolved from DB registry)
       const result = await generateImageFromPrompt({
         prompt,
         aspectRatio,
         style,
         referenceImages: referenceImages.length > 0 ? referenceImages : undefined,
       })
+      const resolvedModelId = result.modelId
 
       // 3. Upload to R2 or create data URL
       let imageUrl: string
@@ -195,7 +196,7 @@ export function generateImageTool(chatId: string, userId: string, uploadedImages
           const { deductCredits } = await import("@/lib/db/queries/credits")
           const { calculateImageCredits } = await import("@/lib/credits")
           await deductCredits(userId, calculateImageCredits(), {
-            modelId: "google/gemini-2.5-flash-image",
+            modelId: resolvedModelId,
             chatId,
             description: "Bildgenerierung",
           })

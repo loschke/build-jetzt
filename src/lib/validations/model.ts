@@ -1,7 +1,7 @@
 import { z } from "zod"
 
 /** Shared category enum — single source of truth for model categories */
-export const modelCategoryEnum = z.enum(["enterprise", "allrounder", "creative", "coding", "analysis", "fast"])
+export const modelCategoryEnum = z.enum(["enterprise", "allrounder", "creative", "coding", "analysis", "fast", "image"])
 
 /** Zod schema for creating/importing a model (used by admin routes) */
 export const createModelSchema = z.object({

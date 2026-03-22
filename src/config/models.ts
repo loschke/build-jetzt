@@ -19,6 +19,7 @@ export type ModelCategory =
   | "coding"
   | "analysis"
   | "fast"
+  | "image"
 
 export interface ModelCapabilities {
   vision?: boolean
@@ -63,6 +64,7 @@ export const CATEGORY_LABELS: Record<ModelCategory, string> = {
   coding: "Coding",
   analysis: "Analyse",
   fast: "Schnell & Günstig",
+  image: "Bildgenerierung",
 }
 
 /** Category display order */
@@ -225,6 +227,15 @@ export async function getModelsByCategory(): Promise<{ category: ModelCategory; 
       label: CATEGORY_LABELS[cat],
       models: grouped.get(cat)!,
     }))
+}
+
+/**
+ * Get the active image generation model from the registry.
+ * Returns the first active model with category "image", or null.
+ */
+export async function getImageModel(): Promise<ModelConfig | null> {
+  const allModels = await getModels()
+  return allModels.find((m) => m.categories.includes("image")) ?? null
 }
 
 export function getModelContextWindow(id: string): number {
