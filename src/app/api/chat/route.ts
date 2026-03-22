@@ -18,7 +18,7 @@ import { resolvePrivacyModel } from "@/lib/ai/privacy-provider"
 import { businessModeConfig } from "@/config/business-mode"
 import { logConsent } from "@/lib/db/queries/consent"
 
-export const maxDuration = 120
+export const maxDuration = 240
 
 const ALLOWED_MIME_TYPES = new Set(
   chatConfig.upload.accept.split(",").map((t) => t.trim())

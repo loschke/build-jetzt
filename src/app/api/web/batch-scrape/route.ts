@@ -1,3 +1,5 @@
+export const maxDuration = 60
+
 import { checkBodySize, requireAuth } from "@/lib/api-guards"
 import { features } from "@/config/features"
 import { checkRateLimit, RATE_LIMITS, rateLimitResponse } from "@/lib/rate-limit"

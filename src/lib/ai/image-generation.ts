@@ -7,6 +7,7 @@ import { generateImage } from "ai"
 import { google } from "@ai-sdk/google"
 
 const IMAGE_MODEL = "gemini-2.5-flash-image"
+const IMAGE_TIMEOUT_MS = 60_000
 
 export interface GenerateImageParams {
   /** Detailed description of the image to generate */
@@ -49,11 +50,16 @@ export async function generateImageFromPrompt(
       }
     : fullPrompt
 
-  const result = await generateImage({
-    model: google.image(IMAGE_MODEL),
-    prompt,
-    aspectRatio: params.aspectRatio ?? "1:1",
-  })
+  const result = await Promise.race([
+    generateImage({
+      model: google.image(IMAGE_MODEL),
+      prompt,
+      aspectRatio: params.aspectRatio ?? "1:1",
+    }),
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("Bildgenerierung Timeout (60s)")), IMAGE_TIMEOUT_MS)
+    ),
+  ])
 
   const image = result.image
   if (!image) {
