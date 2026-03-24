@@ -79,6 +79,19 @@ export async function getChatWithMessages(
 
   if (!chat) return null
 
+  // When limit is set without offset: load the LAST N messages (most recent)
+  // by fetching DESC and reversing, so the UI gets chronological order.
+  if (options?.limit && options.limit > 0 && (!options.offset || options.offset === 0)) {
+    const recent = await db
+      .select()
+      .from(messages)
+      .where(eq(messages.chatId, chatId))
+      .orderBy(desc(messages.createdAt))
+      .limit(options.limit)
+    return { ...chat, messages: recent.reverse() }
+  }
+
+  // With explicit offset: load from that position (for "load older" pagination)
   let query = db
     .select()
     .from(messages)

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo, useDeferredValue, useRef } from "react"
 import { usePathname, useRouter } from "next/navigation"
-import { MessageSquare, MoreHorizontal, Trash2, Pin, PinOff, FolderInput, Share2, Search, Folder, Plus, Settings, ChevronRight, Loader2, Layers } from "lucide-react"
+import { MessageSquare, MoreHorizontal, Trash2, Pin, PinOff, FolderInput, Share2, Search, Folder, Plus, Settings, ChevronRight, Loader2, Layers, Pencil } from "lucide-react"
 import {
   SidebarGroup,
   SidebarGroupLabel,
@@ -87,6 +87,8 @@ export function ChatSidebarContent() {
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [deleteChatId, setDeleteChatId] = useState<string | null>(null)
   const [moveChatId, setMoveChatId] = useState<string | null>(null)
+  const [renameChatId, setRenameChatId] = useState<string | null>(null)
+  const [renameValue, setRenameValue] = useState("")
   const [projectDialogState, setProjectDialogState] = useState<{
     open: boolean
     project?: ProjectItem | null
@@ -205,6 +207,32 @@ export function ChatSidebarContent() {
           // Revert — re-fetch to get correct state
           fetchData()
         }
+      } catch {
+        fetchData()
+      }
+    },
+    [fetchData]
+  )
+
+  const handleRenameChat = useCallback(
+    async (chatId: string, newTitle: string) => {
+      const trimmed = newTitle.trim()
+      if (!trimmed) {
+        setRenameChatId(null)
+        return
+      }
+      // Optimistic update
+      setChats((prev) =>
+        prev.map((c) => (c.id === chatId ? { ...c, title: trimmed } : c))
+      )
+      setRenameChatId(null)
+      try {
+        const res = await fetch(`/api/chats/${chatId}`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ title: trimmed }),
+        })
+        if (!res.ok) fetchData()
       } catch {
         fetchData()
       }
@@ -338,18 +366,40 @@ export function ChatSidebarContent() {
   const projectToDelete = projects.find((p) => p.id === deleteProjectId)
 
   function renderChatItem(chat: ChatItem) {
+    const isRenaming = renameChatId === chat.id
     return (
       <SidebarMenuItem key={chat.id}>
-        <SidebarMenuButton
-          asChild
-          isActive={chat.id === activeChatId}
-          tooltip={chat.title}
-        >
-          <a href={`/c/${chat.id}`}>
-            <MessageSquare className="size-4" />
-            <span className="truncate">{chat.title}</span>
-          </a>
-        </SidebarMenuButton>
+        {isRenaming ? (
+          <form
+            className="flex flex-1 items-center gap-1.5 px-2"
+            onSubmit={(e) => {
+              e.preventDefault()
+              handleRenameChat(chat.id, renameValue)
+            }}
+          >
+            <MessageSquare className="size-4 shrink-0 text-muted-foreground" />
+            <input
+              autoFocus
+              className="flex-1 bg-transparent text-sm outline-none"
+              value={renameValue}
+              onChange={(e) => setRenameValue(e.target.value)}
+              onBlur={() => handleRenameChat(chat.id, renameValue)}
+              onKeyDown={(e) => { if (e.key === "Escape") setRenameChatId(null) }}
+              maxLength={200}
+            />
+          </form>
+        ) : (
+          <SidebarMenuButton
+            asChild
+            isActive={chat.id === activeChatId}
+            tooltip={chat.title}
+          >
+            <a href={`/c/${chat.id}`}>
+              <MessageSquare className="size-4" />
+              <span className="truncate">{chat.title}</span>
+            </a>
+          </SidebarMenuButton>
+        )}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <SidebarMenuAction className="cursor-pointer opacity-0 group-hover/menu-item:opacity-100">
@@ -358,6 +408,12 @@ export function ChatSidebarContent() {
             </SidebarMenuAction>
           </DropdownMenuTrigger>
           <DropdownMenuContent side="right" align="start">
+            <DropdownMenuItem onClick={() => {
+              setRenameChatId(chat.id)
+              setRenameValue(chat.title)
+            }}>
+              <Pencil className="mr-2 size-4" /> Umbenennen
+            </DropdownMenuItem>
             <DropdownMenuItem onClick={() => handleTogglePin(chat.id, chat.isPinned)}>
               {chat.isPinned ? (
                 <><PinOff className="mr-2 size-4" /> Lösen</>

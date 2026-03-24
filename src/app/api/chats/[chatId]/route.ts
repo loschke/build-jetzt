@@ -3,6 +3,7 @@ import { z } from "zod"
 import { requireAuth } from "@/lib/api-guards"
 import { getChatById, getChatWithMessages, getMessageCount, deleteChat, updateChatTitle, toggleChatPin, updateChatModel, updateChatProject } from "@/lib/db/queries/chats"
 import { getProjectById } from "@/lib/db/queries/projects"
+import { getExpertById } from "@/lib/db/queries/experts"
 import { getModelById } from "@/config/models"
 import { checkRateLimit, RATE_LIMITS, rateLimitResponse } from "@/lib/rate-limit"
 
@@ -55,17 +56,30 @@ export async function GET(
     return Response.json({ error: "Nicht gefunden" }, { status: 404 })
   }
 
+  // Resolve expert and project names in parallel (avoids extra client-side fetches)
+  const [expert, project] = await Promise.all([
+    chat.expertId ? getExpertById(chat.expertId) : null,
+    chat.projectId ? getProjectById(chat.projectId) : null,
+  ])
+
+  const enriched = {
+    ...chat,
+    expertName: expert?.name ?? null,
+    expertIcon: expert?.icon ?? null,
+    projectName: project?.name ?? null,
+  }
+
   // Include pagination metadata when limit is specified
   if (limit > 0) {
     const totalMessages = await getMessageCount(chatId)
     return Response.json({
-      ...chat,
+      ...enriched,
       hasMore: offset + limit < totalMessages,
       totalMessages,
     })
   }
 
-  return Response.json(chat)
+  return Response.json(enriched)
 }
 
 export async function PATCH(

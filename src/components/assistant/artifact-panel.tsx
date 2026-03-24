@@ -15,18 +15,30 @@ import { MessageResponse } from "@/components/ai-elements/message"
 import type { ArtifactContentType } from "@/types/artifact"
 import type { QuizDefinition, QuizResults } from "@/types/quiz"
 import type { SectionFeedback } from "@/types/review"
-import { HtmlPreview } from "./html-preview"
-import { CodePreview } from "./code-preview"
-import { QuizRenderer } from "./quiz-renderer"
-import { ReviewRenderer } from "./review-renderer"
-import { ImagePreview } from "./image-preview"
 import { languageToExtension } from "./artifact-utils"
 
+const HtmlPreview = dynamic(
+  () => import("./html-preview").then((mod) => ({ default: mod.HtmlPreview })),
+  { ssr: false }
+)
+const CodePreview = dynamic(
+  () => import("./code-preview").then((mod) => ({ default: mod.CodePreview })),
+  { ssr: false }
+)
+const QuizRenderer = dynamic(
+  () => import("./quiz-renderer").then((mod) => ({ default: mod.QuizRenderer })),
+  { ssr: false }
+)
+const ReviewRenderer = dynamic(
+  () => import("./review-renderer").then((mod) => ({ default: mod.ReviewRenderer })),
+  { ssr: false }
+)
+const ImagePreview = dynamic(
+  () => import("./image-preview").then((mod) => ({ default: mod.ImagePreview })),
+  { ssr: false }
+)
 const ArtifactEditor = dynamic(
-  () =>
-    import("./artifact-editor").then((mod) => ({
-      default: mod.ArtifactEditor,
-    })),
+  () => import("./artifact-editor").then((mod) => ({ default: mod.ArtifactEditor })),
   { ssr: false }
 )
 

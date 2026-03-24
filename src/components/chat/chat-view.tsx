@@ -281,7 +281,7 @@ export function ChatView({ chatId, initialModelId, initialProjectId, initialArti
 
     async function loadChat() {
       try {
-        const res = await fetch(`/api/chats/${chatId}`, { signal: controller.signal })
+        const res = await fetch(`/api/chats/${chatId}?limit=50`, { signal: controller.signal })
         if (!res.ok) return
         const data = await res.json()
 
@@ -302,23 +302,16 @@ export function ChatView({ chatId, initialModelId, initialProjectId, initialArti
         if (data.modelId) setModelId(data.modelId)
         if (data.expertId) {
           setExpertId(data.expertId)
-          // Fetch expert name+icon for header badge
-          fetch(`/api/experts/${data.expertId}`, { signal: controller.signal })
-            .then((res) => res.ok ? res.json() : null)
-            .then((expert) => {
-              if (expert) setExpert(data.expertId, expert.name, expert.icon ?? null)
-            })
-            .catch((e) => console.warn("[chat-view]", e instanceof Error ? e.message : e))
+          // Use enriched data from API response (no extra fetch needed)
+          if (data.expertName) {
+            setExpert(data.expertId, data.expertName, data.expertIcon ?? null)
+          }
         }
         if (data.projectId) {
           projectIdRef.current = data.projectId
-          // Fetch project name for header badge
-          fetch(`/api/projects/${data.projectId}`)
-            .then((res) => res.ok ? res.json() : null)
-            .then((project) => {
-              if (project) setProject(data.projectId, project.name)
-            })
-            .catch((e) => console.warn("[chat-view]", e instanceof Error ? e.message : e))
+          if (data.projectName) {
+            setProject(data.projectId, data.projectName)
+          }
         }
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") return
