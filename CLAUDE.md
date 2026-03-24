@@ -25,7 +25,11 @@
 - `/api/web/*` — Web Search/Scrape/Crawl (Firecrawl)
 - `/api/user/*` — User-Einstellungen, Memories
 - `/api/business-mode/*` — PII-Check, Redaction, Consent
-- `/api/admin/*` — Admin CRUD + Export fuer Skills, Experts, Models, MCP-Server, Credits
+- `/share/[token]` — Geteilter Chat (public, read-only)
+- `/api/chats/[chatId]/share` — Share erstellen/widerrufen/pruefen
+- `/api/share/[token]` — Public Chat-Daten fuer Share-Ansicht
+- `/api/cron/retention` — Chat Retention Cron (CRON_SECRET Auth)
+- `/api/admin/*` — Admin CRUD + Export fuer Skills, Experts, Models, MCP-Server, Credits, Users
 
 ---
 
@@ -163,7 +167,7 @@
 
 ### Tabellen
 
-`users`, `chats`, `messages`, `artifacts`, `usage_logs`, `experts`, `skills`, `models`, `mcp_servers`, `projects`, `project_documents`, `consent_logs`, `credit_transactions`
+`users`, `chats`, `messages`, `artifacts`, `usage_logs`, `experts`, `skills`, `models`, `mcp_servers`, `projects`, `project_documents`, `consent_logs`, `credit_transactions`, `shared_chats`
 
 ---
 
@@ -259,7 +263,8 @@ Details: `docs/feature-flags-konfiguration.md`
 
 ## Security (Kurzfassung)
 
-- **Auth:** `requireAuth()` fuer User-Routes, `requireAdmin()` fuer Admin-Routes
+- **Auth:** `requireAuth()` fuer User-Routes, `requireAdmin()` fuer Admin-Routes, `requireSuperAdmin()` fuer User-Management
+- **Public Routes:** `/`, `/api/auth/*`, `/share/*`, `/api/share/*` (in `proxy.ts`)
 - **Rate-Limiting:** In-Memory Token Bucket (chat: 20/min, api: 60/min, upload: 10/min)
 - **Input-Validierung:** chatId max 20 Zeichen `[a-zA-Z0-9_-]`, Messages max 2000 Zeichen, Body max 5MB
 - **CSP:** `script-src 'self' 'unsafe-inline'`, kein `unsafe-eval`. `connect-src` braucht `blob:`.

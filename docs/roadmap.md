@@ -27,14 +27,18 @@ Alle 10 Original-Meilensteine plus Post-M10-Erweiterungen sind abgeschlossen.
 
 ### Post-M10 (bereits umgesetzt)
 
-| Feature                 | Beschreibung                                      |
-| ----------------------- | ------------------------------------------------- |
-| Image Generation        | Gemini Bildgenerierung mit Iterations-Galerie     |
-| Admin Roles             | DB-basiertes Rollensystem (user/admin/superadmin) |
-| Sidebar Infinite Scroll | Automatisches Nachladen beim Scrollen             |
-| Chat Retention Cron     | Automatische Loesch-Policy fuer alte Chats        |
-| Adaptive Thinking       | Extended Thinking fuer Anthropic-Modelle          |
-| Landing Page            | Feature-Uebersicht mit Beta-CTA                   |
+| Feature                 | Beschreibung                                        |
+| ----------------------- | --------------------------------------------------- |
+| Image Generation        | Gemini Bildgenerierung mit Iterations-Galerie       |
+| Admin Roles             | DB-basiertes Rollensystem (user/admin/superadmin)   |
+| Sidebar Infinite Scroll | Automatisches Nachladen beim Scrollen               |
+| Chat Retention Cron     | Automatische Loesch-Policy fuer alte Chats          |
+| Adaptive Thinking       | Extended Thinking fuer Anthropic-Modelle            |
+| Landing Page            | Feature-Uebersicht mit Beta-CTA                     |
+| Performance             | Message-Limit 50, Artifact Lazy Loading, API Enrich |
+| Chat umbenennen         | Rename-Dialog im Sidebar-Dropdown                   |
+| Chat teilen             | Token-basierter Share-Link, read-only, widerrufbar  |
+| Tool-Accordions         | Eingeklappt bei Chat-History und Share-Ansicht      |
 
 ---
 
@@ -46,7 +50,7 @@ Alle 10 Original-Meilensteine plus Post-M10-Erweiterungen sind abgeschlossen.
 | Generative UI Tools    | 100%   | —                                             | `generative-ui-tools-guide.md`       |
 | Gemini Features        | 60%    | YouTube, TTS, Search Grounding                | `prd-gemini-features.md`             |
 | Anthropic Agent Skills | 0%     | Code Execution, PPTX/XLSX/DOCX/PDF, Files API | `PRD-anthropic-agent-skills.md`      |
-| Performance/Caching    | 80%    | Message-Pagination, Virtualisierung           | `performance-caching-concept.md`     |
+| Performance/Caching    | 90%    | Client-Virtualisierung (spaeter)              | `performance-caching-concept.md`     |
 | Privacy/Family         | 50%    | EU-Config, DSGVO-Export                       | `privacy-family-deployment-guide.md` |
 | Notes/Second Brain     | 0%     | Komplettes Feature                            | `prd-notes-second-brain-v2.md`       |
 | lernen.diy             | 30%    | Content-Pipeline, Lernbegleiter               | `prd-lernen-diy-v1.md`               |
@@ -65,11 +69,11 @@ Alle 10 Original-Meilensteine plus Post-M10-Erweiterungen sind abgeschlossen.
 | Artifact Lazy Loading     | Artifact-Komponenten per `next/dynamic` geladen                    | Performance PRD | Done   |
 | Expert/Projekt Enrichment | API liefert Namen direkt mit, keine Extra-Fetches                  | Performance PRD | Done   |
 | Chat umbenennen           | Inline-Rename im Sidebar-Dropdown                                  | Neu             | Done   |
-| Chat teilen               | Token-basierter Share-Link, read-only, widerrufbar, ohne Login     | Neu             | Offen  |
+| Chat teilen               | Token-basierter Share-Link, read-only, widerrufbar, ohne Login     | Neu             | Done   |
 | EU-Deployment-Checkliste  | Dokumentation fuer Neon EU, Vercel fra1, ENV-Vorlage               | Privacy PRD     | Offen  |
 | DSGVO-Datenexport         | User exportiert eigene Daten als JSON (Chats, Artifacts, Memories) | Privacy PRD     | Offen  |
 
-**Aufwand:** 1-2 Tage (verbleibend: Share + Compliance)
+**Aufwand:** Verbleibend ~1 Tag (Compliance-Themen)
 **Risiko:** Minimal
 **Mehrwert:** Performance, UX, Sharing-Faehigkeit
 
