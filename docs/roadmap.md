@@ -52,6 +52,7 @@ Alle 10 Original-Meilensteine plus Post-M10-Erweiterungen sind abgeschlossen.
 | Admin Roles            | 100%   | —                                             | `prd-admin-roles.md`                 |
 | Generative UI Tools    | 100%   | —                                             | `generative-ui-tools-guide.md`       |
 | Gemini Features        | 90%    | Google Search Grounding (optional)             | `prd-gemini-features.md`             |
+| Stitch Design Gen.     | 0%     | generate_design, edit_design, Device-Targeting  | `prd-stitch-design-generation.md`    |
 | Anthropic Agent Skills | 0%     | Code Execution, PPTX/XLSX/DOCX/PDF, Files API | `PRD-anthropic-agent-skills.md`      |
 | Performance/Caching    | 90%    | Client-Virtualisierung (spaeter)              | `performance-caching-concept.md`     |
 | Privacy/Family         | 50%    | EU-Config, DSGVO-Export                       | `privacy-family-deployment-guide.md` |
@@ -97,6 +98,27 @@ Alle 10 Original-Meilensteine plus Post-M10-Erweiterungen sind abgeschlossen.
 | Google Search Grounding | Optional: Faktencheck ueber Gemini Search (Scope offen)          | Gemini PRD | Offen  |
 
 **Abhaengigkeiten:** `YOUTUBE_API_KEY` (YouTube Search), `GOOGLE_GENERATIVE_AI_API_KEY` (Analyze + TTS), R2 Storage (TTS Audio)
+
+---
+
+### Stufe 2b: Stitch Design Generation
+
+> Hochwertige UI-Design-Generierung und -Iteration direkt im Chat. Google Stitch als spezialisiertes Design-Backend.
+
+| Feature                | Beschreibung                                                          | Quelle              | Status |
+| ---------------------- | --------------------------------------------------------------------- | ------------------- | ------ |
+| Design generieren      | Tool `generate_design`: Prompt → production-quality HTML via Stitch   | Stitch PRD Phase 1  | Offen  |
+| Design iterieren       | Tool `edit_design`: Bestehendes Design mit Follow-up-Prompt verfeinern | Stitch PRD Phase 2  | Offen  |
+| Device-Targeting       | Desktop/Mobile/Tablet-Auswahl bei Generierung                         | Stitch PRD Phase 1  | Offen  |
+| Metadata-Feld          | `metadata` JSONB auf Artifacts (fuer Stitch Project/Screen-Zuordnung) | Stitch PRD Phase 1  | Offen  |
+| Screenshot-Thumbnail   | Stitch-Screenshot als Vorschau-Bild in der Chat-Message               | Stitch PRD Phase 3  | Offen  |
+| Design-Varianten       | Mehrere Layout/Farb/Font-Varianten auf einen Klick                    | Stitch PRD (spaeter) | Offen  |
+
+**Aufwand:** 1-2 Tage
+**Risiko:** Niedrig — komplett additiv, nutzt bestehenden HTML-Artifact-Typ und HtmlPreview. Kein Breaking Change am Chat-Core.
+**Mehrwert:** Hoch — sofortige Qualitaetssteigerung bei UI-Designs, Iteration ermoeglicht Design-Workflow
+**Abhaengigkeiten:** `STITCH_API_KEY` (Google), `@google/stitch-sdk` npm Package
+**Detail-PRD:** `docs/features/prd-stitch-design-generation.md`
 
 ---
 
@@ -198,3 +220,4 @@ Alle 10 Original-Meilensteine plus Post-M10-Erweiterungen sind abgeschlossen.
 | Performance-Konzept        | `docs/features/performance-caching-concept.md`     |
 | Privacy-Guide              | `docs/features/privacy-family-deployment-guide.md` |
 | Anthropic Agent Skills PRD | `docs/PRD-anthropic-agent-skills.md`               |
+| Stitch Design PRD          | `docs/features/prd-stitch-design-generation.md`    |
