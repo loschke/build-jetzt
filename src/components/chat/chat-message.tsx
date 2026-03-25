@@ -21,6 +21,7 @@ import {
 import { AskUser } from "@/components/generative-ui/ask-user"
 import { ContentAlternatives } from "@/components/generative-ui/content-alternatives"
 import { YouTubeResults, YouTubeResultsSkeleton, type YouTubeVideo } from "@/components/generative-ui/youtube-results"
+import { AudioPlayer, AudioPlayerSkeleton, type AudioPlayerData } from "@/components/generative-ui/audio-player"
 import { ToolStatus } from "./tool-status"
 import { MemoryIndicator } from "./memory-indicator"
 import { MessageAttachments } from "./message-attachment"
@@ -62,7 +63,7 @@ interface ChatMessageProps {
 }
 
 /** Tools that have their own dedicated rendering (not shown as ToolStatus) */
-const CUSTOM_RENDERED_TOOLS = new Set(["ask_user", "create_artifact", "create_quiz", "create_review", "content_alternatives", "generate_image", "extract_branding", "youtube_search"])
+const CUSTOM_RENDERED_TOOLS = new Set(["ask_user", "create_artifact", "create_quiz", "create_review", "content_alternatives", "generate_image", "extract_branding", "youtube_search", "text_to_speech"])
 
 /** Check if a part is a generic tool part that should show a ToolStatus */
 function isGenericToolPart(part: { type: string; [key: string]: unknown }): boolean {
@@ -528,29 +529,27 @@ export const ChatMessage = memo(function ChatMessage({
                 const data = extractInlineToolData(part, "text_to_speech")
                 if (!data) return null
 
-                const input = data.input as { title?: string; voice?: string } | undefined
-                const output = unwrapToolOutput<{ artifactId?: string; title?: string; version?: number; durationSeconds?: number }>(data.output)
-                const audioTitle = output?.title ?? input?.title ?? "Audio"
-                const preview = output?.durationSeconds != null
-                  ? `${Math.floor(output.durationSeconds / 60)}:${String(Math.floor(output.durationSeconds % 60)).padStart(2, "0")} · ${input?.voice ?? "Kore"}`
-                  : input?.voice ?? "Audio"
+                const isStreaming = data.state === "input-streaming" || data.state === "input-available"
+                if (isStreaming) {
+                  return <AudioPlayerSkeleton key={`${message.id}-tts-${i}`} />
+                }
+
+                const output = unwrapToolOutput<AudioPlayerData & { error?: string }>(data.output)
+                if (!output?.url) {
+                  if (output?.error) {
+                    return (
+                      <div key={`${message.id}-tts-${i}`} className="mt-3 rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+                        {output.error}
+                      </div>
+                    )
+                  }
+                  return null
+                }
 
                 return (
-                  <ArtifactCard
+                  <AudioPlayer
                     key={`${message.id}-tts-${i}`}
-                    title={audioTitle}
-                    preview={preview}
-                    icon={artifactTypeToIcon("audio")}
-                    isActive={selectedArtifact?.id === output?.artifactId}
-                    onClick={() => {
-                      onArtifactClick({
-                        id: output?.artifactId,
-                        title: audioTitle,
-                        content: "",
-                        type: "audio",
-                        version: output?.version,
-                      })
-                    }}
+                    audio={output}
                   />
                 )
               }

@@ -1,14 +1,13 @@
 /**
  * text_to_speech tool — generates audio from text using Gemini TTS.
  *
- * Creates an audio artifact with a WAV file stored in R2 (or data URL fallback).
+ * Uploads WAV to R2 and returns audio metadata inline in the chat.
  * Supports single voice and multi-speaker dialogue.
  */
 
 import { tool } from "ai"
 import { z } from "zod"
 import { nanoid } from "nanoid"
-import { createArtifact } from "@/lib/db/queries/artifacts"
 import { generateSpeech, type TTSVoice } from "@/lib/ai/tts"
 import { features } from "@/config/features"
 
@@ -26,7 +25,7 @@ export function textToSpeechTool(chatId: string, userId: string) {
       "Maximum text length: 5000 characters. Write the text in the target language.",
     inputSchema: z.object({
       text: z.string().min(1).max(5000).describe("The text to convert to speech. For dialogue, include speaker names like 'Speaker 1: ...'"),
-      title: z.string().max(200).describe("Short title for the audio artifact"),
+      title: z.string().max(200).describe("Short title for the audio player"),
       voice: z.enum(VOICE_ENUM).optional()
         .describe("Voice for single-speaker mode. Kore (warm female, default), Puck (energetic male), Charon (deep male), Zephyr (bright female), Aoede (warm female), Fenrir (deep male), Leda (gentle female), Orus (firm male)"),
       speakers: z.array(z.object({
@@ -36,35 +35,19 @@ export function textToSpeechTool(chatId: string, userId: string) {
         .describe("For multi-speaker dialogue: map exactly 2 speaker names from the text to voices."),
     }),
     execute: async ({ text, title, voice, speakers }) => {
+      if (!features.storage.enabled) {
+        return { error: "Audio-Generierung benötigt konfiguriertes R2 Storage. Bitte R2_ACCESS_KEY_ID setzen." }
+      }
+
       const result = await generateSpeech({
         text,
         voice: voice as TTSVoice | undefined,
         speakers: speakers?.map((s) => ({ name: s.name, voice: s.voice as TTSVoice })),
       })
 
-      // Upload to R2 or create data URL
-      let audioUrl: string
-
-      if (!features.storage.enabled) {
-        return { error: "Audio-Generierung benötigt konfiguriertes R2 Storage. Bitte R2_ACCESS_KEY_ID setzen." }
-      }
-
       const { uploadBuffer } = await import("@/lib/storage")
       const storageKey = `generated-audio/${chatId}/${nanoid()}.wav`
-      audioUrl = await uploadBuffer(result.wavBuffer, "audio/wav", `${title}.wav`, storageKey)
-
-      // Create audio artifact
-      const artifact = await createArtifact({
-        chatId,
-        type: "audio",
-        title,
-        content: JSON.stringify({
-          url: audioUrl,
-          duration: Math.round(result.durationSeconds * 10) / 10,
-          format: "wav",
-          voice: result.voice,
-        }),
-      })
+      const audioUrl = await uploadBuffer(result.wavBuffer, "audio/wav", `${title}.wav`, storageKey)
 
       const { deductToolCredits, calculateTTSCredits } = await import("@/lib/credits")
       const creditError = await deductToolCredits(userId, calculateTTSCredits(), {
@@ -75,11 +58,10 @@ export function textToSpeechTool(chatId: string, userId: string) {
       }
 
       return {
-        artifactId: artifact.id,
-        title: artifact.title,
-        type: "audio" as const,
-        version: artifact.version,
+        title,
+        url: audioUrl,
         durationSeconds: Math.round(result.durationSeconds * 10) / 10,
+        voice: result.voice,
       }
     },
   })

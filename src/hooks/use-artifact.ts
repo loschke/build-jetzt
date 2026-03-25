@@ -100,7 +100,7 @@ export function isExtractBrandingPart(part: { type: string }): boolean {
 }
 
 /** Artifact-producing tools — used for auto-opening the panel during streaming */
-const ARTIFACT_TOOL_TYPES = new Set(["tool-create_artifact", "tool-create_quiz", "tool-create_review", "tool-generate_image", "tool-youtube_analyze", "tool-text_to_speech", "tool-extract_branding"])
+const ARTIFACT_TOOL_TYPES = new Set(["tool-create_artifact", "tool-create_quiz", "tool-create_review", "tool-generate_image", "tool-youtube_analyze", "tool-extract_branding"])
 
 /**
  * Map saved DB parts (tool-call, tool-result) to AI SDK 6 typed tool UI parts.
@@ -346,51 +346,6 @@ export function extractImageFromToolPart(part: { type: string; [key: string]: un
   return null
 }
 
-/**
- * Extract artifact data from a text_to_speech tool part.
- * Audio content is created server-side — empty during streaming.
- */
-export function extractAudioFromToolPart(part: { type: string; [key: string]: unknown }): {
-  artifact: Omit<SelectedArtifact, "isStreaming">
-  isStreaming: boolean
-} | null {
-  if (!isTextToSpeechPart(part)) return null
-
-  const toolPart = part as unknown as {
-    state: string
-    input?: { title?: string; text?: string }
-    output?: unknown
-  }
-  const inp = toolPart.input
-
-  if (toolPart.state === "input-streaming" || toolPart.state === "input-available") {
-    return {
-      artifact: {
-        title: inp?.title ?? "Audio wird generiert…",
-        content: "",
-        type: "audio",
-        version: 1,
-      },
-      isStreaming: true,
-    }
-  }
-
-  if (toolPart.state === "output-available") {
-    const out = unwrapToolOutput<{ artifactId?: string; title?: string; version?: number }>(toolPart.output)
-    return {
-      artifact: {
-        id: out?.artifactId,
-        title: out?.title ?? "Audio",
-        content: "",
-        type: "audio",
-        version: out?.version ?? 1,
-      },
-      isStreaming: false,
-    }
-  }
-
-  return null
-}
 
 /**
  * Extract artifact data from an extract_branding tool part.
@@ -550,7 +505,7 @@ export function useArtifact({ messages, status }: UseArtifactOptions) {
 
     for (const part of lastMsg.parts ?? []) {
       // Try artifact-producing tools in order
-      const extracted = extractArtifactFromToolPart(part) ?? extractQuizFromToolPart(part) ?? extractReviewFromToolPart(part) ?? extractImageFromToolPart(part) ?? extractAudioFromToolPart(part) ?? extractBrandingFromToolPart(part) ?? extractYouTubeAnalyzeFromToolPart(part)
+      const extracted = extractArtifactFromToolPart(part) ?? extractQuizFromToolPart(part) ?? extractReviewFromToolPart(part) ?? extractImageFromToolPart(part) ?? extractBrandingFromToolPart(part) ?? extractYouTubeAnalyzeFromToolPart(part)
       if (extracted) {
         setSelectedArtifact((prev) => {
           // Server-side artifacts (image, youtube_search): skip auto-open on chat reload

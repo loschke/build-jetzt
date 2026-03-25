@@ -37,10 +37,6 @@ const ImagePreview = dynamic(
   () => import("./image-preview").then((mod) => ({ default: mod.ImagePreview })),
   { ssr: false }
 )
-const AudioPreview = dynamic(
-  () => import("./audio-preview").then((mod) => ({ default: mod.AudioPreview })),
-  { ssr: false }
-)
 const ArtifactEditor = dynamic(
   () => import("./artifact-editor").then((mod) => ({ default: mod.ArtifactEditor })),
   { ssr: false }
@@ -442,9 +438,7 @@ export function ArtifactPanel({
 
       {/* Content */}
       <div className="flex-1 overflow-auto">
-        {contentType === "audio" ? (
-          <AudioPreview content={content} title={title} isStreaming={isStreaming} />
-        ) : contentType === "image" ? (
+        {contentType === "image" ? (
           <ImagePreview content={content} title={title} isStreaming={isStreaming} />
         ) : contentType === "quiz" ? (
           (() => {
