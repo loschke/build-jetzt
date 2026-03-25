@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { parseFakeArtifactCall } from "@/lib/ai/tools/parse-fake-artifact"
 import { unwrapToolOutput } from "@/lib/ai/tool-output"
+import { safeDomain } from "@/lib/url-validation"
 import type { ArtifactContentType } from "@/types/artifact"
 
 export interface SelectedArtifact {
@@ -94,8 +95,12 @@ export function isTextToSpeechPart(part: { type: string }): boolean {
   return part.type === "tool-text_to_speech"
 }
 
+export function isExtractBrandingPart(part: { type: string }): boolean {
+  return part.type === "tool-extract_branding"
+}
+
 /** Artifact-producing tools — used for auto-opening the panel during streaming */
-const ARTIFACT_TOOL_TYPES = new Set(["tool-create_artifact", "tool-create_quiz", "tool-create_review", "tool-generate_image", "tool-youtube_search", "tool-youtube_analyze", "tool-text_to_speech"])
+const ARTIFACT_TOOL_TYPES = new Set(["tool-create_artifact", "tool-create_quiz", "tool-create_review", "tool-generate_image", "tool-youtube_search", "tool-youtube_analyze", "tool-text_to_speech", "tool-extract_branding"])
 
 /**
  * Map saved DB parts (tool-call, tool-result) to AI SDK 6 typed tool UI parts.
@@ -388,6 +393,55 @@ export function extractAudioFromToolPart(part: { type: string; [key: string]: un
 }
 
 /**
+ * Extract artifact data from an extract_branding tool part.
+ * Branding JSON is created server-side — empty during streaming.
+ */
+export function extractBrandingFromToolPart(part: { type: string; [key: string]: unknown }): {
+  artifact: Omit<SelectedArtifact, "isStreaming">
+  isStreaming: boolean
+} | null {
+  if (!isExtractBrandingPart(part)) return null
+
+  const toolPart = part as unknown as {
+    state: string
+    input?: { url?: string; title?: string }
+    output?: unknown
+  }
+  const inp = toolPart.input
+
+  if (toolPart.state === "input-streaming" || toolPart.state === "input-available") {
+    const domain = safeDomain(inp?.url)
+    return {
+      artifact: {
+        title: inp?.title ?? `Branding: ${domain}`,
+        content: "",
+        type: "code",
+        language: "json",
+        version: 1,
+      },
+      isStreaming: true,
+    }
+  }
+
+  if (toolPart.state === "output-available") {
+    const out = unwrapToolOutput<{ artifactId?: string; domain?: string }>(toolPart.output)
+    return {
+      artifact: {
+        id: out?.artifactId,
+        title: inp?.title ?? `Branding: ${out?.domain ?? "Website"}`,
+        content: "",
+        type: "code",
+        language: "json",
+        version: 1,
+      },
+      isStreaming: false,
+    }
+  }
+
+  return null
+}
+
+/**
  * Extract artifact data from a youtube_analyze tool part.
  * Like youtube_search, content is created server-side — empty during streaming.
  */
@@ -542,7 +596,7 @@ export function useArtifact({ messages, status }: UseArtifactOptions) {
 
     for (const part of lastMsg.parts ?? []) {
       // Try artifact-producing tools in order
-      const extracted = extractArtifactFromToolPart(part) ?? extractQuizFromToolPart(part) ?? extractReviewFromToolPart(part) ?? extractImageFromToolPart(part) ?? extractAudioFromToolPart(part) ?? extractYouTubeSearchFromToolPart(part) ?? extractYouTubeAnalyzeFromToolPart(part)
+      const extracted = extractArtifactFromToolPart(part) ?? extractQuizFromToolPart(part) ?? extractReviewFromToolPart(part) ?? extractImageFromToolPart(part) ?? extractAudioFromToolPart(part) ?? extractBrandingFromToolPart(part) ?? extractYouTubeSearchFromToolPart(part) ?? extractYouTubeAnalyzeFromToolPart(part)
       if (extracted) {
         setSelectedArtifact((prev) => {
           // Server-side artifacts (image, youtube_search): skip auto-open on chat reload

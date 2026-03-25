@@ -43,4 +43,7 @@ export const features = {
   tts: {
     enabled: !!process.env.GOOGLE_GENERATIVE_AI_API_KEY,
   },
+  branding: {
+    enabled: !!process.env.FIRECRAWL_API_KEY,
+  },
 } as const

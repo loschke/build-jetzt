@@ -19,6 +19,12 @@ const PRIVATE_IP_RANGES = [
   /^0\.0\.0\.0$/,
 ]
 
+/** Extract hostname from a URL string, returns fallback on invalid input. */
+export function safeDomain(url: string | undefined, fallback = "Website"): string {
+  if (!url) return fallback
+  try { return new URL(url).hostname } catch { return fallback }
+}
+
 export function isAllowedUrl(input: string): boolean {
   let parsed: URL
   try {

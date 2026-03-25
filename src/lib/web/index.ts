@@ -14,6 +14,8 @@ import type {
   WebExtractResponse,
   WebMapParams,
   WebMapResponse,
+  WebBrandingParams,
+  WebBrandingResponse,
 } from "./types"
 
 function getClient(): Firecrawl {
@@ -209,5 +211,25 @@ export async function webMap(params: WebMapParams): Promise<WebMapResponse> {
       title: link.title ?? "",
       description: link.description ?? "",
     })),
+  }
+}
+
+/**
+ * Extract branding profile from a URL via Firecrawl branding format.
+ * Returns colors, typography, spacing, components, images, and brand personality.
+ * Credits: 1 per page.
+ */
+export async function webBranding(
+  params: WebBrandingParams
+): Promise<WebBrandingResponse> {
+  const client = getClient()
+  const result = await client.scrape(params.url, {
+    formats: ["branding"],
+  })
+
+  return {
+    url: params.url,
+    branding: result.branding ?? null,
+    metadata: result.metadata as Record<string, unknown> | undefined,
   }
 }

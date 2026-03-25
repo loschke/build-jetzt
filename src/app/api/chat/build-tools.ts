@@ -13,6 +13,7 @@ import { generateImageTool, type UploadedImage } from "@/lib/ai/tools/generate-i
 import { youtubeSearchTool } from "@/lib/ai/tools/youtube-search"
 import { youtubeAnalyzeTool } from "@/lib/ai/tools/youtube-analyze"
 import { textToSpeechTool } from "@/lib/ai/tools/text-to-speech"
+import { extractBrandingTool } from "@/lib/ai/tools/extract-branding"
 import type { SkillMetadata } from "@/lib/ai/skills/discovery"
 import type { MCPHandle } from "@/lib/mcp"
 
@@ -80,6 +81,9 @@ export async function buildTools(params: BuildToolsParams): Promise<BuildToolsRe
   }
   if (features.tts.enabled) {
     tools.text_to_speech = textToSpeechTool(chatId, userId)
+  }
+  if (features.branding.enabled) {
+    tools.extract_branding = extractBrandingTool(chatId, userId)
   }
 
   // Add load_skill tool if skills are available (skip for quicktasks — self-contained)

@@ -107,3 +107,18 @@ export interface WebMapParams {
 export interface WebMapResponse {
   links: WebSearchResult[]
 }
+
+// --- Branding ---
+
+export type { BrandingProfile } from "@mendable/firecrawl-js"
+import type { BrandingProfile } from "@mendable/firecrawl-js"
+
+export interface WebBrandingParams {
+  url: string
+}
+
+export interface WebBrandingResponse {
+  url: string
+  branding: BrandingProfile | null
+  metadata?: Record<string, unknown>
+}

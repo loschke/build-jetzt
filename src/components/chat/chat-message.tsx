@@ -23,8 +23,9 @@ import { ContentAlternatives } from "@/components/generative-ui/content-alternat
 import { ToolStatus } from "./tool-status"
 import { MemoryIndicator } from "./memory-indicator"
 import { MessageAttachments } from "./message-attachment"
-import { isCreateArtifactPart, isGenerateImagePart, isYouTubeSearchPart, isYouTubeAnalyzePart, isTextToSpeechPart, extractArtifactFromToolPart } from "@/hooks/use-artifact"
+import { isCreateArtifactPart, isGenerateImagePart, isYouTubeSearchPart, isYouTubeAnalyzePart, isTextToSpeechPart, isExtractBrandingPart, extractArtifactFromToolPart } from "@/hooks/use-artifact"
 import { unwrapToolOutput } from "@/lib/ai/tool-output"
+import { safeDomain } from "@/lib/url-validation"
 import type { SelectedArtifact } from "@/hooks/use-artifact"
 
 interface MessageMetadata {
@@ -60,7 +61,7 @@ interface ChatMessageProps {
 }
 
 /** Tools that have their own dedicated rendering (not shown as ToolStatus) */
-const CUSTOM_RENDERED_TOOLS = new Set(["ask_user", "create_artifact", "create_quiz", "create_review", "content_alternatives", "generate_image"])
+const CUSTOM_RENDERED_TOOLS = new Set(["ask_user", "create_artifact", "create_quiz", "create_review", "content_alternatives", "generate_image", "extract_branding"])
 
 /** Check if a part is a generic tool part that should show a ToolStatus */
 function isGenericToolPart(part: { type: string; [key: string]: unknown }): boolean {
@@ -548,6 +549,35 @@ export const ChatMessage = memo(function ChatMessage({
                         title: audioTitle,
                         content: "",
                         type: "audio",
+                        version: output?.version,
+                      })
+                    }}
+                  />
+                )
+              }
+              if (isExtractBrandingPart(part)) {
+                const data = extractInlineToolData(part, "extract_branding")
+                if (!data) return null
+
+                const input = data.input as { url?: string; title?: string } | undefined
+                const output = unwrapToolOutput<{ artifactId?: string; title?: string; domain?: string; version?: number }>(data.output)
+                const domain = output?.domain ?? safeDomain(input?.url)
+                const brandingTitle = output?.title ?? input?.title ?? `Branding: ${domain}`
+
+                return (
+                  <ArtifactCard
+                    key={`${message.id}-branding-${i}`}
+                    title={brandingTitle}
+                    preview={`Brand-Profil von ${domain}`}
+                    icon={artifactTypeToIcon("code")}
+                    isActive={selectedArtifact?.id === output?.artifactId}
+                    onClick={() => {
+                      onArtifactClick({
+                        id: output?.artifactId,
+                        title: brandingTitle,
+                        content: "",
+                        type: "code",
+                        language: "json",
                         version: output?.version,
                       })
                     }}

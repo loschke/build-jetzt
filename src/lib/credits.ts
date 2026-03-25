@@ -71,6 +71,13 @@ export function calculateTTSCredits(): number {
   return TTS_CREDITS
 }
 
+/** Flat credit cost for branding extraction. */
+const BRANDING_CREDITS = parseInt(process.env.BRANDING_CREDITS ?? "500", 10)
+
+export function calculateBrandingCredits(): number {
+  return BRANDING_CREDITS
+}
+
 export function calculateCredits(input: CreditCalculationInput): number {
   const model = getModelById(input.modelId)
   const inputPrice = model?.inputPrice?.per1m ?? FALLBACK_INPUT_PRICE
