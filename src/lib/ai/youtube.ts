@@ -10,15 +10,26 @@ export interface YouTubeSearchResult {
   publishedAt: string
   description: string
   thumbnailUrl: string
+  duration?: string
 }
 
 const YOUTUBE_API_BASE = "https://www.googleapis.com/youtube/v3"
 
+export interface YouTubeSearchOptions {
+  query: string
+  maxResults?: number
+  order?: "relevance" | "date" | "viewCount"
+  publishedAfter?: string
+  channelHandle?: string
+  language?: string
+}
+
 /**
  * Search YouTube for videos matching a query.
+ * Supports sorting, date filtering, and channel filtering.
  * Requires YOUTUBE_API_KEY to be set.
  */
-export async function searchYouTube(query: string, maxResults = 5): Promise<YouTubeSearchResult[]> {
+export async function searchYouTube(options: YouTubeSearchOptions): Promise<YouTubeSearchResult[]> {
   const apiKey = process.env.YOUTUBE_API_KEY
   if (!apiKey) {
     throw new Error("YOUTUBE_API_KEY is not configured")
@@ -27,10 +38,29 @@ export async function searchYouTube(query: string, maxResults = 5): Promise<YouT
   const params = new URLSearchParams({
     part: "snippet",
     type: "video",
-    q: query,
-    maxResults: String(Math.min(Math.max(maxResults, 1), 10)),
+    q: options.query,
+    maxResults: String(Math.min(Math.max(options.maxResults ?? 5, 1), 10)),
     key: apiKey,
   })
+
+  if (options.order && options.order !== "relevance") {
+    params.set("order", options.order)
+  }
+
+  if (options.publishedAfter) {
+    params.set("publishedAfter", options.publishedAfter)
+  }
+
+  if (options.language) {
+    params.set("relevanceLanguage", options.language)
+  }
+
+  if (options.channelHandle) {
+    const channelId = await resolveChannelId(options.channelHandle, apiKey)
+    if (channelId) {
+      params.set("channelId", channelId)
+    }
+  }
 
   const res = await fetch(`${YOUTUBE_API_BASE}/search?${params}`, {
     signal: AbortSignal.timeout(10_000),
@@ -55,7 +85,7 @@ export async function searchYouTube(query: string, maxResults = 5): Promise<YouT
     }>
   }
 
-  return (data.items ?? [])
+  const results: YouTubeSearchResult[] = (data.items ?? [])
     .filter((item) => isValidVideoId(item.id.videoId))
     .map((item) => ({
       videoId: item.id.videoId,
@@ -65,6 +95,107 @@ export async function searchYouTube(query: string, maxResults = 5): Promise<YouT
       description: item.snippet.description,
       thumbnailUrl: item.snippet.thumbnails.medium?.url ?? item.snippet.thumbnails.default?.url ?? "",
     }))
+
+  // Fetch durations via videos.list (contentDetails) — best-effort, don't fail search on error
+  if (results.length > 0) {
+    const durations = await fetchVideoDurations(results.map((r) => r.videoId), apiKey)
+    for (const result of results) {
+      result.duration = durations.get(result.videoId)
+    }
+  }
+
+  return results
+}
+
+/**
+ * Resolve a YouTube channel handle or name to a channelId.
+ * Tries channels.list with forHandle first (@handle), falls back to search.
+ */
+async function resolveChannelId(handle: string, apiKey: string): Promise<string | null> {
+  // Strip leading @ if present
+  const cleanHandle = handle.startsWith("@") ? handle.slice(1) : handle
+
+  try {
+    // Try forHandle lookup first (exact match for @handles)
+    const handleParams = new URLSearchParams({
+      part: "id",
+      forHandle: cleanHandle,
+      key: apiKey,
+    })
+    const handleRes = await fetch(`${YOUTUBE_API_BASE}/channels?${handleParams}`, {
+      signal: AbortSignal.timeout(5_000),
+    })
+    if (handleRes.ok) {
+      const data = await handleRes.json() as { items?: Array<{ id: string }> }
+      if (data.items?.[0]?.id) return data.items[0].id
+    }
+
+    // Fallback: search for the channel by name
+    const searchParams = new URLSearchParams({
+      part: "snippet",
+      type: "channel",
+      q: handle,
+      maxResults: "1",
+      key: apiKey,
+    })
+    const searchRes = await fetch(`${YOUTUBE_API_BASE}/search?${searchParams}`, {
+      signal: AbortSignal.timeout(5_000),
+    })
+    if (searchRes.ok) {
+      const data = await searchRes.json() as { items?: Array<{ id: { channelId: string } }> }
+      if (data.items?.[0]?.id?.channelId) return data.items[0].id.channelId
+    }
+  } catch (err) {
+    console.warn("[YouTube] Channel resolve failed:", err instanceof Error ? err.message : "Unknown")
+  }
+  return null
+}
+
+/**
+ * Fetch video durations from the YouTube videos.list endpoint.
+ * Returns a Map of videoId → human-readable duration string.
+ */
+async function fetchVideoDurations(videoIds: string[], apiKey: string): Promise<Map<string, string>> {
+  const durations = new Map<string, string>()
+  try {
+    const params = new URLSearchParams({
+      part: "contentDetails",
+      id: videoIds.join(","),
+      key: apiKey,
+    })
+    const res = await fetch(`${YOUTUBE_API_BASE}/videos?${params}`, {
+      signal: AbortSignal.timeout(5_000),
+    })
+    if (!res.ok) return durations
+
+    const data = await res.json() as {
+      items?: Array<{
+        id: string
+        contentDetails: { duration: string }
+      }>
+    }
+    for (const item of data.items ?? []) {
+      durations.set(item.id, formatIsoDuration(item.contentDetails.duration))
+    }
+  } catch (err) {
+    console.warn("[YouTube] Duration fetch failed:", err instanceof Error ? err.message : "Unknown")
+  }
+  return durations
+}
+
+/**
+ * Convert ISO 8601 duration (PT1H2M30S) to human-readable format (1:02:30).
+ */
+function formatIsoDuration(iso: string): string {
+  const match = iso.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/)
+  if (!match) return ""
+  const h = parseInt(match[1] ?? "0", 10)
+  const m = parseInt(match[2] ?? "0", 10)
+  const s = parseInt(match[3] ?? "0", 10)
+  if (h > 0) {
+    return `${h}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`
+  }
+  return `${m}:${String(s).padStart(2, "0")}`
 }
 
 /**
@@ -121,102 +252,3 @@ export function extractVideoId(url: string): string | null {
   }
 }
 
-/**
- * Build an HTML artifact with YouTube video cards.
- * Uses inline SVG play button instead of iframes (blocked by CSP sandbox).
- * Each card links to YouTube via window.open (works in sandbox with allow-popups).
- */
-export function buildYouTubeResultsHtml(results: YouTubeSearchResult[], query: string): string {
-  if (results.length === 0) {
-    return `<!DOCTYPE html>
-<html lang="de">
-<head><meta charset="utf-8"><title>YouTube: ${escapeHtml(query)}</title>
-<style>body{font-family:system-ui,sans-serif;background:#0f0f0f;color:#fff;padding:2rem;text-align:center}
-h1{font-size:1.2rem;color:#aaa}</style></head>
-<body><h1>Keine Ergebnisse für "${escapeHtml(query)}"</h1></body></html>`
-  }
-
-  const videoCards = results.map((r, idx) => `
-    <a class="card" href="https://www.youtube.com/watch?v=${r.videoId}" target="_blank" rel="noopener">
-      <div class="thumb">
-        <img src="${escapeHtml(r.thumbnailUrl)}" alt="" loading="lazy">
-        <svg class="play" viewBox="0 0 68 48"><path d="M66.52 7.74c-.78-2.93-2.49-5.41-5.42-6.19C55.79.13 34 0 34 0S12.21.13 6.9 1.55C3.97 2.33 2.27 4.81 1.48 7.74.06 13.05 0 24 0 24s.06 10.95 1.48 16.26c.78 2.93 2.49 5.41 5.42 6.19C12.21 47.87 34 48 34 48s21.79-.13 27.1-1.55c2.93-.78 4.64-3.26 5.42-6.19C67.94 34.95 68 24 68 24s-.06-10.95-1.48-16.26z" fill="#f00"/><path d="M45 24 27 14v20" fill="#fff"/></svg>
-      </div>
-      <div class="info">
-        ${idx === 0 ? '<span class="rank">Top-Ergebnis</span>' : ""}
-        <div class="title">${escapeHtml(r.title)}</div>
-        <div class="meta">
-          <span class="channel">${escapeHtml(r.channelTitle)} · ${formatDate(r.publishedAt)}</span>
-          <button class="copy-btn" onclick="event.preventDefault();event.stopPropagation();copyUrl('https://www.youtube.com/watch?v=${r.videoId}',this)" title="URL kopieren">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-          </button>
-        </div>
-      </div>
-    </a>`).join("")
-
-  return `<!DOCTYPE html>
-<html lang="de">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>YouTube: ${escapeHtml(query)}</title>
-<style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{font-family:system-ui,-apple-system,sans-serif;background:#0f0f0f;color:#fff;padding:1rem}
-h1{font-size:1rem;color:#aaa;margin-bottom:1rem;font-weight:400}
-a{text-decoration:none;color:inherit}
-.grid{display:grid;grid-template-columns:1fr;gap:0.75rem}
-.card{display:grid;grid-template-columns:160px 1fr;gap:0;border-radius:12px;overflow:hidden;background:#181818;transition:background 0.2s}
-.card:hover{background:#222}
-.thumb{aspect-ratio:16/9;height:90px;position:relative;background:#111;display:flex;align-items:center;justify-content:center;overflow:hidden}
-.thumb img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-.play{width:48px;height:34px;position:relative;z-index:1;opacity:0.85}
-.card:hover .play{opacity:1}
-.info{padding:0.75rem;min-width:0}
-.title{font-size:0.85rem;font-weight:500;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.meta{display:flex;align-items:center;gap:0.5rem;margin-top:0.25rem}
-.channel{font-size:0.75rem;color:#aaa}
-.copy-btn{background:none;border:1px solid #444;border-radius:4px;color:#aaa;cursor:pointer;padding:2px;width:22px;height:22px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.15s}
-.copy-btn:hover{color:#fff;border-color:#888}
-.copy-btn.copied{color:#3ea6ff;border-color:#3ea6ff}
-.copy-btn svg{width:12px;height:12px}
-.rank{display:inline-block;font-size:0.65rem;font-weight:600;color:#3ea6ff;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.2rem}
-.open-hint{display:inline-flex;align-items:center;gap:4px;font-size:0.7rem;color:#3ea6ff;margin-top:0.5rem;opacity:0;transition:opacity 0.2s}
-.card:hover .open-hint{opacity:1}
-</style>
-</head>
-<body>
-<h1>Ergebnisse für „${escapeHtml(query)}"</h1>
-<div class="grid">
-${videoCards}
-</div>
-<script>
-function copyUrl(url,btn){
-  navigator.clipboard.writeText(url).then(function(){
-    btn.classList.add('copied');
-    setTimeout(function(){btn.classList.remove('copied')},1500);
-  });
-}
-</script>
-</body>
-</html>`
-}
-
-
-
-function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;")
-}
-
-function formatDate(iso: string): string {
-  try {
-    return new Date(iso).toLocaleDateString("de-DE", { day: "numeric", month: "short", year: "numeric" })
-  } catch {
-    return ""
-  }
-}

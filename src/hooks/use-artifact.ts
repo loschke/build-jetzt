@@ -100,7 +100,7 @@ export function isExtractBrandingPart(part: { type: string }): boolean {
 }
 
 /** Artifact-producing tools — used for auto-opening the panel during streaming */
-const ARTIFACT_TOOL_TYPES = new Set(["tool-create_artifact", "tool-create_quiz", "tool-create_review", "tool-generate_image", "tool-youtube_search", "tool-youtube_analyze", "tool-text_to_speech", "tool-extract_branding"])
+const ARTIFACT_TOOL_TYPES = new Set(["tool-create_artifact", "tool-create_quiz", "tool-create_review", "tool-generate_image", "tool-youtube_analyze", "tool-text_to_speech", "tool-extract_branding"])
 
 /**
  * Map saved DB parts (tool-call, tool-result) to AI SDK 6 typed tool UI parts.
@@ -487,52 +487,6 @@ export function extractYouTubeAnalyzeFromToolPart(part: { type: string; [key: st
   return null
 }
 
-/**
- * Extract artifact data from a youtube_search tool part.
- * Like generate_image, content is created server-side — empty during streaming,
- * artifactId available at output-available for DB fetch.
- */
-export function extractYouTubeSearchFromToolPart(part: { type: string; [key: string]: unknown }): {
-  artifact: Omit<SelectedArtifact, "isStreaming">
-  isStreaming: boolean
-} | null {
-  if (!isYouTubeSearchPart(part)) return null
-
-  const toolPart = part as unknown as {
-    state: string
-    input?: { query?: string }
-    output?: unknown
-  }
-  const inp = toolPart.input
-
-  if (toolPart.state === "input-streaming" || toolPart.state === "input-available") {
-    return {
-      artifact: {
-        title: inp?.query ? `YouTube: ${inp.query}` : "YouTube-Suche…",
-        content: "",
-        type: "html",
-        version: 1,
-      },
-      isStreaming: true,
-    }
-  }
-
-  if (toolPart.state === "output-available") {
-    const out = unwrapToolOutput<{ artifactId?: string; title?: string; version?: number }>(toolPart.output)
-    return {
-      artifact: {
-        id: out?.artifactId,
-        title: out?.title ?? "YouTube-Suche",
-        content: "",
-        type: "html",
-        version: out?.version ?? 1,
-      },
-      isStreaming: false,
-    }
-  }
-
-  return null
-}
 
 /**
  * Backward compatibility for old review artifacts (type: "review", JSON content).
@@ -596,7 +550,7 @@ export function useArtifact({ messages, status }: UseArtifactOptions) {
 
     for (const part of lastMsg.parts ?? []) {
       // Try artifact-producing tools in order
-      const extracted = extractArtifactFromToolPart(part) ?? extractQuizFromToolPart(part) ?? extractReviewFromToolPart(part) ?? extractImageFromToolPart(part) ?? extractAudioFromToolPart(part) ?? extractBrandingFromToolPart(part) ?? extractYouTubeSearchFromToolPart(part) ?? extractYouTubeAnalyzeFromToolPart(part)
+      const extracted = extractArtifactFromToolPart(part) ?? extractQuizFromToolPart(part) ?? extractReviewFromToolPart(part) ?? extractImageFromToolPart(part) ?? extractAudioFromToolPart(part) ?? extractBrandingFromToolPart(part) ?? extractYouTubeAnalyzeFromToolPart(part)
       if (extracted) {
         setSelectedArtifact((prev) => {
           // Server-side artifacts (image, youtube_search): skip auto-open on chat reload

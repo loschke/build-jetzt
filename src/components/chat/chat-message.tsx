@@ -20,6 +20,7 @@ import {
 } from "@/components/ai-elements/reasoning"
 import { AskUser } from "@/components/generative-ui/ask-user"
 import { ContentAlternatives } from "@/components/generative-ui/content-alternatives"
+import { YouTubeResults, YouTubeResultsSkeleton, type YouTubeVideo } from "@/components/generative-ui/youtube-results"
 import { ToolStatus } from "./tool-status"
 import { MemoryIndicator } from "./memory-indicator"
 import { MessageAttachments } from "./message-attachment"
@@ -61,7 +62,7 @@ interface ChatMessageProps {
 }
 
 /** Tools that have their own dedicated rendering (not shown as ToolStatus) */
-const CUSTOM_RENDERED_TOOLS = new Set(["ask_user", "create_artifact", "create_quiz", "create_review", "content_alternatives", "generate_image", "extract_branding"])
+const CUSTOM_RENDERED_TOOLS = new Set(["ask_user", "create_artifact", "create_quiz", "create_review", "content_alternatives", "generate_image", "extract_branding", "youtube_search"])
 
 /** Check if a part is a generic tool part that should show a ToolStatus */
 function isGenericToolPart(part: { type: string; [key: string]: unknown }): boolean {
@@ -473,27 +474,25 @@ export const ChatMessage = memo(function ChatMessage({
                 const data = extractInlineToolData(part, "youtube_search")
                 if (!data) return null
 
+                const isStreaming = data.state === "input-streaming" || data.state === "input-available"
+                if (isStreaming) {
+                  return <YouTubeResultsSkeleton key={`${message.id}-yt-search-${i}`} />
+                }
+
+                const output = unwrapToolOutput<{
+                  query?: string
+                  resultCount?: number
+                  videos?: YouTubeVideo[]
+                }>(data.output)
                 const input = data.input as { query?: string } | undefined
-                const output = unwrapToolOutput<{ artifactId?: string; title?: string; version?: number; resultCount?: number }>(data.output)
-                const ytTitle = output?.title ?? `YouTube: ${input?.query ?? "Suche"}`
-                const preview = output?.resultCount != null ? `${output.resultCount} Ergebnisse` : "YouTube-Suche"
+                const query = output?.query ?? input?.query ?? "YouTube"
+                const videos = output?.videos ?? []
 
                 return (
-                  <ArtifactCard
+                  <YouTubeResults
                     key={`${message.id}-yt-search-${i}`}
-                    title={ytTitle}
-                    preview={preview}
-                    icon={artifactTypeToIcon("html")}
-                    isActive={selectedArtifact?.id === output?.artifactId}
-                    onClick={() => {
-                      onArtifactClick({
-                        id: output?.artifactId,
-                        title: ytTitle,
-                        content: "",
-                        type: "html",
-                        version: output?.version,
-                      })
-                    }}
+                    query={query}
+                    videos={videos}
                   />
                 )
               }
