@@ -7,7 +7,7 @@
 ## Projekt-Ueberblick
 
 **Repository:** `loschke-chat`
-**Zweck:** KI-Chat-Plattform mit Expert-System, Artifact-Erstellung, Memory, Bildgenerierung, Websuche und MCP-Integration.
+**Zweck:** KI-Chat-Plattform mit Expert-System, Artifact-Erstellung, Memory, Bildgenerierung, YouTube-Suche/Analyse, Text-to-Speech, Websuche und MCP-Integration.
 **Stack:** Next.js 16 + TypeScript + Tailwind v4 + Vercel AI SDK + Neon Postgres + Logto Auth
 
 ### Routing
@@ -208,7 +208,7 @@ ChatShell (Server Component)
     │   ├── ChatEmptyState (Experten-Grid / Quicktasks)
     │   └── PromptInput
     └── ArtifactPanel (optional, 50%)
-        ├── View: HtmlPreview | MessageResponse | QuizRenderer | ReviewRenderer | ImagePreview
+        ├── View: HtmlPreview | MessageResponse | QuizRenderer | ReviewRenderer | ImagePreview | AudioPreview
         └── Edit: ArtifactEditor (CodeMirror)
 ```
 
@@ -254,7 +254,7 @@ Zentral in `src/config/features.ts`. Drei Patterns:
 | Pattern | Flags | Aktivierung |
 |---------|-------|-------------|
 | **Opt-out** | chat, mermaid, darkMode | Default `enabled`, explizit `"false"` deaktiviert |
-| **Opt-in Server** | web, search, storage, mcp, admin, memory, imageGeneration | Aktiv wenn API-Key/ENV gesetzt |
+| **Opt-in Server** | web, search, storage, mcp, admin, memory, imageGeneration, youtube, tts | Aktiv wenn API-Key/ENV gesetzt |
 | **Opt-in Client** | businessMode, credits | `NEXT_PUBLIC_*` auf `"true"`, Build-Zeit |
 
 Details: `docs/feature-flags-konfiguration.md`

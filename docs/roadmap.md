@@ -39,6 +39,9 @@ Alle 10 Original-Meilensteine plus Post-M10-Erweiterungen sind abgeschlossen.
 | Chat umbenennen         | Rename-Dialog im Sidebar-Dropdown                   |
 | Chat teilen             | Token-basierter Share-Link, read-only, widerrufbar  |
 | Tool-Accordions         | Eingeklappt bei Chat-History und Share-Ansicht      |
+| YouTube Search          | YouTube-Video-Suche mit HTML-Artifact-Ergebnissen   |
+| YouTube Analyze         | Video-Transkription/Analyse via Gemini Multimodal   |
+| Text-to-Speech          | Gemini TTS mit Audio-Artifact und Player im Panel   |
 
 ---
 
@@ -48,7 +51,7 @@ Alle 10 Original-Meilensteine plus Post-M10-Erweiterungen sind abgeschlossen.
 | ---------------------- | ------ | --------------------------------------------- | ------------------------------------ |
 | Admin Roles            | 100%   | —                                             | `prd-admin-roles.md`                 |
 | Generative UI Tools    | 100%   | —                                             | `generative-ui-tools-guide.md`       |
-| Gemini Features        | 60%    | YouTube, TTS, Search Grounding                | `prd-gemini-features.md`             |
+| Gemini Features        | 90%    | Google Search Grounding (optional)             | `prd-gemini-features.md`             |
 | Anthropic Agent Skills | 0%     | Code Execution, PPTX/XLSX/DOCX/PDF, Files API | `PRD-anthropic-agent-skills.md`      |
 | Performance/Caching    | 90%    | Client-Virtualisierung (spaeter)              | `performance-caching-concept.md`     |
 | Privacy/Family         | 50%    | EU-Config, DSGVO-Export                       | `privacy-family-deployment-guide.md` |
@@ -70,6 +73,7 @@ Alle 10 Original-Meilensteine plus Post-M10-Erweiterungen sind abgeschlossen.
 | Expert/Projekt Enrichment | API liefert Namen direkt mit, keine Extra-Fetches                  | Performance PRD | Done   |
 | Chat umbenennen           | Inline-Rename im Sidebar-Dropdown                                  | Neu             | Done   |
 | Chat teilen               | Token-basierter Share-Link, read-only, widerrufbar, ohne Login     | Neu             | Done   |
+| Lange User-Messages       | Collapsible User-Messages mit Mehr/Weniger-Toggle ab 200px         | Neu             | Done   |
 | EU-Deployment-Checkliste  | Dokumentation fuer Neon EU, Vercel fra1, ENV-Vorlage               | Privacy PRD     | Offen  |
 | DSGVO-Datenexport         | User exportiert eigene Daten als JSON (Chats, Artifacts, Memories) | Privacy PRD     | Offen  |
 
@@ -79,20 +83,20 @@ Alle 10 Original-Meilensteine plus Post-M10-Erweiterungen sind abgeschlossen.
 
 ---
 
-### Stufe 2: YouTube + TTS
+### Stufe 2: YouTube + TTS ✅
 
-> Gemini-Erweiterung um die zwei meistgewuenschten Features.
+> Gemini-Erweiterung um die drei meistgewuenschten Features.
 
-| Feature                 | Beschreibung                                                     | Quelle     |
-| ----------------------- | ---------------------------------------------------------------- | ---------- |
-| YouTube Transcription   | Tool `youtube_transcript`: URL → Transkript/Zusammenfassung      | Gemini PRD |
-| Text-to-Speech          | Tool `text_to_speech`: Audio-Generierung inkl. 2-Speaker-Podcast | Gemini PRD |
-| Google Search Grounding | Optional: Faktencheck ueber Gemini Search (Scope offen)          | Gemini PRD |
+| Feature                 | Beschreibung                                                     | Quelle     | Status |
+| ----------------------- | ---------------------------------------------------------------- | ---------- | ------ |
+| YouTube Search          | Tool `youtube_search`: Stichwortsuche, HTML-Artifact mit Cards   | Gemini PRD | Done   |
+| YouTube Analyze         | Tool `youtube_analyze`: URL → Transkript/Zusammenfassung/Analyse | Gemini PRD | Done   |
+| Text-to-Speech          | Tool `text_to_speech`: Audio-Generierung inkl. 2-Speaker-Dialog  | Gemini PRD | Done   |
+| TTS Quicktask           | Quicktask "Text zu Sprache" mit Stimmen- und Modus-Auswahl      | Gemini PRD | Done   |
+| Audio Artifact          | Neuer Artifact-Typ "audio" mit Player im Panel                  | Gemini PRD | Done   |
+| Google Search Grounding | Optional: Faktencheck ueber Gemini Search (Scope offen)          | Gemini PRD | Offen  |
 
-**Aufwand:** 2-3 Tage
-**Risiko:** Niedrig — isolierte Tools, kein Eingriff in Core-Chat
-**Mehrwert:** Hoch — YouTube und TTS sind persoenliche Top-Prioritaeten
-**Abhaengigkeit:** `GOOGLE_GENERATIVE_AI_API_KEY` (bereits vorhanden)
+**Abhaengigkeiten:** `YOUTUBE_API_KEY` (YouTube Search), `GOOGLE_GENERATIVE_AI_API_KEY` (Analyze + TTS), R2 Storage (TTS Audio)
 
 ---
 

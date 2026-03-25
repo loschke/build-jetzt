@@ -7,7 +7,7 @@ import { chats } from "@/lib/db/schema/chats"
 interface CreateArtifactInput {
   chatId: string
   messageId?: string
-  type: "markdown" | "html" | "code" | "quiz" | "review" | "image"
+  type: "markdown" | "html" | "code" | "quiz" | "review" | "image" | "audio"
   title: string
   content: string
   language?: string

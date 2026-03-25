@@ -18,6 +18,9 @@ import {
   WrenchIcon,
   PlugIcon,
   ImageIcon,
+  YoutubeIcon,
+  VideoIcon,
+  Volume2Icon,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 
@@ -29,6 +32,9 @@ const TOOL_LABELS: Record<string, string> = {
   save_memory: "Erinnerung speichern",
   recall_memory: "Erinnerung abrufen",
   generate_image: "Bild generieren",
+  youtube_search: "YouTube-Suche",
+  youtube_analyze: "YouTube analysieren",
+  text_to_speech: "Audio generieren",
 }
 
 /** Icons for known tools */
@@ -39,6 +45,9 @@ const TOOL_ICONS: Record<string, typeof WrenchIcon> = {
   save_memory: BookmarkIcon,
   recall_memory: BrainIcon,
   generate_image: ImageIcon,
+  youtube_search: YoutubeIcon,
+  youtube_analyze: VideoIcon,
+  text_to_speech: Volume2Icon,
 }
 
 /** Format tool input for display */

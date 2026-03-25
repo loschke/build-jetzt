@@ -37,6 +37,10 @@ const ImagePreview = dynamic(
   () => import("./image-preview").then((mod) => ({ default: mod.ImagePreview })),
   { ssr: false }
 )
+const AudioPreview = dynamic(
+  () => import("./audio-preview").then((mod) => ({ default: mod.AudioPreview })),
+  { ssr: false }
+)
 const ArtifactEditor = dynamic(
   () => import("./artifact-editor").then((mod) => ({ default: mod.ArtifactEditor })),
   { ssr: false }
@@ -290,8 +294,8 @@ export function ArtifactPanel({
           )}
         </div>
         <div className="flex items-center gap-1">
-          {/* Hide edit/copy for quiz and image types — show only download for images */}
-          {contentType !== "quiz" && contentType !== "image" && (
+          {/* Hide edit/copy for quiz, image, and audio types */}
+          {contentType !== "quiz" && contentType !== "image" && contentType !== "audio" && (
             <>
               {mode === "edit" && onSave && artifactId && (
                 <Button
@@ -438,7 +442,9 @@ export function ArtifactPanel({
 
       {/* Content */}
       <div className="flex-1 overflow-auto">
-        {contentType === "image" ? (
+        {contentType === "audio" ? (
+          <AudioPreview content={content} title={title} isStreaming={isStreaming} />
+        ) : contentType === "image" ? (
           <ImagePreview content={content} title={title} isStreaming={isStreaming} />
         ) : contentType === "quiz" ? (
           (() => {
@@ -464,18 +470,22 @@ export function ArtifactPanel({
         ) : mode === "view" ? (
           contentType === "html" ? (
             isStreaming ? (
-              <HtmlStreamingPlaceholder title={title} />
+              <StreamingPlaceholder title={title} message="HTML wird generiert…" muted />
             ) : (
               <HtmlPreview html={content} />
             )
           ) : contentType === "code" ? (
             <CodePreview code={content} language={language} />
           ) : (
+            isStreaming && !content ? (
+            <StreamingPlaceholder title={title} />
+          ) : (
             <div ref={viewRef} className="p-6">
               <MessageResponse className="chat-prose">
                 {content}
               </MessageResponse>
             </div>
+          )
           )
         ) : (
           <ArtifactEditor
@@ -489,9 +499,9 @@ export function ArtifactPanel({
   )
 }
 
-function HtmlStreamingPlaceholder({ title }: { title: string }) {
+function StreamingPlaceholder({ title, message = "Inhalt wird generiert…", muted = false }: { title: string; message?: string; muted?: boolean }) {
   return (
-    <div className="flex h-full flex-col items-center justify-center gap-4 bg-muted p-8 text-muted-foreground">
+    <div className={`flex h-full flex-col items-center justify-center gap-4 p-8 text-muted-foreground ${muted ? "bg-muted" : ""}`}>
       <div className="flex items-center gap-2">
         <span className="size-2 animate-pulse rounded-full bg-primary" />
         <span className="text-sm font-medium text-foreground">{title}</span>
@@ -503,7 +513,7 @@ function HtmlStreamingPlaceholder({ title }: { title: string }) {
         <div className="h-3 w-2/3 animate-pulse rounded bg-muted-foreground/20 [animation-delay:450ms]" />
         <div className="h-3 w-4/5 animate-pulse rounded bg-muted-foreground/20 [animation-delay:600ms]" />
       </div>
-      <p className="mt-2 text-xs text-muted-foreground/60">HTML wird generiert...</p>
+      <p className="mt-2 text-xs text-muted-foreground/60">{message}</p>
     </div>
   )
 }

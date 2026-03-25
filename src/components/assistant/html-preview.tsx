@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react"
 
-const CSP_META = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data: blob:; font-src data:;">`
+const CSP_META = `<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; img-src data: blob: https://i.ytimg.com https://yt3.ggpht.com; font-src data:;">`
 
 function injectCsp(html: string): string {
   // Strip any existing CSP meta tags to prevent override
@@ -37,7 +37,7 @@ export function HtmlPreview({ html }: HtmlPreviewProps) {
     <div className="h-full w-full overflow-auto bg-neutral-900 p-4">
       <iframe
         srcDoc={safeSrcDoc}
-        sandbox="allow-scripts"
+        sandbox="allow-scripts allow-popups"
         className="mx-auto w-full border-0"
         style={{ height: "100%", minHeight: "600px" }}
         title="Preview"

@@ -3,6 +3,9 @@ import {
   Code,
   GalleryHorizontalEnd,
   Image as ImageIcon,
+  Volume2,
+  ClipboardCheck,
+  MessageSquareMore,
   Maximize2,
   type LucideIcon,
 } from "lucide-react"
@@ -14,6 +17,9 @@ const ICON_MAP: Record<string, LucideIcon> = {
   Code,
   GalleryHorizontalEnd,
   ImageIcon,
+  Volume2,
+  ClipboardCheck,
+  MessageSquareMore,
 }
 
 interface ArtifactCardProps {

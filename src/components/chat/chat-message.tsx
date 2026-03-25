@@ -1,6 +1,6 @@
 "use client"
 
-import { memo, useCallback } from "react"
+import { memo, useCallback, useRef, useState, useEffect } from "react"
 import { CopyIcon, DownloadIcon, PencilIcon } from "lucide-react"
 
 import {
@@ -23,7 +23,7 @@ import { ContentAlternatives } from "@/components/generative-ui/content-alternat
 import { ToolStatus } from "./tool-status"
 import { MemoryIndicator } from "./memory-indicator"
 import { MessageAttachments } from "./message-attachment"
-import { isCreateArtifactPart, isGenerateImagePart, extractArtifactFromToolPart } from "@/hooks/use-artifact"
+import { isCreateArtifactPart, isGenerateImagePart, isYouTubeSearchPart, isYouTubeAnalyzePart, isTextToSpeechPart, extractArtifactFromToolPart } from "@/hooks/use-artifact"
 import { unwrapToolOutput } from "@/lib/ai/tool-output"
 import type { SelectedArtifact } from "@/hooks/use-artifact"
 
@@ -243,7 +243,7 @@ export const ChatMessage = memo(function ChatMessage({
               messageId={message.id}
               parts={message.parts?.filter((part) => part.type === "file") ?? []}
             />
-            {messageText && <p className="whitespace-pre-wrap">{messageText}</p>}
+            {messageText && <CollapsibleText text={messageText} maxHeight={200} />}
             {onEdit && !isStreaming && messageText && (
               <MessageToolbar className="mt-1 opacity-0 transition-opacity group-hover:opacity-100">
                 <MessageActions>
@@ -468,6 +468,92 @@ export const ChatMessage = memo(function ChatMessage({
                   />
                 )
               }
+              if (isYouTubeSearchPart(part)) {
+                const data = extractInlineToolData(part, "youtube_search")
+                if (!data) return null
+
+                const input = data.input as { query?: string } | undefined
+                const output = unwrapToolOutput<{ artifactId?: string; title?: string; version?: number; resultCount?: number }>(data.output)
+                const ytTitle = output?.title ?? `YouTube: ${input?.query ?? "Suche"}`
+                const preview = output?.resultCount != null ? `${output.resultCount} Ergebnisse` : "YouTube-Suche"
+
+                return (
+                  <ArtifactCard
+                    key={`${message.id}-yt-search-${i}`}
+                    title={ytTitle}
+                    preview={preview}
+                    icon={artifactTypeToIcon("html")}
+                    isActive={selectedArtifact?.id === output?.artifactId}
+                    onClick={() => {
+                      onArtifactClick({
+                        id: output?.artifactId,
+                        title: ytTitle,
+                        content: "",
+                        type: "html",
+                        version: output?.version,
+                      })
+                    }}
+                  />
+                )
+              }
+              if (isYouTubeAnalyzePart(part)) {
+                const data = extractInlineToolData(part, "youtube_analyze")
+                if (!data) return null
+
+                const input = data.input as { title?: string; url?: string; task?: string } | undefined
+                const output = unwrapToolOutput<{ artifactId?: string; title?: string; version?: number }>(data.output)
+                const analyzeTitle = output?.title ?? input?.title ?? "YouTube-Analyse"
+                const taskLabel = input?.task === "transcribe" ? "Transkript" : input?.task === "analyze" ? "Analyse" : "Zusammenfassung"
+
+                return (
+                  <ArtifactCard
+                    key={`${message.id}-yt-analyze-${i}`}
+                    title={analyzeTitle}
+                    preview={taskLabel}
+                    icon={artifactTypeToIcon("markdown")}
+                    isActive={selectedArtifact?.id === output?.artifactId}
+                    onClick={() => {
+                      onArtifactClick({
+                        id: output?.artifactId,
+                        title: analyzeTitle,
+                        content: "",
+                        type: "markdown",
+                        version: output?.version,
+                      })
+                    }}
+                  />
+                )
+              }
+              if (isTextToSpeechPart(part)) {
+                const data = extractInlineToolData(part, "text_to_speech")
+                if (!data) return null
+
+                const input = data.input as { title?: string; voice?: string } | undefined
+                const output = unwrapToolOutput<{ artifactId?: string; title?: string; version?: number; durationSeconds?: number }>(data.output)
+                const audioTitle = output?.title ?? input?.title ?? "Audio"
+                const preview = output?.durationSeconds != null
+                  ? `${Math.floor(output.durationSeconds / 60)}:${String(Math.floor(output.durationSeconds % 60)).padStart(2, "0")} · ${input?.voice ?? "Kore"}`
+                  : input?.voice ?? "Audio"
+
+                return (
+                  <ArtifactCard
+                    key={`${message.id}-tts-${i}`}
+                    title={audioTitle}
+                    preview={preview}
+                    icon={artifactTypeToIcon("audio")}
+                    isActive={selectedArtifact?.id === output?.artifactId}
+                    onClick={() => {
+                      onArtifactClick({
+                        id: output?.artifactId,
+                        title: audioTitle,
+                        content: "",
+                        type: "audio",
+                        version: output?.version,
+                      })
+                    }}
+                  />
+                )
+              }
               if (isGenericToolPart(part)) {
                 const { toolName, state, input, output, errorText, inputDetail } = extractGenericToolData(part)
                 return (
@@ -511,3 +597,52 @@ export const ChatMessage = memo(function ChatMessage({
     </Message>
   )
 })
+
+/** Collapsible text for long user messages */
+function CollapsibleText({ text, maxHeight }: { text: string; maxHeight: number }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const [isOverflowing, setIsOverflowing] = useState(false)
+  const [isExpanded, setIsExpanded] = useState(false)
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const check = () => setIsOverflowing(el.scrollHeight > maxHeight)
+    check()
+    const observer = new ResizeObserver(check)
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [maxHeight])
+
+  return (
+    <div className="relative">
+      <div
+        ref={ref}
+        className="whitespace-pre-wrap transition-[max-height] duration-200"
+        style={!isExpanded && isOverflowing ? { maxHeight, overflow: "hidden" } : undefined}
+      >
+        {text}
+      </div>
+      {isOverflowing && !isExpanded && (
+        <div className="absolute inset-x-0 bottom-0 flex items-end justify-center h-12 bg-gradient-to-t from-background to-transparent">
+          <button
+            type="button"
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors pb-1"
+            onClick={() => setIsExpanded(true)}
+          >
+            Mehr anzeigen
+          </button>
+        </div>
+      )}
+      {isOverflowing && isExpanded && (
+        <button
+          type="button"
+          className="text-xs text-muted-foreground hover:text-foreground transition-colors mt-1"
+          onClick={() => setIsExpanded(false)}
+        >
+          Weniger anzeigen
+        </button>
+      )}
+    </div>
+  )
+}

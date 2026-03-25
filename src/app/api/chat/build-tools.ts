@@ -10,6 +10,9 @@ import { createLoadSkillTool } from "@/lib/ai/tools/load-skill"
 import { createSaveMemoryTool } from "@/lib/ai/tools/save-memory"
 import { createRecallMemoryTool } from "@/lib/ai/tools/recall-memory"
 import { generateImageTool, type UploadedImage } from "@/lib/ai/tools/generate-image"
+import { youtubeSearchTool } from "@/lib/ai/tools/youtube-search"
+import { youtubeAnalyzeTool } from "@/lib/ai/tools/youtube-analyze"
+import { textToSpeechTool } from "@/lib/ai/tools/text-to-speech"
 import type { SkillMetadata } from "@/lib/ai/skills/discovery"
 import type { MCPHandle } from "@/lib/mcp"
 
@@ -65,6 +68,18 @@ export async function buildTools(params: BuildToolsParams): Promise<BuildToolsRe
   // Add image generation tool if enabled and no privacy routing
   if ((imageGenerationEnabled ?? features.imageGeneration.enabled)) {
     tools.generate_image = generateImageTool(chatId, userId, uploadedImages)
+  }
+
+  // Add YouTube tools if enabled
+  if (features.youtube.enabled) {
+    tools.youtube_search = youtubeSearchTool(chatId, userId)
+  }
+  // YouTube Analyze uses Gemini multimodal (same key as image generation)
+  if (features.imageGeneration.enabled) {
+    tools.youtube_analyze = youtubeAnalyzeTool(chatId, userId)
+  }
+  if (features.tts.enabled) {
+    tools.text_to_speech = textToSpeechTool(chatId, userId)
   }
 
   // Add load_skill tool if skills are available (skip for quicktasks — self-contained)

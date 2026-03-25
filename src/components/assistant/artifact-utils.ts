@@ -220,6 +220,8 @@ export function artifactTypeToIcon(type: string): string {
       return "MessageSquareMore"
     case "image":
       return "ImageIcon"
+    case "audio":
+      return "Volume2"
     default:
       return "FileText"
   }

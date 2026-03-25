@@ -37,4 +37,10 @@ export const features = {
   imageGeneration: {
     enabled: !!process.env.GOOGLE_GENERATIVE_AI_API_KEY,
   },
+  youtube: {
+    enabled: !!process.env.YOUTUBE_API_KEY,
+  },
+  tts: {
+    enabled: !!process.env.GOOGLE_GENERATIVE_AI_API_KEY,
+  },
 } as const

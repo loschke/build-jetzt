@@ -50,6 +50,27 @@ export function calculateImageCredits(): number {
   return IMAGE_GENERATION_CREDITS
 }
 
+/** Flat credit cost for YouTube search. */
+const YOUTUBE_SEARCH_CREDITS = parseInt(process.env.YOUTUBE_SEARCH_CREDITS ?? "200", 10)
+
+export function calculateYouTubeSearchCredits(): number {
+  return YOUTUBE_SEARCH_CREDITS
+}
+
+/** Flat credit cost for YouTube video analysis. */
+const YOUTUBE_ANALYZE_CREDITS = parseInt(process.env.YOUTUBE_ANALYZE_CREDITS ?? "5000", 10)
+
+export function calculateYouTubeAnalyzeCredits(): number {
+  return YOUTUBE_ANALYZE_CREDITS
+}
+
+/** Flat credit cost for text-to-speech generation. */
+const TTS_CREDITS = parseInt(process.env.TTS_CREDITS ?? "3000", 10)
+
+export function calculateTTSCredits(): number {
+  return TTS_CREDITS
+}
+
 export function calculateCredits(input: CreditCalculationInput): number {
   const model = getModelById(input.modelId)
   const inputPrice = model?.inputPrice?.per1m ?? FALLBACK_INPUT_PRICE

@@ -77,6 +77,8 @@ interface BuildSystemPromptOptions {
   projectInstructions?: string | null
   projectDocuments?: Array<{ title: string; content: string }> | null
   customInstructions?: string | null
+  youtubeEnabled?: boolean
+  ttsEnabled?: boolean
   webToolsEnabled?: boolean
   mcpToolNames?: string[]
 }
@@ -102,7 +104,21 @@ export function buildSystemPrompt(options?: BuildSystemPromptOptions): string {
   // 2. Artifact instructions (always included)
   sections.push(SYSTEM_PROMPTS.artifacts)
 
-  // 2.5. Web tools instructions (when enabled)
+  // 2.5. YouTube tools instructions (when enabled)
+  if (options?.youtubeEnabled) {
+    sections.push(
+      `## YouTube-Tools\n\n### YouTube-Suche (\`youtube_search\`)\nSuche nach YouTube-Videos zu einem Thema. Nutze es wenn:\n- Der User nach Videos zu einem Thema sucht\n- Du dem User Video-Content empfehlen willst\n- Schreibe die Suchanfrage in der Sprache, in der relevante Videos zu erwarten sind\n\n### YouTube-Analyse (\`youtube_analyze\`)\nAnalysiere, transkribiere oder fasse YouTube-Videos zusammen. Nutze es wenn:\n- Der User eine YouTube-URL teilt und wissen will, worum es geht\n- Transkription, Zusammenfassung oder detaillierte Analyse eines Videos gefragt ist\n- Tasks: \`transcribe\` (Wort für Wort), \`summarize\` (Zusammenfassung), \`analyze\` (detailliert)`
+    )
+  }
+
+  // 2.55. TTS instructions (when enabled)
+  if (options?.ttsEnabled) {
+    sections.push(
+      `## Text-to-Speech (\`text_to_speech\`)\nWandle Text in gesprochenes Audio um. Nutze es wenn:\n- Der User Text vorgelesen haben will\n- Ein Podcast-Intro, Voiceover oder Sprachausgabe gewünscht ist\n- Für Dialoge: Nutze das \`speakers\` Feld mit genau 2 Sprechern und verschiedenen Stimmen\n- Stimmen: Kore (warm weiblich, Standard), Puck (energisch männlich), Charon (tief männlich), Zephyr (hell weiblich), Aoede, Fenrir, Leda, Orus\n- Maximal 5000 Zeichen pro Anfrage`
+    )
+  }
+
+  // 2.6. Web tools instructions (when enabled)
   if (options?.webToolsEnabled) {
     sections.push(
       `## Web-Tools\n\nDu hast zwei Web-Tools zur Verfügung:\n- **web_search**: Suche im Web nach aktuellen Informationen.\n- **web_fetch**: Rufe den Inhalt einer URL ab und lies ihn als Markdown.\n\nWenn der User eine URL teilt, nutze web_fetch um den Inhalt zu lesen. Wenn der User nach aktuellen Informationen fragt, nutze web_search.`

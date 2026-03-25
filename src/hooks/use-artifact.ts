@@ -73,8 +73,29 @@ export function isGenerateImagePart(part: { type: string }): boolean {
   return part.type === "tool-generate_image"
 }
 
+/**
+ * Check if a message part is a youtube_search tool invocation.
+ */
+export function isYouTubeSearchPart(part: { type: string }): boolean {
+  return part.type === "tool-youtube_search"
+}
+
+/**
+ * Check if a message part is a youtube_analyze tool invocation.
+ */
+export function isYouTubeAnalyzePart(part: { type: string }): boolean {
+  return part.type === "tool-youtube_analyze"
+}
+
+/**
+ * Check if a message part is a text_to_speech tool invocation.
+ */
+export function isTextToSpeechPart(part: { type: string }): boolean {
+  return part.type === "tool-text_to_speech"
+}
+
 /** Artifact-producing tools — used for auto-opening the panel during streaming */
-const ARTIFACT_TOOL_TYPES = new Set(["tool-create_artifact", "tool-create_quiz", "tool-create_review", "tool-generate_image"])
+const ARTIFACT_TOOL_TYPES = new Set(["tool-create_artifact", "tool-create_quiz", "tool-create_review", "tool-generate_image", "tool-youtube_search", "tool-youtube_analyze", "tool-text_to_speech"])
 
 /**
  * Map saved DB parts (tool-call, tool-result) to AI SDK 6 typed tool UI parts.
@@ -321,6 +342,145 @@ export function extractImageFromToolPart(part: { type: string; [key: string]: un
 }
 
 /**
+ * Extract artifact data from a text_to_speech tool part.
+ * Audio content is created server-side — empty during streaming.
+ */
+export function extractAudioFromToolPart(part: { type: string; [key: string]: unknown }): {
+  artifact: Omit<SelectedArtifact, "isStreaming">
+  isStreaming: boolean
+} | null {
+  if (!isTextToSpeechPart(part)) return null
+
+  const toolPart = part as unknown as {
+    state: string
+    input?: { title?: string; text?: string }
+    output?: unknown
+  }
+  const inp = toolPart.input
+
+  if (toolPart.state === "input-streaming" || toolPart.state === "input-available") {
+    return {
+      artifact: {
+        title: inp?.title ?? "Audio wird generiert…",
+        content: "",
+        type: "audio",
+        version: 1,
+      },
+      isStreaming: true,
+    }
+  }
+
+  if (toolPart.state === "output-available") {
+    const out = unwrapToolOutput<{ artifactId?: string; title?: string; version?: number }>(toolPart.output)
+    return {
+      artifact: {
+        id: out?.artifactId,
+        title: out?.title ?? "Audio",
+        content: "",
+        type: "audio",
+        version: out?.version ?? 1,
+      },
+      isStreaming: false,
+    }
+  }
+
+  return null
+}
+
+/**
+ * Extract artifact data from a youtube_analyze tool part.
+ * Like youtube_search, content is created server-side — empty during streaming.
+ */
+export function extractYouTubeAnalyzeFromToolPart(part: { type: string; [key: string]: unknown }): {
+  artifact: Omit<SelectedArtifact, "isStreaming">
+  isStreaming: boolean
+} | null {
+  if (!isYouTubeAnalyzePart(part)) return null
+
+  const toolPart = part as unknown as {
+    state: string
+    input?: { title?: string; url?: string; task?: string }
+    output?: unknown
+  }
+  const inp = toolPart.input
+
+  if (toolPart.state === "input-streaming" || toolPart.state === "input-available") {
+    return {
+      artifact: {
+        title: inp?.title ?? "YouTube-Analyse…",
+        content: "",
+        type: "markdown",
+        version: 1,
+      },
+      isStreaming: true,
+    }
+  }
+
+  if (toolPart.state === "output-available") {
+    const out = unwrapToolOutput<{ artifactId?: string; title?: string; version?: number }>(toolPart.output)
+    return {
+      artifact: {
+        id: out?.artifactId,
+        title: out?.title ?? "YouTube-Analyse",
+        content: "",
+        type: "markdown",
+        version: out?.version ?? 1,
+      },
+      isStreaming: false,
+    }
+  }
+
+  return null
+}
+
+/**
+ * Extract artifact data from a youtube_search tool part.
+ * Like generate_image, content is created server-side — empty during streaming,
+ * artifactId available at output-available for DB fetch.
+ */
+export function extractYouTubeSearchFromToolPart(part: { type: string; [key: string]: unknown }): {
+  artifact: Omit<SelectedArtifact, "isStreaming">
+  isStreaming: boolean
+} | null {
+  if (!isYouTubeSearchPart(part)) return null
+
+  const toolPart = part as unknown as {
+    state: string
+    input?: { query?: string }
+    output?: unknown
+  }
+  const inp = toolPart.input
+
+  if (toolPart.state === "input-streaming" || toolPart.state === "input-available") {
+    return {
+      artifact: {
+        title: inp?.query ? `YouTube: ${inp.query}` : "YouTube-Suche…",
+        content: "",
+        type: "html",
+        version: 1,
+      },
+      isStreaming: true,
+    }
+  }
+
+  if (toolPart.state === "output-available") {
+    const out = unwrapToolOutput<{ artifactId?: string; title?: string; version?: number }>(toolPart.output)
+    return {
+      artifact: {
+        id: out?.artifactId,
+        title: out?.title ?? "YouTube-Suche",
+        content: "",
+        type: "html",
+        version: out?.version ?? 1,
+      },
+      isStreaming: false,
+    }
+  }
+
+  return null
+}
+
+/**
  * Backward compatibility for old review artifacts (type: "review", JSON content).
  * Extracts markdown content from JSON wrapper and treats as markdown with reviewMode.
  */
@@ -382,22 +542,21 @@ export function useArtifact({ messages, status }: UseArtifactOptions) {
 
     for (const part of lastMsg.parts ?? []) {
       // Try artifact-producing tools in order
-      const extracted = extractArtifactFromToolPart(part) ?? extractQuizFromToolPart(part) ?? extractReviewFromToolPart(part) ?? extractImageFromToolPart(part)
+      const extracted = extractArtifactFromToolPart(part) ?? extractQuizFromToolPart(part) ?? extractReviewFromToolPart(part) ?? extractImageFromToolPart(part) ?? extractAudioFromToolPart(part) ?? extractYouTubeSearchFromToolPart(part) ?? extractYouTubeAnalyzeFromToolPart(part)
       if (extracted) {
         setSelectedArtifact((prev) => {
-          // Image artifact: skip auto-open on chat reload (no panel open, content empty).
-          // But allow updates when panel IS open (streaming → output-available transition).
-          if (extracted.artifact.type === "image" && !extracted.isStreaming && !extracted.artifact.content) {
-            if (!prev || prev.type !== "image") {
-              // No image panel open → this is a chat reload → skip
+          // Server-side artifacts (image, youtube_search): skip auto-open on chat reload
+          // (no panel open, content empty). Allow updates when panel IS open (streaming → output-available).
+          const isServerSideArtifact = !extracted.artifact.content && !extracted.isStreaming
+          if (isServerSideArtifact) {
+            if (!prev || prev.type !== extracted.artifact.type) {
               return prev
             }
-            // Panel is open (streaming placeholder) → update with artifactId so auto-fetch can run
           }
 
-          // Skip re-setting image artifacts that already have content loaded
-          // (prevents flicker when text continues streaming after image is ready)
-          if (prev && prev.type === "image" && prev.content && !prev.isStreaming
+          // Skip re-setting server-side artifacts that already have content loaded
+          // (prevents flicker when text continues streaming after content is ready)
+          if (prev && prev.content && !prev.isStreaming
             && extracted.artifact.id === prev.id) {
             return prev
           }
@@ -407,21 +566,20 @@ export function useArtifact({ messages, status }: UseArtifactOptions) {
     }
   }, [messages])
 
-  // Auto-fetch image artifact content from DB.
-  // Image artifacts arrive with empty content (image generated server-side in execute).
-  // This effect fetches the actual gallery JSON once an artifactId is available.
-  // Runs on: initial streaming completion, chat reload, card click with empty content.
-  const imageFetchedRef = useRef<string | null>(null)
+  // Auto-fetch server-side artifact content from DB.
+  // Server-side artifacts (image, youtube_search, etc.) arrive with empty content
+  // (generated in the tool's execute handler). This effect fetches the actual content
+  // once an artifactId is available.
+  const serverFetchedRef = useRef<string | null>(null)
   useEffect(() => {
     if (!selectedArtifact) return
-    if (selectedArtifact.type !== "image") return
     if (selectedArtifact.isStreaming) return
     if (!selectedArtifact.id) return
     if (selectedArtifact.content) return // Already has content
 
     // Prevent duplicate fetches for the same artifact
-    if (imageFetchedRef.current === selectedArtifact.id) return
-    imageFetchedRef.current = selectedArtifact.id
+    if (serverFetchedRef.current === selectedArtifact.id) return
+    serverFetchedRef.current = selectedArtifact.id
 
     fetch(`/api/artifacts/${selectedArtifact.id}`)
       .then((res) => (res.ok ? res.json() : null))
@@ -435,8 +593,8 @@ export function useArtifact({ messages, status }: UseArtifactOptions) {
         }
       })
       .catch((err) => {
-        console.warn("[useArtifact] Image fetch failed:", err)
-        imageFetchedRef.current = null
+        console.warn("[useArtifact] Server artifact fetch failed:", err)
+        serverFetchedRef.current = null
       })
   }, [selectedArtifact?.id, selectedArtifact?.type, selectedArtifact?.isStreaming, selectedArtifact?.content])
 

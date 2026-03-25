@@ -31,6 +31,7 @@ const nextConfig: NextConfig = {
               "img-src 'self' data: blob: https:",
               "font-src 'self' data: https://fonts.gstatic.com",
               "connect-src 'self' https: blob:",
+              "media-src 'self' data: blob: https://*.r2.dev https://*.r2.cloudflarestorage.com",
               "frame-ancestors 'none'",
               "base-uri 'self'",
               "form-action 'self'",
