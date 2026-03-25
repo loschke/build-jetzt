@@ -145,7 +145,12 @@ h1{font-size:1.2rem;color:#aaa}</style></head>
       <div class="info">
         ${idx === 0 ? '<span class="rank">Top-Ergebnis</span>' : ""}
         <div class="title">${escapeHtml(r.title)}</div>
-        <div class="channel">${escapeHtml(r.channelTitle)} · ${formatDate(r.publishedAt)}</div>
+        <div class="meta">
+          <span class="channel">${escapeHtml(r.channelTitle)} · ${formatDate(r.publishedAt)}</span>
+          <button class="copy-btn" onclick="event.preventDefault();event.stopPropagation();copyUrl('https://www.youtube.com/watch?v=${r.videoId}',this)" title="URL kopieren">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+          </button>
+        </div>
       </div>
     </a>`).join("")
 
@@ -169,7 +174,12 @@ a{text-decoration:none;color:inherit}
 .card:hover .play{opacity:1}
 .info{padding:0.75rem;min-width:0}
 .title{font-size:0.85rem;font-weight:500;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.channel{font-size:0.75rem;color:#aaa;margin-top:0.25rem}
+.meta{display:flex;align-items:center;gap:0.5rem;margin-top:0.25rem}
+.channel{font-size:0.75rem;color:#aaa}
+.copy-btn{background:none;border:1px solid #444;border-radius:4px;color:#aaa;cursor:pointer;padding:2px;width:22px;height:22px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all 0.15s}
+.copy-btn:hover{color:#fff;border-color:#888}
+.copy-btn.copied{color:#3ea6ff;border-color:#3ea6ff}
+.copy-btn svg{width:12px;height:12px}
 .rank{display:inline-block;font-size:0.65rem;font-weight:600;color:#3ea6ff;text-transform:uppercase;letter-spacing:0.05em;margin-bottom:0.2rem}
 .open-hint{display:inline-flex;align-items:center;gap:4px;font-size:0.7rem;color:#3ea6ff;margin-top:0.5rem;opacity:0;transition:opacity 0.2s}
 .card:hover .open-hint{opacity:1}
@@ -180,6 +190,14 @@ a{text-decoration:none;color:inherit}
 <div class="grid">
 ${videoCards}
 </div>
+<script>
+function copyUrl(url,btn){
+  navigator.clipboard.writeText(url).then(function(){
+    btn.classList.add('copied');
+    setTimeout(function(){btn.classList.remove('copied')},1500);
+  });
+}
+</script>
 </body>
 </html>`
 }
