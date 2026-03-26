@@ -99,8 +99,22 @@ export function isExtractBrandingPart(part: { type: string }): boolean {
   return part.type === "tool-extract_branding"
 }
 
+/**
+ * Check if a message part is a generate_design tool invocation.
+ */
+export function isGenerateDesignPart(part: { type: string }): boolean {
+  return part.type === "tool-generate_design"
+}
+
+/**
+ * Check if a message part is an edit_design tool invocation.
+ */
+export function isEditDesignPart(part: { type: string }): boolean {
+  return part.type === "tool-edit_design"
+}
+
 /** Artifact-producing tools — used for auto-opening the panel during streaming */
-const ARTIFACT_TOOL_TYPES = new Set(["tool-create_artifact", "tool-create_quiz", "tool-create_review", "tool-generate_image", "tool-youtube_analyze", "tool-extract_branding"])
+const ARTIFACT_TOOL_TYPES = new Set(["tool-create_artifact", "tool-create_quiz", "tool-create_review", "tool-generate_image", "tool-youtube_analyze", "tool-extract_branding", "tool-generate_design", "tool-edit_design"])
 
 /**
  * Map saved DB parts (tool-call, tool-result) to AI SDK 6 typed tool UI parts.
@@ -444,6 +458,53 @@ export function extractYouTubeAnalyzeFromToolPart(part: { type: string; [key: st
 
 
 /**
+ * Extract artifact data from a generate_design or edit_design tool part.
+ * Like generate_image, HTML is created server-side — empty during streaming.
+ */
+export function extractDesignFromToolPart(part: { type: string; [key: string]: unknown }): {
+  artifact: Omit<SelectedArtifact, "isStreaming">
+  isStreaming: boolean
+} | null {
+  if (!isGenerateDesignPart(part) && !isEditDesignPart(part)) return null
+
+  const toolPart = part as unknown as {
+    state: string
+    input?: { title?: string; prompt?: string }
+    output?: unknown
+  }
+  const inp = toolPart.input
+
+  if (toolPart.state === "input-streaming" || toolPart.state === "input-available") {
+    return {
+      artifact: {
+        title: inp?.title ?? "Design wird generiert…",
+        content: "",
+        type: "html",
+        version: 1,
+      },
+      isStreaming: true,
+    }
+  }
+
+  if (toolPart.state === "output-available") {
+    const out = unwrapToolOutput<{ artifactId?: string; title?: string; version?: number; error?: string }>(toolPart.output)
+    if (out?.error) return null
+    return {
+      artifact: {
+        id: out?.artifactId,
+        title: out?.title ?? inp?.title ?? "UI Design",
+        content: "",
+        type: "html",
+        version: out?.version ?? 1,
+      },
+      isStreaming: false,
+    }
+  }
+
+  return null
+}
+
+/**
  * Backward compatibility for old review artifacts (type: "review", JSON content).
  * Extracts markdown content from JSON wrapper and treats as markdown with reviewMode.
  */
@@ -505,7 +566,7 @@ export function useArtifact({ messages, status }: UseArtifactOptions) {
 
     for (const part of lastMsg.parts ?? []) {
       // Try artifact-producing tools in order
-      const extracted = extractArtifactFromToolPart(part) ?? extractQuizFromToolPart(part) ?? extractReviewFromToolPart(part) ?? extractImageFromToolPart(part) ?? extractBrandingFromToolPart(part) ?? extractYouTubeAnalyzeFromToolPart(part)
+      const extracted = extractArtifactFromToolPart(part) ?? extractQuizFromToolPart(part) ?? extractReviewFromToolPart(part) ?? extractImageFromToolPart(part) ?? extractBrandingFromToolPart(part) ?? extractYouTubeAnalyzeFromToolPart(part) ?? extractDesignFromToolPart(part)
       if (extracted) {
         setSelectedArtifact((prev) => {
           // Server-side artifacts (image, youtube_search): skip auto-open on chat reload

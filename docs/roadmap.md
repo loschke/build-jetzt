@@ -47,17 +47,18 @@ Alle 10 Original-Meilensteine plus Post-M10-Erweiterungen sind abgeschlossen.
 
 ## Offene PRDs: Status-Audit
 
-| PRD                    | Fertig | Offen                                         | Referenz                             |
-| ---------------------- | ------ | --------------------------------------------- | ------------------------------------ |
-| Admin Roles            | 100%   | —                                             | `prd-admin-roles.md`                 |
-| Generative UI Tools    | 100%   | —                                             | `generative-ui-tools-guide.md`       |
-| Gemini Features        | 90%    | Google Search Grounding (optional)             | `prd-gemini-features.md`             |
-| Stitch Design Gen.     | 0%     | generate_design, edit_design, Device-Targeting  | `prd-stitch-design-generation.md`    |
-| Anthropic Agent Skills | 0%     | Code Execution, PPTX/XLSX/DOCX/PDF, Files API | `PRD-anthropic-agent-skills.md`      |
-| Performance/Caching    | 90%    | Client-Virtualisierung (spaeter)              | `performance-caching-concept.md`     |
-| Privacy/Family         | 50%    | EU-Config, DSGVO-Export                       | `privacy-family-deployment-guide.md` |
-| Notes/Second Brain     | 0%     | Komplettes Feature                            | `prd-notes-second-brain-v2.md`       |
-| lernen.diy             | 30%    | Content-Pipeline, Lernbegleiter               | `prd-lernen-diy-v1.md`               |
+| PRD                    | Fertig | Offen                                          | Referenz                                   |
+| ---------------------- | ------ | ---------------------------------------------- | ------------------------------------------ |
+| Admin Roles            | 100%   | —                                              | `prd-admin-roles.md`                       |
+| Generative UI Tools    | 100%   | —                                              | `generative-ui-tools-guide.md`             |
+| Gemini Features        | 90%    | Google Search Grounding (optional)             | `prd-gemini-features.md`                   |
+| Stitch Design Gen.     | 0%     | generate_design, edit_design, Device-Targeting | `features/prd-stitch-design-generation.md` |
+| Anthropic Agent Skills | 0%     | Code Execution, PPTX/XLSX/DOCX/PDF, Files API  | `PRD-anthropic-agent-skills.md`            |
+| Performance/Caching    | 90%    | Client-Virtualisierung (spaeter)               | `performance-caching-concept.md`           |
+| Privacy/Family         | 50%    | EU-Config, DSGVO-Export                        | `privacy-family-deployment-guide.md`       |
+| Notes/Second Brain     | 0%     | Komplettes Feature                             | `prd-notes-second-brain-v2.md`             |
+| lernen.diy             | 30%    | Content-Pipeline, Lernbegleiter                | `prd-lernen-diy-v1.md`                     |
+| Teams & Organisations  | 0%     | Komplettes Feature (4 Tabellen, RBAC, Invites) | `features/prd-teams.md`                    |
 
 ---
 
@@ -93,8 +94,8 @@ Alle 10 Original-Meilensteine plus Post-M10-Erweiterungen sind abgeschlossen.
 | YouTube Search          | Tool `youtube_search`: Stichwortsuche, HTML-Artifact mit Cards   | Gemini PRD | Done   |
 | YouTube Analyze         | Tool `youtube_analyze`: URL → Transkript/Zusammenfassung/Analyse | Gemini PRD | Done   |
 | Text-to-Speech          | Tool `text_to_speech`: Audio-Generierung inkl. 2-Speaker-Dialog  | Gemini PRD | Done   |
-| TTS Quicktask           | Quicktask "Text zu Sprache" mit Stimmen- und Modus-Auswahl      | Gemini PRD | Done   |
-| Audio Artifact          | Neuer Artifact-Typ "audio" mit Player im Panel                  | Gemini PRD | Done   |
+| TTS Quicktask           | Quicktask "Text zu Sprache" mit Stimmen- und Modus-Auswahl       | Gemini PRD | Done   |
+| Audio Artifact          | Neuer Artifact-Typ "audio" mit Player im Panel                   | Gemini PRD | Done   |
 | Google Search Grounding | Optional: Faktencheck ueber Gemini Search (Scope offen)          | Gemini PRD | Offen  |
 
 **Abhaengigkeiten:** `YOUTUBE_API_KEY` (YouTube Search), `GOOGLE_GENERATIVE_AI_API_KEY` (Analyze + TTS), R2 Storage (TTS Audio)
@@ -105,14 +106,14 @@ Alle 10 Original-Meilensteine plus Post-M10-Erweiterungen sind abgeschlossen.
 
 > Hochwertige UI-Design-Generierung und -Iteration direkt im Chat. Google Stitch als spezialisiertes Design-Backend.
 
-| Feature                | Beschreibung                                                          | Quelle              | Status |
-| ---------------------- | --------------------------------------------------------------------- | ------------------- | ------ |
-| Design generieren      | Tool `generate_design`: Prompt → production-quality HTML via Stitch   | Stitch PRD Phase 1  | Offen  |
-| Design iterieren       | Tool `edit_design`: Bestehendes Design mit Follow-up-Prompt verfeinern | Stitch PRD Phase 2  | Offen  |
-| Device-Targeting       | Desktop/Mobile/Tablet-Auswahl bei Generierung                         | Stitch PRD Phase 1  | Offen  |
-| Metadata-Feld          | `metadata` JSONB auf Artifacts (fuer Stitch Project/Screen-Zuordnung) | Stitch PRD Phase 1  | Offen  |
-| Screenshot-Thumbnail   | Stitch-Screenshot als Vorschau-Bild in der Chat-Message               | Stitch PRD Phase 3  | Offen  |
-| Design-Varianten       | Mehrere Layout/Farb/Font-Varianten auf einen Klick                    | Stitch PRD (spaeter) | Offen  |
+| Feature              | Beschreibung                                                           | Quelle               | Status |
+| -------------------- | ---------------------------------------------------------------------- | -------------------- | ------ |
+| Design generieren    | Tool `generate_design`: Prompt → production-quality HTML via Stitch    | Stitch PRD Phase 1   | Offen  |
+| Design iterieren     | Tool `edit_design`: Bestehendes Design mit Follow-up-Prompt verfeinern | Stitch PRD Phase 2   | Offen  |
+| Device-Targeting     | Desktop/Mobile/Tablet-Auswahl bei Generierung                          | Stitch PRD Phase 1   | Offen  |
+| Metadata-Feld        | `metadata` JSONB auf Artifacts (fuer Stitch Project/Screen-Zuordnung)  | Stitch PRD Phase 1   | Offen  |
+| Screenshot-Thumbnail | Stitch-Screenshot als Vorschau-Bild in der Chat-Message                | Stitch PRD Phase 3   | Offen  |
+| Design-Varianten     | Mehrere Layout/Farb/Font-Varianten auf einen Klick                     | Stitch PRD (spaeter) | Offen  |
 
 **Aufwand:** 1-2 Tage
 **Risiko:** Niedrig — komplett additiv, nutzt bestehenden HTML-Artifact-Typ und HtmlPreview. Kein Breaking Change am Chat-Core.
@@ -179,6 +180,29 @@ Alle 10 Original-Meilensteine plus Post-M10-Erweiterungen sind abgeschlossen.
 
 ---
 
+### Stufe 5b: Teams & Organisations
+
+> Team-Collaboration fuer Workshops und B2B-Szenarien. Querschnitts-Feature mit Auswirkung auf Experts, Skills, Credits, Sharing und Sidebar.
+
+| Feature               | Beschreibung                                                           | Quelle            |
+| --------------------- | ---------------------------------------------------------------------- | ----------------- |
+| Team CRUD             | Teams erstellen, verwalten, loeschen mit Slug-basierter Identifikation | Teams PRD Phase A |
+| Invite-System         | Token-basierte Einladungen mit Ablaufdatum und optionaler E-Mail       | Teams PRD Phase A |
+| RBAC                  | Drei Rollen: Owner, Admin, Member mit abgestuften Berechtigungen       | Teams PRD Phase A |
+| Three-Tier-Resolution | Experts/Skills: personal > team > global Priorisierung                 | Teams PRD Phase B |
+| Dual-Credit-Pool      | Team-Budget mit Fallback auf persoenliches Budget                      | Teams PRD Phase B |
+| Team-Switcher UI      | Kontext-Wechsel in Sidebar zwischen Personal und Teams                 | Teams PRD Phase C |
+| Team-Management-Seite | Members, Resources, Credits verwalten unter `/teams/[teamId]`          | Teams PRD Phase C |
+| Team-Chat-Sharing     | Chats gezielt mit Teams teilen (neben oeffentlichem Share)             | Teams PRD Phase C |
+
+**Aufwand:** 8-12 Tage (4 Phasen: Backend → Integration → Frontend → Admin)
+**Risiko:** Mittel-Hoch — Querschnitts-Feature, aendert 12+ bestehende Dateien (resolve-context, persist, Experts, Skills, Credits, Sidebar)
+**Mehrwert:** B2B/Workshop-Faehigkeit, Team-Collaboration, Grundlage fuer skalierte Nutzung
+**Abhaengigkeiten:** Stabile Credit-Architektur, Feature-Flag `NEXT_PUBLIC_TEAMS_ENABLED`
+**Detail-PRD:** `docs/features/prd-teams.md`
+
+---
+
 ### Stufe 6: Monetarisierung + Skalierung
 
 > Plattform fuer zahlende Nutzer vorbereiten.
@@ -221,3 +245,4 @@ Alle 10 Original-Meilensteine plus Post-M10-Erweiterungen sind abgeschlossen.
 | Privacy-Guide              | `docs/features/privacy-family-deployment-guide.md` |
 | Anthropic Agent Skills PRD | `docs/PRD-anthropic-agent-skills.md`               |
 | Stitch Design PRD          | `docs/features/prd-stitch-design-generation.md`    |
+| Teams PRD                  | `docs/features/prd-teams.md`                       |

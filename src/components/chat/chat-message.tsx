@@ -25,7 +25,7 @@ import { AudioPlayer, AudioPlayerSkeleton, type AudioPlayerData } from "@/compon
 import { ToolStatus } from "./tool-status"
 import { MemoryIndicator } from "./memory-indicator"
 import { MessageAttachments } from "./message-attachment"
-import { isCreateArtifactPart, isGenerateImagePart, isYouTubeSearchPart, isYouTubeAnalyzePart, isTextToSpeechPart, isExtractBrandingPart, extractArtifactFromToolPart } from "@/hooks/use-artifact"
+import { isCreateArtifactPart, isGenerateImagePart, isYouTubeSearchPart, isYouTubeAnalyzePart, isTextToSpeechPart, isExtractBrandingPart, isGenerateDesignPart, isEditDesignPart, extractArtifactFromToolPart } from "@/hooks/use-artifact"
 import { unwrapToolOutput } from "@/lib/ai/tool-output"
 import { safeDomain } from "@/lib/url-validation"
 import type { SelectedArtifact } from "@/hooks/use-artifact"
@@ -63,7 +63,7 @@ interface ChatMessageProps {
 }
 
 /** Tools that have their own dedicated rendering (not shown as ToolStatus) */
-const CUSTOM_RENDERED_TOOLS = new Set(["ask_user", "create_artifact", "create_quiz", "create_review", "content_alternatives", "generate_image", "extract_branding", "youtube_search", "text_to_speech"])
+const CUSTOM_RENDERED_TOOLS = new Set(["ask_user", "create_artifact", "create_quiz", "create_review", "content_alternatives", "generate_image", "extract_branding", "youtube_search", "text_to_speech", "generate_design", "edit_design"])
 
 /** Check if a part is a generic tool part that should show a ToolStatus */
 function isGenericToolPart(part: { type: string; [key: string]: unknown }): boolean {
@@ -576,6 +576,35 @@ export const ChatMessage = memo(function ChatMessage({
                         content: "",
                         type: "code",
                         language: "json",
+                        version: output?.version,
+                      })
+                    }}
+                  />
+                )
+              }
+              if (isGenerateDesignPart(part) || isEditDesignPart(part)) {
+                const toolName = isGenerateDesignPart(part) ? "generate_design" : "edit_design"
+                const data = extractInlineToolData(part, toolName)
+                if (!data) return null
+
+                const input = data.input as { title?: string; prompt?: string } | undefined
+                const output = unwrapToolOutput<{ artifactId?: string; title?: string; version?: number; error?: string }>(data.output)
+                if (output?.error) return null
+                const designTitle = output?.title ?? input?.title ?? "UI Design"
+
+                return (
+                  <ArtifactCard
+                    key={`${message.id}-design-${i}`}
+                    title={designTitle}
+                    preview={isEditDesignPart(part) ? "Design-Iteration" : "Stitch Design"}
+                    icon={artifactTypeToIcon("html")}
+                    isActive={selectedArtifact?.id === output?.artifactId}
+                    onClick={() => {
+                      onArtifactClick({
+                        id: output?.artifactId,
+                        title: designTitle,
+                        content: "",
+                        type: "html",
                         version: output?.version,
                       })
                     }}

@@ -14,6 +14,8 @@ import { youtubeSearchTool } from "@/lib/ai/tools/youtube-search"
 import { youtubeAnalyzeTool } from "@/lib/ai/tools/youtube-analyze"
 import { textToSpeechTool } from "@/lib/ai/tools/text-to-speech"
 import { extractBrandingTool } from "@/lib/ai/tools/extract-branding"
+import { generateDesignTool } from "@/lib/ai/tools/generate-design"
+import { editDesignTool } from "@/lib/ai/tools/edit-design"
 import type { SkillMetadata } from "@/lib/ai/skills/discovery"
 import type { MCPHandle } from "@/lib/mcp"
 
@@ -84,6 +86,10 @@ export async function buildTools(params: BuildToolsParams): Promise<BuildToolsRe
   }
   if (features.branding.enabled) {
     tools.extract_branding = extractBrandingTool(chatId, userId)
+  }
+  if (features.stitch.enabled) {
+    tools.generate_design = generateDesignTool(chatId, userId)
+    tools.edit_design = editDesignTool(chatId, userId)
   }
 
   // Add load_skill tool if skills are available (skip for quicktasks — self-contained)

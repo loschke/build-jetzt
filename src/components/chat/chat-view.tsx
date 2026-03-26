@@ -43,6 +43,7 @@ import { SuggestedReplies } from "./suggested-replies"
 import { ExpertSwitchPopover } from "./expert-switch-popover"
 import { ExpertSwitchDivider } from "./expert-switch-divider"
 import { useArtifact, mapSavedPartsToUI } from "@/hooks/use-artifact"
+import { useResizeHandle } from "@/hooks/use-resize-handle"
 import type { QuizDefinition, QuizResults } from "@/types/quiz"
 import type { SectionFeedback } from "@/types/review"
 import { DropZoneOverlay } from "./drop-zone-overlay"
@@ -495,6 +496,16 @@ export function ChatView({ chatId, initialModelId, initialProjectId, initialArti
     [sendMessage]
   )
 
+  const [artifactFullscreen, setArtifactFullscreen] = useState(false)
+  const { panelWidth, containerRef, handlePointerDown, handlePointerMove, handlePointerUp, handleDoubleClick } = useResizeHandle()
+
+  const hasArtifact = selectedArtifact !== null
+
+  // Reset fullscreen when artifact closes
+  useEffect(() => {
+    if (!hasArtifact) setArtifactFullscreen(false)
+  }, [hasArtifact])
+
   if (chatId && !initialMessagesLoaded) {
     return (
       <div className="flex h-full items-center justify-center">
@@ -504,13 +515,15 @@ export function ChatView({ chatId, initialModelId, initialProjectId, initialArti
   }
 
   const isGenerating = status === "streaming" || status === "submitted"
-  const hasArtifact = selectedArtifact !== null
 
   return (
-    <div className="flex flex-1 min-h-0">
+    <div ref={containerRef} className="flex flex-1 min-h-0" onPointerMove={hasArtifact ? handlePointerMove : undefined} onPointerUp={hasArtifact ? handlePointerUp : undefined}>
       <DropZoneOverlay />
       {/* Chat column */}
-      <div className={`flex min-h-0 flex-col ${hasArtifact ? "w-1/2 border-r max-md:hidden" : "flex-1"}`}>
+      <div
+        className={`flex min-h-0 flex-col ${hasArtifact ? (artifactFullscreen ? "hidden" : "max-md:hidden") : "flex-1"}`}
+        style={hasArtifact && !artifactFullscreen ? { width: `${(1 - panelWidth) * 100}%` } : undefined}
+      >
         {/* Messages area */}
         <Conversation className="flex-1">
           <ConversationContent className={`mx-auto w-full gap-4 p-4 md:gap-6 md:p-6 ${hasArtifact ? "max-w-2xl" : "max-w-3xl"}`}>
@@ -661,9 +674,24 @@ export function ChatView({ chatId, initialModelId, initialProjectId, initialArti
         </div>
       </div>
 
+      {/* Resize handle */}
+      {hasArtifact && !artifactFullscreen && (
+        <div
+          className="hidden md:flex w-1.5 shrink-0 cursor-col-resize items-center justify-center hover:bg-primary/10 active:bg-primary/20 transition-colors"
+          onPointerDown={handlePointerDown}
+          onDoubleClick={handleDoubleClick}
+          title="Ziehen zum Anpassen, Doppelklick fuer 50/50"
+        >
+          <div className="h-8 w-0.5 rounded-full bg-border" />
+        </div>
+      )}
+
       {/* Artifact panel with error boundary */}
       {hasArtifact && (
-        <div className="flex w-1/2 min-h-0 max-md:w-full max-md:absolute max-md:inset-0 max-md:z-50 max-md:bg-background">
+        <div
+          className={`flex min-h-0 ${artifactFullscreen ? "fixed inset-0 z-50 bg-background" : "max-md:w-full max-md:absolute max-md:inset-0 max-md:z-50 max-md:bg-background"}`}
+          style={!artifactFullscreen ? { width: `${panelWidth * 100}%` } : undefined}
+        >
           <ArtifactErrorBoundary onClose={closeArtifact}>
             <ArtifactPanel
               content={selectedArtifact.content}
@@ -678,6 +706,8 @@ export function ChatView({ chatId, initialModelId, initialProjectId, initialArti
               onSave={selectedArtifact.id ? handleArtifactSave : undefined}
               onQuizComplete={selectedArtifact.type === "quiz" ? handleQuizComplete : undefined}
               onReviewComplete={selectedArtifact.type === "markdown" ? handleReviewComplete : undefined}
+              fullscreen={artifactFullscreen}
+              onToggleFullscreen={() => setArtifactFullscreen(f => !f)}
             />
           </ArtifactErrorBoundary>
         </div>

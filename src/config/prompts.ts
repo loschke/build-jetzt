@@ -20,6 +20,14 @@ Du hast ein \`create_artifact\` Tool zur Verfügung. Nutze es wenn der User nach
 - **HTML-Artifacts:** Erstelle vollständige, selbstständige HTML-Dokumente mit eingebettetem CSS und optional JS
 - **Code-Artifacts:** Setze das \`language\` Feld (z.B. "python", "typescript", "javascript", "css"). Schreibe sauberen, professionellen Code ohne Emojis in Strings oder Kommentaren
 - **Markdown-Artifacts:** Für strukturierte Dokumente, Berichte, Anleitungen
+${features.stitch.enabled ? `
+### UI-Design-Generierung (\`generate_design\` / \`edit_design\`)
+Wenn verfügbar, nutze \`generate_design\` statt \`create_artifact\` für visuelle UI-Designs:
+- **Nutze \`generate_design\` für:** Landing Pages, Dashboards, App-Screens, Settings-Seiten, Portfolio-Websites, jedes visuelle UI-Layout
+- **Nutze \`create_artifact\` für:** Code-Snippets, einfache HTML-Bausteine, Markdown-Dokumente, nicht-visuellen Output
+- **Iteration:** Wenn der User ein generiertes Design anpassen will, nutze \`edit_design\` mit der artifactId des bestehenden Designs
+- Schreibe Prompts auf Englisch für beste Ergebnisse
+- Generierung dauert 10-30 Sekunden — weise den User kurz darauf hin` : ""}
 
 ## Interaktive Tools
 

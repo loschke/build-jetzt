@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import dynamic from "next/dynamic"
-import { X, Eye, Pencil, Copy, Download, Check, FileText, Printer, Code, Save, ClipboardCheck } from "lucide-react"
+import { X, Eye, Pencil, Copy, Download, Check, FileText, Printer, Code, Save, ClipboardCheck, Maximize2, Minimize2 } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -62,6 +62,8 @@ interface ArtifactPanelProps {
   reviewMode?: boolean
   onClose: () => void
   onSave?: (content: string) => void
+  fullscreen?: boolean
+  onToggleFullscreen?: () => void
   /** Callback when a quiz is completed — passes updated quiz + results for back-channel */
   onQuizComplete?: (quiz: QuizDefinition, results: QuizResults) => void
   /** Callback when a review is completed — passes feedback for back-channel */
@@ -90,6 +92,8 @@ export function ArtifactPanel({
   onSave,
   onQuizComplete,
   onReviewComplete,
+  fullscreen,
+  onToggleFullscreen,
 }: ArtifactPanelProps) {
   const [mode, setMode] = useState<"view" | "review" | "edit">(initialReviewMode ? "review" : "view")
   const [editContent, setEditContent] = useState(content)
@@ -111,6 +115,16 @@ export function ArtifactPanel({
       printIframesRef.current = []
     }
   }, [])
+
+  // ESC exits fullscreen
+  useEffect(() => {
+    if (!fullscreen || !onToggleFullscreen) return
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onToggleFullscreen()
+    }
+    window.addEventListener("keydown", handler)
+    return () => window.removeEventListener("keydown", handler)
+  }, [fullscreen, onToggleFullscreen])
 
   const handleCopy = useCallback(async () => {
     const textToCopy = mode === "edit" ? editContent : content
@@ -421,6 +435,22 @@ export function ArtifactPanel({
               title="Herunterladen"
             >
               <Download className="size-3.5" />
+            </Button>
+          )}
+          {onToggleFullscreen && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-8 md:size-7 max-md:hidden"
+              onClick={onToggleFullscreen}
+              title={fullscreen ? "Verkleinern" : "Vollbild"}
+            >
+              {fullscreen ? (
+                <Minimize2 className="size-3.5" />
+              ) : (
+                <Maximize2 className="size-3.5" />
+              )}
             </Button>
           )}
           <Button

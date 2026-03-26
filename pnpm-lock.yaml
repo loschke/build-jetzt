@@ -65,6 +65,9 @@ importers:
       '@google/genai':
         specifier: ^1.46.0
         version: 1.46.0(@modelcontextprotocol/sdk@1.26.0(@cfworker/json-schema@4.1.1)(zod@4.3.6))
+      '@google/stitch-sdk':
+        specifier: ^0.0.3
+        version: 0.0.3(@cfworker/json-schema@4.1.1)
       '@logto/next':
         specifier: ^4.2.8
         version: 4.2.8(next@16.2.1(@babel/core@7.29.0)(@opentelemetry/api@1.9.0)(react-dom@19.2.4(react@19.2.4))(react@19.2.4))
@@ -1193,6 +1196,10 @@ packages:
     peerDependenciesMeta:
       '@modelcontextprotocol/sdk':
         optional: true
+
+  '@google/stitch-sdk@0.0.3':
+    resolution: {integrity: sha512-lBqT4sgYUzyKdFJ8m+ITxQedI29iWhoJtRXbxGYYg1iSGoRV0dqwhyKIL7rN9QW+NoyBuIMmsjuCcoxtm8Qz4A==}
+    engines: {node: '>=18'}
 
   '@hono/node-server@1.19.9':
     resolution: {integrity: sha512-vHL6w3ecZsky+8P5MD+eFfaGTyCeOHUIFYMGpQGbrBTSmNNoxv0if69rEZ5giu36weC5saFuznL411gRX7bJDw==}
@@ -8754,6 +8761,14 @@ snapshots:
       - supports-color
       - utf-8-validate
 
+  '@google/stitch-sdk@0.0.3(@cfworker/json-schema@4.1.1)':
+    dependencies:
+      '@modelcontextprotocol/sdk': 1.26.0(@cfworker/json-schema@4.1.1)(zod@4.3.6)
+      zod: 4.3.6
+    transitivePeerDependencies:
+      - '@cfworker/json-schema'
+      - supports-color
+
   '@hono/node-server@1.19.9(hono@4.12.1)':
     dependencies:
       hono: 4.12.1
@@ -9148,7 +9163,6 @@ snapshots:
       '@cfworker/json-schema': 4.1.1
     transitivePeerDependencies:
       - supports-color
-    optional: true
 
   '@mswjs/interceptors@0.41.3':
     dependencies:

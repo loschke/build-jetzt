@@ -78,6 +78,20 @@ export function calculateBrandingCredits(): number {
   return BRANDING_CREDITS
 }
 
+/** Flat credit cost for Stitch design generation. */
+const STITCH_GENERATION_CREDITS = parseInt(process.env.STITCH_GENERATION_CREDITS ?? "5000", 10)
+
+export function calculateStitchGenerationCredits(): number {
+  return STITCH_GENERATION_CREDITS
+}
+
+/** Flat credit cost for Stitch design editing/iteration. */
+const STITCH_EDIT_CREDITS = parseInt(process.env.STITCH_EDIT_CREDITS ?? "3000", 10)
+
+export function calculateStitchEditCredits(): number {
+  return STITCH_EDIT_CREDITS
+}
+
 /**
  * Deduct flat-rate credits for a tool operation.
  * Checks balance atomically (no race condition). Returns error string

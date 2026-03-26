@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, integer, index } from "drizzle-orm/pg-core"
+import { pgTable, text, timestamp, integer, index, jsonb } from "drizzle-orm/pg-core"
 import { chats } from "./chats"
 import { messages } from "./messages"
 
@@ -15,6 +15,7 @@ export const artifacts = pgTable(
     content: text("content").notNull(),
     language: text("language"),
     fileUrl: text("file_url"),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>(),
     version: integer("version").default(1).notNull(),
     createdAt: timestamp("created_at", { withTimezone: true })
       .defaultNow()

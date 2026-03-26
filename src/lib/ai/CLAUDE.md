@@ -34,6 +34,7 @@ Tools werden bedingt registriert:
 - Wenn search enabled: `web_search`, `web_fetch`
 - Wenn memory enabled + User-Toggle: `save_memory`, `recall_memory`
 - Wenn Gemini-Key + kein Privacy-Routing: `generate_image`
+- Wenn Stitch-Key: `generate_design`, `edit_design`
 - Wenn Skills vorhanden + kein Quicktask: `load_skill`
 - MCP-Tools: dynamisch, mit Collision Guard (Built-in hat Vorrang)
 
@@ -95,6 +96,15 @@ Details: `docs/system-prompt-architektur.md`
 - **Credits:** Flat-Rate `IMAGE_GENERATION_CREDITS` (default 500)
 - **Privacy:** Tool deaktiviert bei Privacy-Routing
 
+## Stitch Design Generation
+
+- **Provider:** Google Stitch via `@google/stitch-sdk` (MCP-basiert)
+- **Tools:** `generate_design` (neues Design), `edit_design` (Iteration)
+- **Output:** HTML mit Tailwind CSS als `html` Artifact
+- **Metadata:** `artifacts.metadata` JSONB speichert `{ stitchProjectId, stitchScreenId }` fuer Iteration
+- **Credits:** Flat-Rate `STITCH_GENERATION_CREDITS` (default 5000), `STITCH_EDIT_CREDITS` (default 3000)
+- **Feature-Flag:** `STITCH_API_KEY` (opt-in)
+
 ## Privacy-Provider (`privacy-provider.ts`)
 
 Bypass fuer den Gateway bei Business Mode Privacy-Routing:
@@ -116,6 +126,8 @@ src/lib/ai/
 │   ├── save-memory.ts        — Explizites Memory-Speichern (Factory)
 │   ├── recall-memory.ts      — On-demand Memory-Suche (Factory)
 │   ├── generate-image.ts     — Bildgenerierung (Factory, Gemini)
+│   ├── generate-design.ts    — UI-Design via Stitch (Factory)
+│   ├── edit-design.ts        — Design-Iteration via Stitch (Factory)
 │   ├── load-skill.ts         — Skill-Content laden (Factory)
 │   └── parse-fake-artifact.ts — Fallback fuer Models ohne Tool-Calling
 ├── skills/

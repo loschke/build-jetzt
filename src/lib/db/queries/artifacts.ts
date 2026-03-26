@@ -12,6 +12,7 @@ interface CreateArtifactInput {
   content: string
   language?: string
   fileUrl?: string
+  metadata?: Record<string, unknown>
 }
 
 export async function createArtifact(input: CreateArtifactInput) {
@@ -40,6 +41,7 @@ export async function createArtifact(input: CreateArtifactInput) {
       content: input.content,
       language: input.language ?? null,
       fileUrl: input.fileUrl ?? null,
+      metadata: input.metadata ?? null,
     })
     .returning()
   return artifact
@@ -67,6 +69,7 @@ export async function getArtifactByIdForUser(id: string, userId: string) {
       content: artifacts.content,
       language: artifacts.language,
       fileUrl: artifacts.fileUrl,
+      metadata: artifacts.metadata,
       version: artifacts.version,
       createdAt: artifacts.createdAt,
     })
@@ -148,7 +151,8 @@ export async function updateArtifactContent(
   id: string,
   userId: string,
   content: string,
-  expectedVersion?: number
+  expectedVersion?: number,
+  metadata?: Record<string, unknown>
 ) {
   const db = getDb()
 
@@ -175,13 +179,19 @@ export async function updateArtifactContent(
     conditions.push(eq(artifacts.version, expectedVersion))
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const setValues: Record<string, any> = {
+    content,
+    version: sql`${artifacts.version} + 1`,
+    updatedAt: new Date(),
+  }
+  if (metadata !== undefined) {
+    setValues.metadata = metadata
+  }
+
   const [updated] = await db
     .update(artifacts)
-    .set({
-      content,
-      version: sql`${artifacts.version} + 1`,
-      updatedAt: new Date(),
-    })
+    .set(setValues)
     .where(and(...conditions))
     .returning()
 

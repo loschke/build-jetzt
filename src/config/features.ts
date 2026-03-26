@@ -46,4 +46,7 @@ export const features = {
   branding: {
     enabled: !!process.env.FIRECRAWL_API_KEY,
   },
+  stitch: {
+    enabled: !!process.env.STITCH_API_KEY,
+  },
 } as const
