@@ -221,9 +221,19 @@ export async function buildModelMessages(
   const cleanedMessages = rawMessages.map((msg) => ({
     ...msg,
     parts: msg.parts
-      ?.filter((part) =>
-        ALLOWED_PART_TYPES.has(part.type) || part.type.startsWith("tool-")
-      )
+      ?.filter((part) => {
+        // Allow standard types + typed tool parts
+        if (!(ALLOWED_PART_TYPES.has(part.type) || part.type.startsWith("tool-"))) return false
+        // Strip code_execution provider tool parts from history.
+        // convertToModelMessages cannot handle provider tools (no schema, server-generated IDs).
+        // Claude doesn't need the code execution logs for iteration — the text summary
+        // and artifact contain the relevant context.
+        if (part.type === "tool-code_execution") return false
+        // Also strip DB-persisted format of code_execution
+        const p = part as Record<string, unknown>
+        if ((part.type === "tool-call" || part.type === "tool-result") && p.toolName === "code_execution") return false
+        return true
+      })
       .map((part) => {
         const p = part as Record<string, unknown>
         // Detect orphaned client-side tool parts: type "tool-ask_user" / "tool-content_alternatives"
@@ -238,6 +248,13 @@ export async function buildModelMessages(
           return { ...p, state: "output-available" as const, output: { skipped: true } } as typeof part
         }
         return part
+      })
+      // Clean up orphaned step-start parts (adjacent step-starts after code_execution removal)
+      .filter((part, idx, arr) => {
+        if (part.type !== "step-start") return true
+        const next = arr[idx + 1]
+        // Remove step-start at end of parts array or followed by another step-start
+        return next !== undefined && next.type !== "step-start"
       }),
   })) satisfies UIMessage[]
 

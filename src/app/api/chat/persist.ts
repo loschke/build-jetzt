@@ -22,6 +22,79 @@ const ALLOWED_PERSIST_TYPES: Set<string> = new Set(ALLOWED_MIME_TYPES)
 /** Max file size for R2 persistence (10MB, matches client-side limit) */
 const MAX_PERSIST_SIZE = 10 * 1024 * 1024
 
+import { extractFileRefs, ANTHROPIC_FILES_API_BASE, ANTHROPIC_FILES_API_BETA } from "@/lib/ai/anthropic-skills"
+
+const PDF_MIME = "application/pdf"
+const FILE_ID_PATTERN = /^file_[a-zA-Z0-9]{20,60}$/
+const MAX_SKILL_FILES = 10
+
+/**
+ * Persist PDF files from code execution to R2 + Artifact.
+ * Binary formats (PPTX/XLSX/DOCX) remain as temporary file references via Files API proxy.
+ */
+async function persistCodeExecutionFiles(
+  assistantParts: Array<Record<string, unknown>>,
+  chatId: string,
+  userId: string,
+): Promise<void> {
+  if (!features.anthropicSkills.enabled) return
+
+  const apiKey = process.env.ANTHROPIC_API_KEY
+  if (!apiKey) return
+
+  // Collect PDF file refs from code_execution tool results (capped for safety)
+  const pdfFiles: Array<{ fileId: string; fileName: string }> = []
+  for (const part of assistantParts) {
+    if (part.type !== "tool-result" || part.toolName !== "code_execution") continue
+    for (const ref of extractFileRefs(part.result)) {
+      if (ref.extension === "pdf" && FILE_ID_PATTERN.test(ref.fileId)) {
+        pdfFiles.push({ fileId: ref.fileId, fileName: ref.fileName })
+        if (pdfFiles.length >= MAX_SKILL_FILES) break
+      }
+    }
+    if (pdfFiles.length >= MAX_SKILL_FILES) break
+  }
+
+  if (pdfFiles.length === 0) return
+
+  await Promise.all(pdfFiles.map(async ({ fileId, fileName }) => {
+    try {
+      const response = await fetch(`${ANTHROPIC_FILES_API_BASE}/${fileId}/content`, {
+        headers: {
+          "x-api-key": apiKey,
+          "anthropic-version": "2023-06-01",
+          "anthropic-beta": ANTHROPIC_FILES_API_BETA,
+        },
+      })
+      if (!response.ok) {
+        console.warn(`[persist] Failed to download file ${fileId}: ${response.status}`)
+        return
+      }
+
+      const buffer = Buffer.from(await response.arrayBuffer())
+      if (buffer.length > MAX_PERSIST_SIZE) {
+        console.warn(`[persist] Skill file ${fileId} exceeds size limit: ${buffer.length} bytes`)
+        return
+      }
+      const storageKey = `skill-files/${userId}/${chatId}/${nanoid()}-${sanitizeFilename(fileName) || fileId}`
+      const r2Url = await uploadBuffer(buffer, PDF_MIME, fileName, storageKey)
+
+      await createArtifact({
+        chatId,
+        type: "code",
+        title: fileName.replace(/\.[^.]+$/, ""),
+        content: "",
+        language: "pdf",
+        fileUrl: r2Url,
+      })
+
+      console.log(`[persist] Persisted skill file: ${fileName} → R2 + Artifact`)
+    } catch (err) {
+      console.warn(`[persist] Skill file persistence failed for ${fileId}:`, err instanceof Error ? err.message : err)
+    }
+  }))
+}
+
 import { SYSTEM_PROMPTS } from "./resolve-context"
 import type { ChatContext } from "./resolve-context"
 
@@ -268,6 +341,9 @@ export function createOnFinish(params: CreateOnFinishParams): StreamTextOnFinish
           console.error("Failed to create artifact from fake tool call:", err instanceof Error ? err.message : "Unknown")
         }
       }
+
+      // Step 1b: Persist code execution file outputs (PDF → R2 + Artifact)
+      await persistCodeExecutionFiles(assistantParts, resolvedChatId, userId)
 
       // Step 2: Save user message FIRST (sequential) to guarantee correct ordering.
       // User message save may include extraction which takes time — if saved in parallel

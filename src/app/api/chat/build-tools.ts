@@ -16,6 +16,8 @@ import { textToSpeechTool } from "@/lib/ai/tools/text-to-speech"
 import { extractBrandingTool } from "@/lib/ai/tools/extract-branding"
 import { generateDesignTool } from "@/lib/ai/tools/generate-design"
 import { editDesignTool } from "@/lib/ai/tools/edit-design"
+import { anthropic as anthropicProvider } from "@ai-sdk/anthropic"
+import { isAnthropicModel } from "@/lib/ai/anthropic-skills"
 import type { SkillMetadata } from "@/lib/ai/skills/discovery"
 import type { MCPHandle } from "@/lib/mcp"
 
@@ -24,6 +26,8 @@ interface BuildToolsParams {
   userId: string
   skills: SkillMetadata[]
   hasQuicktask: boolean
+  /** Model ID to enable model-specific tools (e.g. Anthropic code execution) */
+  modelId: string
   searchEnabled?: boolean
   memoryEnabled?: boolean
   mcpEnabled?: boolean
@@ -46,7 +50,7 @@ interface BuildToolsResult {
  * Includes built-in tools and optionally MCP tools.
  */
 export async function buildTools(params: BuildToolsParams): Promise<BuildToolsResult> {
-  const { chatId, userId, skills, hasQuicktask, searchEnabled, memoryEnabled, mcpEnabled, expertMcpServerIds, expertAllowedTools, imageGenerationEnabled, uploadedImages } = params
+  const { chatId, userId, skills, hasQuicktask, modelId, searchEnabled, memoryEnabled, mcpEnabled, expertMcpServerIds, expertAllowedTools, imageGenerationEnabled, uploadedImages } = params
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const tools: Record<string, any> = {
@@ -90,6 +94,11 @@ export async function buildTools(params: BuildToolsParams): Promise<BuildToolsRe
   if (features.stitch.enabled) {
     tools.generate_design = generateDesignTool(chatId, userId)
     tools.edit_design = editDesignTool(chatId, userId)
+  }
+
+  // Add Anthropic Code Execution tool (required for Agent Skills: PPTX, XLSX, DOCX, PDF)
+  if (isAnthropicModel(modelId) && features.anthropicSkills.enabled) {
+    tools.code_execution = anthropicProvider.tools.codeExecution_20260120()
   }
 
   // Add load_skill tool if skills are available (skip for quicktasks — self-contained)

@@ -49,4 +49,7 @@ export const features = {
   stitch: {
     enabled: !!process.env.STITCH_API_KEY,
   },
+  anthropicSkills: {
+    enabled: process.env.ANTHROPIC_SKILLS_ENABLED !== "false",
+  },
 } as const

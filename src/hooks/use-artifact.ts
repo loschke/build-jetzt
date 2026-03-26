@@ -113,6 +113,10 @@ export function isEditDesignPart(part: { type: string }): boolean {
   return part.type === "tool-edit_design"
 }
 
+export function isCodeExecutionPart(part: { type: string }): boolean {
+  return part.type === "tool-code_execution"
+}
+
 /** Artifact-producing tools — used for auto-opening the panel during streaming */
 const ARTIFACT_TOOL_TYPES = new Set(["tool-create_artifact", "tool-create_quiz", "tool-create_review", "tool-generate_image", "tool-youtube_analyze", "tool-extract_branding", "tool-generate_design", "tool-edit_design"])
 

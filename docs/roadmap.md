@@ -56,7 +56,7 @@ Alle 10 Original-Meilensteine plus Post-M10-Erweiterungen sind abgeschlossen.
 | Generative UI Tools    | 100%   | —                                              | `generative-ui-tools-guide.md`             |
 | Gemini Features        | 90%    | Google Search Grounding (optional)             | `prd-gemini-features.md`                   |
 | Stitch Design Gen.     | 80%    | Screenshot-Thumbnail, Design-Varianten (spaeter) | `features/prd-stitch-design-generation.md` |
-| Anthropic Agent Skills | 0%     | Code Execution, PPTX/XLSX/DOCX/PDF, Files API  | `PRD-anthropic-agent-skills.md`            |
+| Anthropic Agent Skills | 80%    | PDF-Preview im Panel (spaeter)                  | `PRD-anthropic-agent-skills.md`            |
 | Performance/Caching    | 90%    | Client-Virtualisierung (spaeter)               | `performance-caching-concept.md`           |
 | Privacy/Family         | 50%    | EU-Config, DSGVO-Export                        | `privacy-family-deployment-guide.md`       |
 | Notes/Second Brain     | 0%     | Komplettes Feature                             | `prd-notes-second-brain-v2.md`             |
@@ -130,20 +130,22 @@ Alle 10 Original-Meilensteine plus Post-M10-Erweiterungen sind abgeschlossen.
 
 > Dokument-Generierung direkt im Chat. PPTX, XLSX, DOCX, PDF ueber Anthropic Code Execution.
 
-| Feature              | Beschreibung                                                    | Quelle                   |
-| -------------------- | --------------------------------------------------------------- | ------------------------ |
-| Code Execution Tool  | `code_execution` fuer Anthropic-Modelle registrieren            | Agent Skills PRD Phase 1 |
-| Skills-Config        | Standard-Skills (pptx, xlsx, docx, pdf) + Custom Skills per ENV | Agent Skills PRD Phase 1 |
-| Files API Proxy      | `/api/files/[fileId]` Route zum Download generierter Dateien    | Agent Skills PRD Phase 1 |
-| Download-Card        | Neue `FileDownloadCard` Komponente fuer Binaer-Formate im Chat  | Agent Skills PRD Phase 2 |
-| PDF Artifact         | PDF-Preview im ArtifactPanel, R2-Persistenz                     | Agent Skills PRD Phase 3 |
-| Multi-Turn Container | Container-ID zwischen Steps weiterleiten (`prepareStep`)        | Agent Skills PRD Phase 1 |
+| Feature              | Beschreibung                                                    | Quelle                   | Status |
+| -------------------- | --------------------------------------------------------------- | ------------------------ | ------ |
+| Code Execution Tool  | `code_execution` fuer Anthropic-Modelle registrieren            | Agent Skills PRD Phase 1 | Done   |
+| Skills-Config        | Standard-Skills (pptx, xlsx, docx, pdf) + Custom Skills per ENV | Agent Skills PRD Phase 1 | Done   |
+| Files API Proxy      | `/api/files/[fileId]` Route zum Download generierter Dateien    | Agent Skills PRD Phase 1 | Done   |
+| Download-Card        | Neue `FileDownloadCard` Komponente fuer Binaer-Formate im Chat  | Agent Skills PRD Phase 2 | Done   |
+| PDF R2-Persistenz    | PDF-Dateien von Files API nach R2 + Artifact persistieren       | Agent Skills PRD Phase 3 | Done   |
+| Multi-Turn Container | Container-ID zwischen Steps weiterleiten (`prepareStep`)        | Agent Skills PRD Phase 1 | Done   |
+| PDF-Preview Panel    | PDF-Preview im ArtifactPanel via `<embed>` Tag                  | Agent Skills PRD Phase 3 | Offen  |
 
 **Aufwand:** 3-4 Tage
-**Risiko:** Mittel — Beta-APIs, Gateway-Kompatibilitaet muss getestet werden
+**Risiko:** Mittel — Gateway-Kompatibilitaet muss getestet werden
 **Mehrwert:** Hoch — Dokument-Generierung ist ein Killer-Feature (PowerPoint, Excel, PDF)
 **Einschraenkung:** Nur mit Anthropic-Modellen, nicht ZDR-faehig (kein Privacy-Routing)
-**Detail-PRD:** `docs/PRD-anthropic-agent-skills.md`
+**Abhaengigkeiten:** `ANTHROPIC_API_KEY` (fuer Files-API-Downloads), kein zusaetzlicher API-Key noetig
+**Detail-PRD:** `docs/features/PRD-anthropic-agent-skills.md`
 
 ---
 

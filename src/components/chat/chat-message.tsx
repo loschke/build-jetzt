@@ -23,9 +23,11 @@ import { ContentAlternatives } from "@/components/generative-ui/content-alternat
 import { YouTubeResults, YouTubeResultsSkeleton, type YouTubeVideo } from "@/components/generative-ui/youtube-results"
 import { AudioPlayer, AudioPlayerSkeleton, type AudioPlayerData } from "@/components/generative-ui/audio-player"
 import { ToolStatus } from "./tool-status"
+import { FileDownloadCard } from "./file-download-card"
 import { MemoryIndicator } from "./memory-indicator"
 import { MessageAttachments } from "./message-attachment"
-import { isCreateArtifactPart, isGenerateImagePart, isYouTubeSearchPart, isYouTubeAnalyzePart, isTextToSpeechPart, isExtractBrandingPart, isGenerateDesignPart, isEditDesignPart, extractArtifactFromToolPart } from "@/hooks/use-artifact"
+import { isCreateArtifactPart, isGenerateImagePart, isYouTubeSearchPart, isYouTubeAnalyzePart, isTextToSpeechPart, isExtractBrandingPart, isGenerateDesignPart, isEditDesignPart, isCodeExecutionPart, extractArtifactFromToolPart } from "@/hooks/use-artifact"
+import { extractFileRefs } from "@/lib/ai/anthropic-skills"
 import { unwrapToolOutput } from "@/lib/ai/tool-output"
 import { safeDomain } from "@/lib/url-validation"
 import type { SelectedArtifact } from "@/hooks/use-artifact"
@@ -63,7 +65,7 @@ interface ChatMessageProps {
 }
 
 /** Tools that have their own dedicated rendering (not shown as ToolStatus) */
-const CUSTOM_RENDERED_TOOLS = new Set(["ask_user", "create_artifact", "create_quiz", "create_review", "content_alternatives", "generate_image", "extract_branding", "youtube_search", "text_to_speech", "generate_design", "edit_design"])
+const CUSTOM_RENDERED_TOOLS = new Set(["ask_user", "create_artifact", "create_quiz", "create_review", "content_alternatives", "generate_image", "extract_branding", "youtube_search", "text_to_speech", "generate_design", "edit_design", "code_execution"])
 
 /** Check if a part is a generic tool part that should show a ToolStatus */
 function isGenericToolPart(part: { type: string; [key: string]: unknown }): boolean {
@@ -609,6 +611,29 @@ export const ChatMessage = memo(function ChatMessage({
                       })
                     }}
                   />
+                )
+              }
+              if (isCodeExecutionPart(part)) {
+                const data = extractGenericToolData(part)
+                const files = extractFileRefs(data.output)
+                return (
+                  <div key={`${message.id}-codeexec-${i}`} className="space-y-2">
+                    <ToolStatus
+                      toolName={data.toolName}
+                      state={data.state}
+                      input={data.input}
+                      output={data.output}
+                      errorText={data.errorText}
+                    />
+                    {files.map((file) => (
+                      <FileDownloadCard
+                        key={file.fileId}
+                        fileId={file.fileId}
+                        fileName={file.fileName}
+                        fileType={file.extension}
+                      />
+                    ))}
+                  </div>
                 )
               }
               if (isGenericToolPart(part)) {

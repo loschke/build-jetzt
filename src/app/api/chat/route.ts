@@ -1,4 +1,4 @@
-import { streamText, gateway, stepCountIs } from "ai"
+import { streamText, gateway, stepCountIs, type JSONValue } from "ai"
 import type { UIMessage } from "ai"
 
 import { requireAuth } from "@/lib/api-guards"
@@ -14,6 +14,8 @@ import { resolveContext } from "./resolve-context"
 import { buildModelMessages } from "./build-messages"
 import { buildTools } from "./build-tools"
 import { createOnFinish } from "./persist"
+import { createAnthropic, forwardAnthropicContainerIdFromLastStep } from "@ai-sdk/anthropic"
+import { buildSkillsConfig, isAnthropicModel } from "@/lib/ai/anthropic-skills"
 import { resolvePrivacyModel } from "@/lib/ai/privacy-provider"
 import { resolveCustomModel } from "@/lib/ai/custom-providers"
 import { businessModeConfig } from "@/config/business-mode"
@@ -185,6 +187,7 @@ export async function POST(req: Request) {
     userId: user.id,
     skills,
     hasQuicktask: !!quicktaskPrompt,
+    modelId: effectivePrivacyRoute ? "" : finalModelId,
     memoryEnabled: userMemoryEnabled,
     mcpEnabled: features.mcp.enabled,
     expertMcpServerIds: mcpServerIds,
@@ -205,19 +208,43 @@ export async function POST(req: Request) {
 
   const customModel = resolveCustomModel(finalModelId)
 
+  // Anthropic-specific: skills config + higher step count for Code Execution
+  const isAnthropic = isAnthropicModel(finalModelId) && !privacyModel
+  const skillsConfig = isAnthropic ? buildSkillsConfig(finalModelId) : undefined
+
+  // Skills require direct Anthropic provider (gateway doesn't forward container.skills)
+  const anthropicApiKey = process.env.ANTHROPIC_API_KEY
+  const useDirectAnthropicProvider = skillsConfig && anthropicApiKey
+  const anthropicModel = useDirectAnthropicProvider
+    ? createAnthropic({ apiKey: anthropicApiKey })(finalModelId.replace("anthropic/", ""))
+    : null
+
+  if (skillsConfig && !anthropicApiKey) {
+    console.warn("[skills] ANTHROPIC_API_KEY not set — skills disabled, falling back to gateway")
+  }
+  if (useDirectAnthropicProvider) {
+    console.log("[skills] Direct Anthropic provider active, skills:", JSON.stringify(skillsConfig))
+  }
+
   const result = streamText({
-    model: privacyModel ?? customModel ?? gateway(finalModelId),
+    model: privacyModel ?? customModel ?? anthropicModel ?? gateway(finalModelId),
     messages: modelMessages,
     maxOutputTokens: chatConfig.maxTokens,
-    stopWhen: stepCountIs(5),
+    stopWhen: stepCountIs(useDirectAnthropicProvider ? 8 : 5),
     temperature: effectiveTemperature,
-    ...(finalModelId.startsWith("anthropic/") && !privacyModel && {
+    ...(isAnthropic && {
       providerOptions: {
         anthropic: {
           thinking: { type: "adaptive" },
           effort: "medium",
-        },
+          ...(useDirectAnthropicProvider && {
+            container: { skills: skillsConfig },
+          }),
+        } as unknown as Record<string, JSONValue>,
       },
+      ...(useDirectAnthropicProvider && {
+        prepareStep: forwardAnthropicContainerIdFromLastStep,
+      }),
     }),
     tools,
     onFinish: createOnFinish({

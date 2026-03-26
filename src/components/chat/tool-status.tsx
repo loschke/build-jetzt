@@ -21,6 +21,7 @@ import {
   YoutubeIcon,
   VideoIcon,
   Volume2Icon,
+  TerminalIcon,
 } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 
@@ -35,6 +36,7 @@ const TOOL_LABELS: Record<string, string> = {
   youtube_search: "YouTube-Suche",
   youtube_analyze: "YouTube analysieren",
   text_to_speech: "Audio generieren",
+  code_execution: "Code ausführen",
 }
 
 /** Icons for known tools */
@@ -48,6 +50,7 @@ const TOOL_ICONS: Record<string, typeof WrenchIcon> = {
   youtube_search: YoutubeIcon,
   youtube_analyze: VideoIcon,
   text_to_speech: Volume2Icon,
+  code_execution: TerminalIcon,
 }
 
 /** Format tool input for display */

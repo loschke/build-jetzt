@@ -35,6 +35,7 @@ Tools werden bedingt registriert:
 - Wenn memory enabled + User-Toggle: `save_memory`, `recall_memory`
 - Wenn Gemini-Key + kein Privacy-Routing: `generate_image`
 - Wenn Stitch-Key: `generate_design`, `edit_design`
+- Wenn Anthropic-Modell + Skills enabled: `code_execution` (Agent Skills: PPTX, XLSX, DOCX, PDF)
 - Wenn Skills vorhanden + kein Quicktask: `load_skill`
 - MCP-Tools: dynamisch, mit Collision Guard (Built-in hat Vorrang)
 
