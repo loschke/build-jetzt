@@ -1,7 +1,7 @@
 # PRD: Stitch Design Generation
 
 > Feature-Dokumentation fuer die Integration von Google Stitch als Design-Backend in die KI-Chat-Plattform.
-> Status: Recherche abgeschlossen, Implementierung ausstehend.
+> Status: Phase 1+2 implementiert (generate_design, edit_design, Device-Targeting, Metadata). Offen: Screenshot-Thumbnail, Design-Varianten.
 
 ---
 
@@ -322,56 +322,56 @@ stitch: {
 
 ## 7. Implementierungs-Reihenfolge
 
-### Phase 1: Grundlagen
+### Phase 1: Grundlagen ✅
 
-| # | Schritt | Abhaengigkeit |
-|---|---------|---------------|
-| 1 | `pnpm add @google/stitch-sdk` | SDK auf npm verfuegbar |
-| 2 | Feature Flag in `features.ts` | — |
-| 3 | DB Migration: `metadata` JSONB-Feld auf `artifacts` | — |
-| 4 | `generate-design.ts` Tool | 1, 2 |
-| 5 | Tool-Registration in `build-tools.ts` | 4 |
+| # | Schritt | Status |
+|---|---------|--------|
+| 1 | `pnpm add @google/stitch-sdk` | Done |
+| 2 | Feature Flag in `features.ts` | Done |
+| 3 | DB Migration: `metadata` JSONB-Feld auf `artifacts` | Done |
+| 4 | `generate-design.ts` Tool (callTool + deepFind statt Domain API) | Done |
+| 5 | Tool-Registration in `build-tools.ts` | Done |
 
-### Phase 2: Client + Iteration
+### Phase 2: Client + Iteration ✅
 
-| # | Schritt | Abhaengigkeit |
-|---|---------|---------------|
-| 6 | Client-Side Detection in `use-artifact.ts` | 5 |
-| 7 | CSP-Verifikation mit echtem Stitch-Output | 5 |
-| 8 | `edit-design.ts` Tool (Iteration) | 3, 5 |
-| 9 | End-to-End Test | Alles |
+| # | Schritt | Status |
+|---|---------|--------|
+| 6 | Client-Side Detection in `use-artifact.ts` | Done |
+| 7 | CSP: Tailwind CDN, Google Fonts, Google Images erlaubt | Done |
+| 8 | `edit-design.ts` Tool (callTool + deepFind) | Done |
+| 9 | ArtifactCard-Rendering in `chat-message.tsx` | Done |
+| 10 | Artifact-Panel: Resize-Handle + Fullscreen-Toggle | Done |
 
-### Phase 3: Polish
+### Phase 3: Polish (teilweise)
 
-| # | Schritt | Abhaengigkeit |
-|---|---------|---------------|
-| 10 | `.env.example` aktualisieren | 2 |
-| 11 | Docs aktualisieren (Feature-Flags, Roadmap) | — |
-| 12 | Screenshot-Thumbnail als Vorschau (Nice-to-have) | 5 |
+| # | Schritt | Status |
+|---|---------|--------|
+| 11 | `.env.example` aktualisieren | Done |
+| 12 | Docs + Roadmap aktualisieren | Done |
+| 13 | Security: SSRF-Schutz (isAllowedStitchUrl), Credit-Pre-Check | Done |
+| 14 | Screenshot-Thumbnail als Vorschau (Nice-to-have) | Offen |
 
 ---
 
 ## 8. Risiken & Offene Fragen
 
-### Risiken
+### Risiken (Post-Implementation Review)
 
-| Risiko | Schwere | Wahrscheinlichkeit | Mitigation |
-|--------|---------|---------------------|------------|
-| SDK nicht auf npm verfuegbar | Blockierend | Gering | Vor Start pruefen: `npm view @google/stitch-sdk` |
-| API-Aenderungen (Stitch ist neu) | Mittel | Mittel | Wrapper-Pattern isoliert, Aenderung = 1 Datei |
-| Latenz (10-30s pro Generation) | Gering | Hoch (erwartet) | Loading-State wie Image Gen, `maxDuration=240` reicht |
-| Stitch-Preismodell unklar | Mittel | Mittel | Feature-Flag = jederzeit abschaltbar, Credit-Limit setzbar |
-| CSP blockiert Stitch-Output | Gering | Gering | Post-Processing als Fallback, "inline Tailwind" sollte passen |
-| Stitch-Projekt-Accumulation | Gering | Hoch | Cleanup nach Download oder periodischer Cron |
-| Breaking Change am Chat-Core | Keine | Keine | Komplett additiv, 0 Aenderungen an bestehendem Flow |
+| Risiko | Status | Ergebnis |
+|--------|--------|----------|
+| SDK nicht auf npm verfuegbar | Geloest | v0.0.3 verfuegbar, funktioniert |
+| API-Aenderungen (Stitch ist neu) | **Eingetreten** | SDK Domain API (`project.generate()`) parsed Responses fragil. Fix: `callTool()` + `deepFind()` fuer robuste Extraktion |
+| Latenz (10-30s pro Generation) | Bestaetigt | 20-60s in der Praxis, Loading-State funktioniert |
+| CSP blockiert Stitch-Output | **Eingetreten** | Tailwind CDN + Google Fonts + Google Images mussten in CSP erlaubt werden (App-Level + iframe) |
+| Stitch-Projekt-Accumulation | Offen | Projekte werden in Stitch erstellt, kein Cleanup implementiert |
 
-### Offene Fragen
+### Offene Fragen (entschieden)
 
-1. **Stitch-Preismodell:** Was kostet ein API Call? Bestimmt die Credit-Konfiguration.
-2. **Metadata-Feld:** `fileUrl` recyclen oder neues `metadata` JSONB-Feld? (Empfehlung: JSONB)
-3. **Projekt-Cleanup:** Stitch-Projekte nach Download loeschen oder behalten?
-4. **Stitch-Modellwahl:** `GEMINI_3_PRO` (Qualitaet) vs. `GEMINI_3_FLASH` (Speed) — konfigurierbar per ENV oder User-Wahl?
-5. **Screenshot-Nutzung:** Als Thumbnail im Chat anzeigen oder nur HTML-Artifact?
+1. ~~Metadata-Feld~~ → JSONB-Feld `metadata` auf `artifacts` implementiert
+2. ~~Stitch-Modellwahl~~ → `GEMINI_3_FLASH` als Default (schneller, guenstiger)
+3. **Projekt-Cleanup:** Noch offen — Stitch-Projekte akkumulieren serverseitig
+4. **Screenshot-Nutzung:** Noch offen — aktuell nur HTML-Artifact, kein Thumbnail
+5. **User-eigene API-Keys:** PRD erstellt (`docs/features/prd-user-api-keys.md`) — Bring Your Own Key System
 
 ---
 

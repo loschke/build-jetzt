@@ -42,6 +42,9 @@ Alle 10 Original-Meilensteine plus Post-M10-Erweiterungen sind abgeschlossen.
 | YouTube Search          | YouTube-Video-Suche mit HTML-Artifact-Ergebnissen   |
 | YouTube Analyze         | Video-Transkription/Analyse via Gemini Multimodal   |
 | Text-to-Speech          | Gemini TTS mit Audio-Artifact und Player im Panel   |
+| Stitch Design Gen.      | UI-Design via Google Stitch (generate + edit + Device-Targeting) |
+| Artifact-Panel Resize   | Drag-Handle fuer stufenlose Breitenanpassung (25%-75%) |
+| Artifact-Panel Fullscreen | Vollbild-Modus mit ESC-Toggle                     |
 
 ---
 
@@ -52,7 +55,7 @@ Alle 10 Original-Meilensteine plus Post-M10-Erweiterungen sind abgeschlossen.
 | Admin Roles            | 100%   | —                                              | `prd-admin-roles.md`                       |
 | Generative UI Tools    | 100%   | —                                              | `generative-ui-tools-guide.md`             |
 | Gemini Features        | 90%    | Google Search Grounding (optional)             | `prd-gemini-features.md`                   |
-| Stitch Design Gen.     | 0%     | generate_design, edit_design, Device-Targeting | `features/prd-stitch-design-generation.md` |
+| Stitch Design Gen.     | 80%    | Screenshot-Thumbnail, Design-Varianten (spaeter) | `features/prd-stitch-design-generation.md` |
 | Anthropic Agent Skills | 0%     | Code Execution, PPTX/XLSX/DOCX/PDF, Files API  | `PRD-anthropic-agent-skills.md`            |
 | Performance/Caching    | 90%    | Client-Virtualisierung (spaeter)               | `performance-caching-concept.md`           |
 | Privacy/Family         | 50%    | EU-Config, DSGVO-Export                        | `privacy-family-deployment-guide.md`       |
@@ -108,10 +111,10 @@ Alle 10 Original-Meilensteine plus Post-M10-Erweiterungen sind abgeschlossen.
 
 | Feature              | Beschreibung                                                           | Quelle               | Status |
 | -------------------- | ---------------------------------------------------------------------- | -------------------- | ------ |
-| Design generieren    | Tool `generate_design`: Prompt → production-quality HTML via Stitch    | Stitch PRD Phase 1   | Offen  |
-| Design iterieren     | Tool `edit_design`: Bestehendes Design mit Follow-up-Prompt verfeinern | Stitch PRD Phase 2   | Offen  |
-| Device-Targeting     | Desktop/Mobile/Tablet-Auswahl bei Generierung                          | Stitch PRD Phase 1   | Offen  |
-| Metadata-Feld        | `metadata` JSONB auf Artifacts (fuer Stitch Project/Screen-Zuordnung)  | Stitch PRD Phase 1   | Offen  |
+| Design generieren    | Tool `generate_design`: Prompt → production-quality HTML via Stitch    | Stitch PRD Phase 1   | Done   |
+| Design iterieren     | Tool `edit_design`: Bestehendes Design mit Follow-up-Prompt verfeinern | Stitch PRD Phase 2   | Done   |
+| Device-Targeting     | Desktop/Mobile/Tablet-Auswahl bei Generierung                          | Stitch PRD Phase 1   | Done   |
+| Metadata-Feld        | `metadata` JSONB auf Artifacts (fuer Stitch Project/Screen-Zuordnung)  | Stitch PRD Phase 1   | Done   |
 | Screenshot-Thumbnail | Stitch-Screenshot als Vorschau-Bild in der Chat-Message                | Stitch PRD Phase 3   | Offen  |
 | Design-Varianten     | Mehrere Layout/Farb/Font-Varianten auf einen Klick                     | Stitch PRD (spaeter) | Offen  |
 
