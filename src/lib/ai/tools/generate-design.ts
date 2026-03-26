@@ -1,33 +1,21 @@
 /**
- * generate_design tool — generates production-quality UI designs using Google Stitch.
+ * generate_design tool — UI design generation via Google Stitch.
  *
- * Uses callTool directly to capture and log the raw MCP response,
- * then extracts screen data flexibly from whatever shape Stitch returns.
+ * Uses callTool + deepFind instead of SDK domain API because
+ * project.generate() has fragile response parsing that crashes
+ * on unexpected response shapes (known SDK 0.0.3 issue).
  */
 
 import { tool } from "ai"
 import { z } from "zod"
 import { stitch } from "@google/stitch-sdk"
 import { createArtifact } from "@/lib/db/queries/artifacts"
+import { deepFind, isAllowedStitchUrl } from "./stitch-utils"
 
 /** Stitch metadata stored on artifacts for iteration support */
 export interface StitchMetadata {
   stitchProjectId: string
   stitchScreenId: string
-}
-
-/**
- * Deep-search an object for a key, returning the first match.
- */
-function deepFind(obj: unknown, key: string): unknown {
-  if (!obj || typeof obj !== "object") return undefined
-  const record = obj as Record<string, unknown>
-  if (key in record) return record[key]
-  for (const v of Object.values(record)) {
-    const found = deepFind(v, key)
-    if (found !== undefined) return found
-  }
-  return undefined
 }
 
 /**
@@ -57,17 +45,23 @@ export function generateDesignTool(chatId: string, userId: string) {
       ),
     }),
     execute: async ({ prompt, title, style, colorScheme, deviceType }) => {
-      // 1. Enrich prompt
+      // Pre-check credits before calling Stitch API
+      const { deductToolCredits, calculateStitchGenerationCredits } = await import("@/lib/credits")
+      const creditError = await deductToolCredits(userId, calculateStitchGenerationCredits(), {
+        chatId, description: "Design-Generierung (Stitch)", toolName: "generate_design",
+      })
+      if (creditError) {
+        return { error: creditError }
+      }
+
       let enrichedPrompt = prompt
       if (style) enrichedPrompt += `\nStyle: ${style}`
       if (colorScheme) enrichedPrompt += `\nColor scheme: ${colorScheme}`
 
-      // 2. Create project
       const project = await stitch.createProject(title)
       const projectId = project.id
       console.log("[generate_design] Project created:", projectId)
 
-      // 3. Generate screen via callTool to capture raw response
       const raw = await stitch.callTool("generate_screen_from_text", {
         projectId,
         prompt: enrichedPrompt,
@@ -75,21 +69,16 @@ export function generateDesignTool(chatId: string, userId: string) {
         modelId: "GEMINI_3_FLASH",
       })
 
-      console.log("[generate_design] Raw response keys:", Object.keys(raw as object))
-
-      // 4. Extract screen ID — search flexibly through response
+      // Extract screen ID and HTML URL via deep search (Stitch response shape varies)
       let screenId: string | null = null
       let htmlUrl: string | null = null
 
-      // Try to find screenId and downloadUrl anywhere in the response
       const downloadUrl = deepFind(raw, "downloadUrl")
       if (typeof downloadUrl === "string") htmlUrl = downloadUrl
 
-      // Look for screen ID in various locations
       const foundId = deepFind(raw, "screenId") ?? deepFind(raw, "id")
       if (typeof foundId === "string") screenId = foundId
 
-      // Try name pattern: "projects/xxx/screens/yyy"
       if (!screenId) {
         const name = deepFind(raw, "name")
         if (typeof name === "string" && name.includes("/screens/")) {
@@ -97,23 +86,8 @@ export function generateDesignTool(chatId: string, userId: string) {
         }
       }
 
-      console.log("[generate_design] Extracted screenId:", screenId, "htmlUrl:", htmlUrl ? "found" : "not found")
-
-      // 5. If no HTML URL from generate response, fetch via get_screen
+      // Fallback: fetch HTML via get_screen if not in generate response
       if (!htmlUrl && screenId) {
-        console.log("[generate_design] Fetching HTML via get_screen...")
-        const screenRaw = await stitch.callTool("get_screen", {
-          projectId,
-          screenId,
-          name: `projects/${projectId}/screens/${screenId}`,
-        }) as Record<string, unknown>
-        const foundUrl = deepFind(screenRaw, "downloadUrl")
-        if (typeof foundUrl === "string") htmlUrl = foundUrl
-      }
-
-      // 6. Last resort: list screens and fetch HTML individually
-      if (!htmlUrl && screenId) {
-        console.log("[generate_design] Fetching HTML via get_screen for", screenId)
         const screenRaw = await stitch.callTool("get_screen", {
           projectId, screenId,
           name: `projects/${projectId}/screens/${screenId}`,
@@ -124,20 +98,20 @@ export function generateDesignTool(chatId: string, userId: string) {
 
       if (!screenId || !htmlUrl) {
         throw new Error(
-          `Design-Generierung fehlgeschlagen: screenId=${screenId ?? "null"}, htmlUrl=${htmlUrl ? "found" : "null"}. ` +
-          `Bitte Server-Logs pruefen.`
+          `Design-Generierung fehlgeschlagen: screenId=${screenId ?? "null"}, htmlUrl=${htmlUrl ? "found" : "null"}. Bitte Server-Logs pruefen.`
         )
       }
 
-      // 7. Download HTML
-      console.log("[generate_design] Downloading HTML...")
+      if (!isAllowedStitchUrl(htmlUrl)) {
+        throw new Error("Stitch download URL rejected: unexpected domain.")
+      }
+
       const htmlResponse = await fetch(htmlUrl, { signal: AbortSignal.timeout(30000) })
       if (!htmlResponse.ok) {
         throw new Error(`Failed to download Stitch HTML: ${htmlResponse.status}`)
       }
-      let htmlContent = await htmlResponse.text()
+      const htmlContent = await htmlResponse.text()
 
-      // 8. Persist
       const metadata: StitchMetadata = { stitchProjectId: projectId, stitchScreenId: screenId }
       const artifact = await createArtifact({
         chatId,
@@ -146,15 +120,6 @@ export function generateDesignTool(chatId: string, userId: string) {
         content: htmlContent,
         metadata: { ...metadata },
       })
-
-      // 10. Credits
-      const { deductToolCredits, calculateStitchGenerationCredits } = await import("@/lib/credits")
-      const creditError = await deductToolCredits(userId, calculateStitchGenerationCredits(), {
-        chatId, description: "Design-Generierung (Stitch)", toolName: "generate_design",
-      })
-      if (creditError) {
-        console.warn("[generate_design] Credits insufficient:", creditError)
-      }
 
       return {
         artifactId: artifact.id,

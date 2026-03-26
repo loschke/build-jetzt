@@ -120,7 +120,10 @@ export function ArtifactPanel({
   useEffect(() => {
     if (!fullscreen || !onToggleFullscreen) return
     const handler = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onToggleFullscreen()
+      if (e.key === "Escape") {
+        e.stopPropagation()
+        onToggleFullscreen()
+      }
     }
     window.addEventListener("keydown", handler)
     return () => window.removeEventListener("keydown", handler)

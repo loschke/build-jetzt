@@ -1,7 +1,6 @@
 /**
  * edit_design tool — iterates on an existing Stitch-generated design.
- *
- * Uses callTool + deepFind for robust response extraction (same as generate-design).
+ * Same callTool + deepFind approach as generate-design.ts.
  */
 
 import { tool } from "ai"
@@ -9,18 +8,7 @@ import { z } from "zod"
 import { stitch } from "@google/stitch-sdk"
 import { getArtifactByIdForUser, updateArtifactContent } from "@/lib/db/queries/artifacts"
 import type { StitchMetadata } from "./generate-design"
-
-/** Deep-search an object for a key, returning the first match. */
-function deepFind(obj: unknown, key: string): unknown {
-  if (!obj || typeof obj !== "object") return undefined
-  const record = obj as Record<string, unknown>
-  if (key in record) return record[key]
-  for (const v of Object.values(record)) {
-    const found = deepFind(v, key)
-    if (found !== undefined) return found
-  }
-  return undefined
-}
+import { deepFind, isAllowedStitchUrl } from "./stitch-utils"
 
 /**
  * Factory: creates an edit_design tool scoped to a chat + user.
@@ -58,6 +46,15 @@ export function editDesignTool(chatId: string, userId: string) {
       const metadata = existing.metadata as StitchMetadata | null
       if (!metadata?.stitchProjectId || !metadata?.stitchScreenId) {
         return { error: "Dieses Artifact hat keine Stitch-Metadaten. Nur mit generate_design erstellte Designs koennen iteriert werden." }
+      }
+
+      // Pre-check credits before calling Stitch API
+      const { deductToolCredits, calculateStitchEditCredits } = await import("@/lib/credits")
+      const creditError = await deductToolCredits(userId, calculateStitchEditCredits(), {
+        chatId, description: "Design-Iteration (Stitch)", toolName: "edit_design",
+      })
+      if (creditError) {
+        return { error: creditError }
       }
 
       const { stitchProjectId: projectId, stitchScreenId: originalScreenId } = metadata
@@ -119,6 +116,10 @@ export function editDesignTool(chatId: string, userId: string) {
       }
 
       // 5. Download HTML
+      if (!isAllowedStitchUrl(htmlUrl)) {
+        throw new Error("Stitch download URL rejected: unexpected domain.")
+      }
+
       const htmlResponse = await fetch(htmlUrl, { signal: AbortSignal.timeout(30000) })
       if (!htmlResponse.ok) {
         throw new Error(`Failed to download edited Stitch HTML: ${htmlResponse.status}`)
@@ -138,15 +139,6 @@ export function editDesignTool(chatId: string, userId: string) {
         existing.version,
         { ...newMetadata }
       )
-
-      // 8. Credits
-      const { deductToolCredits, calculateStitchEditCredits } = await import("@/lib/credits")
-      const creditError = await deductToolCredits(userId, calculateStitchEditCredits(), {
-        chatId, description: "Design-Iteration (Stitch)", toolName: "edit_design",
-      })
-      if (creditError) {
-        console.warn("[edit_design] Credits insufficient:", creditError)
-      }
 
       return {
         artifactId,
