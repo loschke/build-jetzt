@@ -21,13 +21,14 @@ import {
 import { AskUser } from "@/components/generative-ui/ask-user"
 import { ContentAlternatives } from "@/components/generative-ui/content-alternatives"
 import { YouTubeResults, YouTubeResultsSkeleton, type YouTubeVideo } from "@/components/generative-ui/youtube-results"
+import { SearchGroundingResults, SearchGroundingResultsSkeleton, type GroundingSourceItem } from "@/components/generative-ui/search-grounding-results"
 import { AudioPlayer, AudioPlayerSkeleton, type AudioPlayerData } from "@/components/generative-ui/audio-player"
 import { DeepResearchProgress } from "./deep-research-progress"
 import { ToolStatus } from "./tool-status"
 import { FileDownloadCard } from "./file-download-card"
 import { MemoryIndicator } from "./memory-indicator"
 import { MessageAttachments } from "./message-attachment"
-import { isCreateArtifactPart, isGenerateImagePart, isYouTubeSearchPart, isYouTubeAnalyzePart, isTextToSpeechPart, isExtractBrandingPart, isGenerateDesignPart, isEditDesignPart, isCodeExecutionPart, extractArtifactFromToolPart } from "@/hooks/use-artifact"
+import { isCreateArtifactPart, isGenerateImagePart, isYouTubeSearchPart, isYouTubeAnalyzePart, isTextToSpeechPart, isExtractBrandingPart, isGenerateDesignPart, isEditDesignPart, isCodeExecutionPart, isGoogleSearchPart, extractArtifactFromToolPart } from "@/hooks/use-artifact"
 import { extractFileRefs } from "@/lib/ai/anthropic-skills"
 import { unwrapToolOutput } from "@/lib/ai/tool-output"
 import { safeDomain } from "@/lib/url-validation"
@@ -66,7 +67,7 @@ interface ChatMessageProps {
 }
 
 /** Tools that have their own dedicated rendering (not shown as ToolStatus) */
-const CUSTOM_RENDERED_TOOLS = new Set(["ask_user", "create_artifact", "create_quiz", "create_review", "content_alternatives", "generate_image", "extract_branding", "youtube_search", "text_to_speech", "generate_design", "edit_design", "code_execution", "deep_research"])
+const CUSTOM_RENDERED_TOOLS = new Set(["ask_user", "create_artifact", "create_quiz", "create_review", "content_alternatives", "generate_image", "extract_branding", "youtube_search", "text_to_speech", "generate_design", "edit_design", "code_execution", "deep_research", "google_search"])
 
 /** Check if a part is a generic tool part that should show a ToolStatus */
 function isGenericToolPart(part: { type: string; [key: string]: unknown }): boolean {
@@ -502,6 +503,43 @@ export const ChatMessage = memo(function ChatMessage({
                     key={`${message.id}-yt-search-${i}`}
                     query={query}
                     videos={videos}
+                  />
+                )
+              }
+              if (isGoogleSearchPart(part)) {
+                const data = extractInlineToolData(part, "google_search")
+                if (!data) return null
+
+                const isStreaming = data.state === "input-streaming" || data.state === "input-available"
+                if (isStreaming) {
+                  return <SearchGroundingResultsSkeleton key={`${message.id}-gsearch-${i}`} />
+                }
+
+                const output = unwrapToolOutput<{
+                  query?: string
+                  answer?: string
+                  sources?: GroundingSourceItem[]
+                  error?: string
+                }>(data.output)
+                const input = data.input as { query?: string } | undefined
+                const query = output?.query ?? input?.query ?? "Google Search"
+
+                if (output?.error) {
+                  return (
+                    <div key={`${message.id}-gsearch-${i}`} className="mt-3 rounded-xl border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+                      {output.error}
+                    </div>
+                  )
+                }
+
+                if (!output?.answer) return null
+
+                return (
+                  <SearchGroundingResults
+                    key={`${message.id}-gsearch-${i}`}
+                    query={query}
+                    answer={output.answer}
+                    sources={output.sources ?? []}
                   />
                 )
               }

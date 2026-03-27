@@ -39,6 +39,7 @@ const TOOL_LABELS: Record<string, string> = {
   text_to_speech: "Audio generieren",
   code_execution: "Code ausführen",
   deep_research: "Deep Research",
+  google_search: "Google Search",
 }
 
 /** Icons for known tools */
@@ -54,6 +55,7 @@ const TOOL_ICONS: Record<string, typeof WrenchIcon> = {
   text_to_speech: Volume2Icon,
   code_execution: TerminalIcon,
   deep_research: FlaskConicalIcon,
+  google_search: SearchIcon,
 }
 
 /** Format tool input for display */

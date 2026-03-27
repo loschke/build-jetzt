@@ -99,6 +99,13 @@ export function calculateDeepResearchCredits(): number {
   return DEEP_RESEARCH_CREDITS
 }
 
+/** Flat credit cost for Google Search with grounding. */
+const GOOGLE_SEARCH_CREDITS = parseInt(process.env.GOOGLE_SEARCH_CREDITS ?? "500", 10)
+
+export function calculateGoogleSearchCredits(): number {
+  return GOOGLE_SEARCH_CREDITS
+}
+
 /**
  * Deduct flat-rate credits for a tool operation.
  * Checks balance atomically (no race condition). Returns error string

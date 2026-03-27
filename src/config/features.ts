@@ -56,4 +56,8 @@ export const features = {
     enabled: !!process.env.GOOGLE_GENERATIVE_AI_API_KEY
       && process.env.DEEP_RESEARCH_ENABLED === "true",
   },
+  googleSearch: {
+    enabled: !!process.env.GOOGLE_GENERATIVE_AI_API_KEY
+      && process.env.GOOGLE_SEARCH_ENABLED === "true",
+  },
 } as const

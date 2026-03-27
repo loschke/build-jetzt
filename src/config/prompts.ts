@@ -132,6 +132,7 @@ interface BuildSystemPromptOptions {
   youtubeEnabled?: boolean
   ttsEnabled?: boolean
   webToolsEnabled?: boolean
+  googleSearchEnabled?: boolean
   mcpToolNames?: string[]
 }
 
@@ -178,7 +179,14 @@ export function buildSystemPrompt(options?: BuildSystemPromptOptions): string {
   // 2.6. Web tools instructions (when enabled)
   if (options?.webToolsEnabled) {
     sections.push(
-      `## Web-Tools\n\nDu hast zwei Web-Tools zur Verfügung:\n- **web_search**: Suche im Web nach aktuellen Informationen.\n- **web_fetch**: Rufe den Inhalt einer URL ab und lies ihn als Markdown.\n\nWenn der User eine URL teilt, nutze web_fetch um den Inhalt zu lesen. Wenn der User nach aktuellen Informationen fragt, nutze web_search.`
+      `## Web-Tools\n\nDu hast zwei Web-Tools zur Verfügung:\n- **web_search**: Suche im Web nach aktuellen Informationen.\n- **web_fetch**: Rufe den Inhalt einer URL ab und lies ihn als Markdown.\n\nWenn der User eine URL teilt, nutze web_fetch um den Inhalt zu lesen. Wenn der User nach aktuellen Informationen fragt, nutze web_search.${options?.googleSearchEnabled ? `\n\n**Abgrenzung web_search vs. google_search:**\n- \`web_search\`: Breite Recherche, domainspezifische Suchen, wenn du Rohdaten brauchst oder ganze Seiten lesen willst (mit web_fetch). Gut fuer Artifacts mit Quellenverzeichnis.\n- \`google_search\`: Schnelle Faktenantworten mit automatischen Quellenangaben direkt im Chat. Bevorzuge google_search fuer Faktencheck, aktuelle Ereignisse und quellenbasierte Schnellantworten.` : ""}`
+    )
+  }
+
+  // 2.65. Google Search grounding (when enabled)
+  if (options?.googleSearchEnabled) {
+    sections.push(
+      `## Google Search (\`google_search\`)\nSchnelle Websuche ueber Google mit automatischen Quellenangaben. Nutze es wenn:\n- Der User Fakten pruefen will oder aktuelle Informationen braucht\n- Quellenangaben wichtig sind (die Quellen werden automatisch mitgeliefert)\n- Eine schnelle, praegnante Antwort mit Belegen gefragt ist\n- Der User explizit nach Google oder aktuellen Informationen fragt\n\nDie Antwort wird direkt im Chat angezeigt — erstelle KEIN Artifact fuer google_search Ergebnisse.\nFuer ausfuehrliche Recherche mit ganzen Seiten nutze stattdessen web_search + web_fetch.`
     )
   }
 

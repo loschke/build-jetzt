@@ -212,6 +212,7 @@ export async function resolveContext(params: ResolveContextParams): Promise<Chat
     youtubeEnabled: features.youtube.enabled,
     ttsEnabled: features.tts.enabled,
     webToolsEnabled: features.search.enabled,
+    googleSearchEnabled: features.googleSearch.enabled,
   })
 
   // Model resolution chain: quicktask > expert > user default > system default
