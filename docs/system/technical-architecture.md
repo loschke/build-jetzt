@@ -108,6 +108,14 @@ Alle Tools werden in `src/app/api/chat/build-tools.ts` registriert. Die Registri
 | `save_memory`    | Memory enabled + User-Toggle      | Factory (userId) → Mem0           | Explizit Information speichern       |
 | `recall_memory`  | Memory enabled + User-Toggle      | Factory (userId) → Mem0           | Semantische Memory-Suche             |
 | `generate_image` | Gemini-Key + kein Privacy-Routing | Factory (chatId, userId) → Gemini | Bild generieren/bearbeiten           |
+| `youtube_search`   | `features.youtube.enabled`        | Factory (chatId, userId) → YouTube API | Video-Suche mit Ergebnis-Cards   |
+| `youtube_analyze`  | `features.imageGeneration.enabled` | Factory (chatId, userId) → Gemini     | Video-Transkription/Analyse      |
+| `text_to_speech`   | `features.tts.enabled`            | Factory (chatId, userId) → Gemini TTS | Text → Audio (8 Stimmen)         |
+| `extract_branding` | `features.branding.enabled`       | Factory (chatId, userId) → Firecrawl  | Branding-Extraktion von URLs     |
+| `generate_design`  | `features.stitch.enabled`         | Factory (chatId, userId) → Stitch     | UI-Design generieren             |
+| `edit_design`      | `features.stitch.enabled`         | Factory (chatId, userId) → Stitch     | UI-Design iterieren              |
+| `deep_research`    | `features.deepResearch.enabled` + kein Privacy-Routing | Factory (chatId, userId) → Gemini Interactions API | Async Deep Research (5-12 Min) |
+| `code_execution`   | Anthropic-Modell + Skills enabled | Anthropic Provider                    | Office-Dokumente (PPTX, XLSX, DOCX, PDF) |
 | `load_skill`     | Skills vorhanden + kein Quicktask | Factory (availableSkills) → DB    | Skill-Content on-demand laden        |
 
 #### MCP-Tools (dynamisch)
@@ -536,9 +544,10 @@ consent_logs
 artifacts
 ├── id (PK, nanoid)
 ├── chatId (FK), messageId (FK)
-├── type (markdown|html|code|image|quiz|review)
+├── type (markdown|html|code|image|quiz|review|audio)
 ├── title, content, language
 ├── fileUrl (nullable)
+├── metadata (jsonb) — sources, deepResearch, stitchProjectId, etc.
 ├── version (integer, Optimistic Locking)
 └── createdAt, updatedAt
     Index: chatId
@@ -618,7 +627,7 @@ Models, Experts, Skills, MCP-Server: DB → ENV (JSON) → Hardcoded Default. Er
 
 ### 3. Geschichteter System-Prompt
 
-6 Layer in fester Reihenfolge. Spaetere Layer haben hoehere Prioritaet. Custom Instructions immer zuletzt.
+7 Layer in fester Reihenfolge (Layer 0-6). Spaetere Layer haben hoehere Prioritaet. Layer 0 (Datum) ist immer erstes Element. Custom Instructions immer zuletzt.
 
 ### 4. Drei-Phasen Chat-Processing
 

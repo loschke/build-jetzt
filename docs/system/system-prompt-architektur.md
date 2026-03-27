@@ -6,17 +6,23 @@ Leitfaden zur Prompt-Architektur der Chat-Plattform. Beschreibt wie System-Promp
 
 ## Prompt-Assembly: Wie der System-Prompt entsteht
 
-Die Funktion `buildSystemPrompt()` in `src/config/prompts.ts` setzt den System-Prompt aus bis zu 6 Layern zusammen. Alle Layer werden mit `\n\n` getrennt und als **ein einziger System-Message** an das LLM gesendet.
+Die Funktion `buildSystemPrompt()` in `src/config/prompts.ts` setzt den System-Prompt aus bis zu 7 Layern zusammen. Alle Layer werden mit `\n\n` getrennt und als **ein einziger System-Message** an das LLM gesendet.
 
 Die Reihenfolge ist relevant: LLMs gewichten Instruktionen am Ende des Prompts tendenziell stärker. Deshalb steht Layer 6 (Custom Instructions) immer zuletzt.
 
 ```
 ┌─────────────────────────────────────────────┐
+│  Layer 0: Aktuelles Datum                   │  ← Wann ist heute?
+├─────────────────────────────────────────────┤
 │  Layer 1: Expert-Persona (oder Default)     │  ← Wer bin ich?
 ├─────────────────────────────────────────────┤
 │  Layer 2: Artifact-Instruktionen            │  ← Welche Tools kann ich nutzen?
-│  Layer 2.5: Web-Tools (bedingt)             │
-│  Layer 2.6: MCP-Tools (bedingt)             │
+│  Layer 2.1: Quellenverlinkung               │
+│  Layer 2.2: Stitch Design (bedingt)         │
+│  Layer 2.3: Deep Research (bedingt)         │
+│  Layer 2.5: YouTube / TTS (bedingt)         │
+│  Layer 2.6: Web-Tools (bedingt)             │
+│  Layer 2.7: MCP-Tools (bedingt)             │
 ├─────────────────────────────────────────────┤
 │  Layer 3: Skills / Quicktask (exklusiv)     │  ← Was kann ich laden?
 ├─────────────────────────────────────────────┤
@@ -32,6 +38,16 @@ Die Reihenfolge ist relevant: LLMs gewichten Instruktionen am Ende des Prompts t
 ---
 
 ## Layer im Detail
+
+### Layer 0: Aktuelles Datum (immer aktiv)
+
+**Quelle:** `new Date().toLocaleDateString("de-DE", ...)` in `buildSystemPrompt()`
+
+**Format:** `Aktuelles Datum: Donnerstag, 27. März 2026`
+
+**Zweck:** Verhindert, dass das LLM veraltete Jahreszahlen in Suchstrings verwendet. Ohne diesen Layer wuerden Anfragen wie "aktuelle Nachrichten von heute" zu Suchen mit dem Trainingsdatum fuehren.
+
+---
 
 ### Layer 1: Expert-Persona (oder Default)
 
@@ -85,12 +101,15 @@ Definiert Regeln und Anwendungsfälle fuer:
 | `content_alternatives` | 2-5 inhaltliche Varianten            | Auswahl zwischen Optionen |
 | `create_review`        | Abschnittsweises Feedback            | Iterative Texte/Konzepte  |
 
-Enthält auch Regeln wie:
+Enthält auch Regeln fuer:
 
 - Vor Tool-Call immer kurze Einleitung schreiben
 - Kein Artifact fuer kurze Snippets oder direkte Antworten
 - Review bevorzugen wenn Inhalt iterativ verbessert wird
 - Finales Artifact nach Review-Abschluss erstellen
+- **Quellenverlinkung:** Unicode-Superscript-Zitate `⁽¹⁾` + `## Quellen` Verzeichnis bei web_search-basierten Artifacts
+- **Stitch Design:** `generate_design`/`edit_design` Instruktionen (bedingt)
+- **Deep Research:** `deep_research` mit Bestaetigungspflicht via `ask_user` (bedingt)
 
 ---
 

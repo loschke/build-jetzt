@@ -29,6 +29,12 @@ Deaktivierung: ENV auf `"false"` setzen.
 | `admin`           | `ADMIN_EMAILS`                                                                    | Admin-UI fuer Skills/Experts/Models/MCP/Credits         |
 | `memory`          | `MEM0_API_KEY`                                                                    | Persistentes Memory ueber Sessions hinweg (Mem0 Cloud)  |
 | `imageGeneration` | `GOOGLE_GENERATIVE_AI_API_KEY`                                                    | Bildgenerierung via Gemini                              |
+| `youtube`         | `YOUTUBE_API_KEY`                                                                 | YouTube-Video-Suche im Chat                             |
+| `tts`             | `GOOGLE_GENERATIVE_AI_API_KEY`                                                    | Text-to-Speech (Gemini TTS)                             |
+| `branding`        | `FIRECRAWL_API_KEY`                                                               | Branding-Extraktion von Webseiten                       |
+| `stitch`          | `STITCH_API_KEY`                                                                  | UI-Design-Generierung via Google Stitch                 |
+| `deepResearch`    | `GOOGLE_GENERATIVE_AI_API_KEY` + `DEEP_RESEARCH_ENABLED=true`                     | Deep Research (Gemini Interactions API, Doppel-Gate)     |
+| `anthropicSkills` | `ANTHROPIC_SKILLS_ENABLED` (Default: `true`, opt-out)                             | Code Execution fuer Office-Dokumente (Anthropic)        |
 
 Aktivierung: Zugehoerigen API-Key oder ENV-Variable setzen.
 
@@ -109,7 +115,14 @@ Aktivierung: ENV auf `"true"` setzen. Aenderung erfordert Re-Build (Build-Zeit-I
 | `CREDITS_PER_DOLLAR`          | Integer | `100000` | Credits pro Dollar (100k = $1)           |
 | `FALLBACK_INPUT_PRICE`        | Float   | `1.0`    | Default Input-Token-Preis pro 1M ($/1M)  |
 | `FALLBACK_OUTPUT_PRICE`       | Float   | `5.0`    | Default Output-Token-Preis pro 1M ($/1M) |
-| `IMAGE_GENERATION_CREDITS`    | Integer | `500`    | Flat-Rate Credits pro Bildgenerierung    |
+| `IMAGE_GENERATION_CREDITS`    | Integer | `8000`   | Flat-Rate Credits pro Bildgenerierung    |
+| `YOUTUBE_SEARCH_CREDITS`      | Integer | `200`    | Flat-Rate Credits pro YouTube-Suche      |
+| `YOUTUBE_ANALYZE_CREDITS`     | Integer | `5000`   | Flat-Rate Credits pro YouTube-Analyse    |
+| `TTS_CREDITS`                 | Integer | `3000`   | Flat-Rate Credits pro TTS-Generierung    |
+| `BRANDING_CREDITS`            | Integer | `500`    | Flat-Rate Credits pro Branding-Extrakt.  |
+| `STITCH_GENERATION_CREDITS`   | Integer | `5000`   | Flat-Rate Credits pro Stitch-Design      |
+| `STITCH_EDIT_CREDITS`         | Integer | `3000`   | Flat-Rate Credits pro Stitch-Iteration   |
+| `DEEP_RESEARCH_CREDITS`       | Integer | `50000`  | Flat-Rate Credits pro Deep Research      |
 
 ### Business Mode
 
@@ -130,11 +143,30 @@ Aktivierung: ENV auf `"true"` setzen. Aenderung erfordert Re-Build (Build-Zeit-I
 | `MCP_ENABLED`        | Boolean    | Aktiviert MCP-Client-Support             |
 | `MCP_SERVERS_CONFIG` | JSON Array | Fallback MCP-Server-Configs wenn DB leer |
 
-### Bildgenerierung
+### Google AI (Gemini)
 
-| Variable                       | Typ    | Beschreibung                               |
-| ------------------------------ | ------ | ------------------------------------------ |
-| `GOOGLE_GENERATIVE_AI_API_KEY` | String | Gemini API Key (aktiviert Bildgenerierung) |
+| Variable                       | Typ    | Beschreibung                                                          |
+| ------------------------------ | ------ | --------------------------------------------------------------------- |
+| `GOOGLE_GENERATIVE_AI_API_KEY` | String | Gemini API Key (aktiviert Bildgenerierung, TTS, YouTube-Analyse, Deep Research) |
+
+### YouTube
+
+| Variable          | Typ    | Beschreibung                             |
+| ----------------- | ------ | ---------------------------------------- |
+| `YOUTUBE_API_KEY` | String | YouTube Data API v3 Key (youtube_search) |
+
+### Deep Research
+
+| Variable                 | Typ     | Default | Beschreibung                           |
+| ------------------------ | ------- | ------- | -------------------------------------- |
+| `DEEP_RESEARCH_ENABLED`  | Boolean | —       | Explizites Opt-in (Feature ist teuer)  |
+| `DEEP_RESEARCH_CREDITS`  | Integer | `50000` | Flat-Rate Credits pro Recherche        |
+
+### Stitch Design
+
+| Variable        | Typ    | Beschreibung                              |
+| --------------- | ------ | ----------------------------------------- |
+| `STITCH_API_KEY` | String | Google Stitch API Key (UI-Design-Generierung) |
 
 ### Admin
 
@@ -156,7 +188,7 @@ Aktivierung: ENV auf `"true"` setzen. Aenderung erfordert Re-Build (Build-Zeit-I
 
 | Datei              | Steuert                                                                              | Konfigurierbar ueber             |
 | ------------------ | ------------------------------------------------------------------------------------ | -------------------------------- |
-| `features.ts`      | Feature-Flag-Registry (12 Flags)                                                     | ENV                              |
+| `features.ts`      | Feature-Flag-Registry (19 Flags)                                                     | ENV                              |
 | `ai.ts`            | Default-Modell, Temperature (0.7), Projekt-Dokument-Limits                           | ENV                              |
 | `brand.ts`         | 5 Brands mit Name, Domain, Beschreibung                                              | `NEXT_PUBLIC_BRAND` ENV          |
 | `models.ts`        | Model-Registry mit Preisen, Regionen, Capabilities                                   | DB → ENV → Hardcoded Fallback    |
@@ -243,6 +275,13 @@ Tools werden in `build-tools.ts` nur registriert wenn das Feature aktiv ist:
 | `web_search`, `web_fetch`                                                                           | `features.search.enabled`                                   |
 | `save_memory`, `recall_memory`                                                                      | `features.memory.enabled` UND `user.memoryEnabled`          |
 | `generate_image`                                                                                    | `features.imageGeneration.enabled` UND kein Privacy-Routing |
+| `youtube_search`                                                                                    | `features.youtube.enabled`                                  |
+| `youtube_analyze`                                                                                   | `features.imageGeneration.enabled` (Gemini Multimodal)      |
+| `text_to_speech`                                                                                    | `features.tts.enabled`                                      |
+| `extract_branding`                                                                                  | `features.branding.enabled`                                 |
+| `generate_design`, `edit_design`                                                                    | `features.stitch.enabled`                                   |
+| `deep_research`                                                                                     | `features.deepResearch.enabled` UND kein Privacy-Routing    |
+| `code_execution`                                                                                    | Anthropic-Modell UND `features.anthropicSkills.enabled`     |
 | MCP-Tools (`server__tool`)                                                                          | `features.mcp.enabled` UND Server erreichbar                |
 | `create_artifact`, `create_quiz`, `create_review`, `content_alternatives`, `ask_user`, `load_skill` | Immer verfuegbar                                            |
 

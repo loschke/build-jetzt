@@ -144,6 +144,29 @@ Die KI kann das Internet nutzen, ohne dass der Nutzer einen separaten Browser oe
 - **Websuche:** Aktuelle Informationen finden (Nachrichten, Preise, Fakten)
 - **URL lesen:** Inhalte einer Webseite als sauberen Text abrufen und zusammenfassen
 - **Quellen:** Ergebnisse mit Links und Snippets im Chat
+- **Datum-Awareness:** Die KI kennt immer das aktuelle Datum und sucht mit korrekten Zeitangaben
+
+### Deep Research
+
+Umfassende, mehrstufige Recherche fuer komplexe Fragestellungen:
+
+- **Automatisch:** KI erkennt Recherche-Bedarf und schlaegt Deep Research vor
+- **Bestaetigung:** Nutzer wird vor Start ueber Dauer (5-12 Minuten) und Kosten informiert
+- **Async:** Recherche laeuft im Hintergrund bei Google. Nutzer kann andere Chats nutzen
+- **Phasen:** Live-Fortschritt zeigt Planung → Suche → Analyse → Bericht
+- **Report:** Ergebnis als herunterladbares Markdown-Artifact mit Quellenangaben
+- **Auffindbar:** Research-Reports sind ueber "Meine Dateien" → Research-Filter zugaenglich
+
+**Typische Anwendungsfaelle:** Marktanalysen, Vergleichsstudien, Literaturrecherchen, Wettbewerbsanalysen, Technologie-Evaluierungen.
+
+### Quellenverlinkung in Artifacts
+
+Wenn die KI auf Basis von Websuche-Ergebnissen schreibt:
+
+- **Inline-Zitate:** Hochgestellte Nummern markieren quellenbasierte Aussagen
+- **Quellenverzeichnis:** Am Ende jedes Artifacts mit nummerierten Links
+- **Quellen-Badge:** Im Artifact-Header sichtbar ("3 Quellen"), klickbar zum Verzeichnis
+- **Metadata:** Quellen werden strukturiert gespeichert fuer spaetere Nutzung
 
 ### Bildgenerierung
 
@@ -155,6 +178,39 @@ Bilder erstellen, bearbeiten und kombinieren direkt im Chat:
 - **Kombinieren:** Mehrere Bilder hochladen → kombiniertes Ergebnis
 
 Die KI formuliert den englischen Bildprompt automatisch (bessere Ergebnisse). Der Nutzer beschreibt auf Deutsch.
+
+### YouTube-Integration
+
+Videos suchen und analysieren direkt im Chat:
+
+- **Suche:** Stichwortsuche mit Video-Ergebnis-Cards (Thumbnail, Titel, Kanal)
+- **Analyse:** Video-URL eingeben → Transkription, Zusammenfassung oder tiefe Analyse
+- **Multimodal:** Gemini analysiert Thumbnail + Transkript fuer kontextreiche Ergebnisse
+
+### Text-to-Speech
+
+Texte in gesprochenes Audio umwandeln:
+
+- **Stimmen:** 8 verschiedene Stimmen (4 weiblich, 4 maennlich, verschiedene Charaktere)
+- **Multi-Speaker:** 2-Sprecher-Dialoge mit automatischer Stimmenzuweisung
+- **Player:** Audio direkt im Chat abspielbar, herunterladbar als WAV
+
+### UI-Design-Generierung (Stitch)
+
+Professionelle UI-Designs direkt im Chat erstellen:
+
+- **Generieren:** Beschreibung → production-quality HTML mit Tailwind CSS
+- **Iterieren:** Bestehende Designs mit Follow-up-Prompts verfeinern
+- **Device-Targeting:** Desktop, Mobile oder Tablet-optimierte Layouts
+- **Live-Preview:** Designs sofort im Artifact-Panel sichtbar und editierbar
+
+### Dokument-Generierung (Agent Skills)
+
+Professionelle Office-Dokumente im Chat erstellen:
+
+- **Formate:** PowerPoint (.pptx), Excel (.xlsx), Word (.docx), PDF
+- **Download:** Generierte Dateien direkt im Chat herunterladbar
+- **Iteration:** Dokumente koennen in Folge-Nachrichten ueberarbeitet werden
 
 ### Session-Abschluss (Wrapup)
 
@@ -213,6 +269,11 @@ Jede Datenschutz-Entscheidung wird in einem Consent-Log gespeichert (DSGVO-konfo
 | **Varianten**       | Manuell nachfragen                       | Automatische Tab-Ansicht fuer 2-5 Alternativen                                    |
 | **Rueckfragen**     | Freitext                                 | Strukturierte UI-Widgets (Radio, Checkbox, Textarea)                              |
 | **Bildgenerierung** | Separates Tool                           | Integriert im Chat mit Iterations-Galerie und Bild-Kombination                    |
+| **Deep Research**   | Nicht verfuegbar                         | Mehrstufige Recherche (5-12 Min), async, Report mit Quellen als Artifact          |
+| **YouTube**         | Nicht verfuegbar                         | Video-Suche + multimodale Analyse (Transkript + Thumbnail) im Chat               |
+| **Text-to-Speech**  | Nicht verfuegbar                         | 8 Stimmen, Multi-Speaker-Dialoge, Audio-Player im Chat                            |
+| **UI-Design**       | Nicht verfuegbar                         | Stitch: production-quality HTML-Designs, iterierbar, Device-Targeting             |
+| **Quellen**         | Keine Transparenz                        | Inline-Zitate + Quellenverzeichnis in Artifacts                                   |
 | **Modell-Auswahl**  | Manuell                                  | Automatisch basierend auf Expert/Quicktask/User-Praeferenz                        |
 | **Credit-System**   | Fixe Abo-Preise                          | Transparentes Pay-as-you-go mit Model-basierten Kosten                            |
 | **Wrapup**          | Manuell zusammenfassen                   | 5 strukturierte Formate (Uebergabe, PRD, Action Items, Briefing, Zusammenfassung) |
@@ -245,18 +306,27 @@ Jede Datenschutz-Entscheidung wird in einem Consent-Log gespeichert (DSGVO-konfo
 
 ```
 CHATTEN                          ERSTELLEN
-├── 7 KI-Experten                ├── Dokumente (Markdown)
+├── 7 KI-Experten                ├── Dokumente (Markdown + Quellen)
 ├── Freies Chatten               ├── HTML-Seiten (Live-Preview)
 ├── Quicktask-Formulare          ├── Code (Syntax-Highlighting)
 ├── Strukturierte Rueckfragen    ├── Quizzes (Auto-Auswertung)
 ├── Varianten-Vergleich          ├── Reviews (Abschnitts-Feedback)
-└── Session-Wrapup (5 Formate)   └── Bilder (Generieren, Iterieren)
+└── Session-Wrapup (5 Formate)   ├── Bilder (Generieren, Iterieren)
+                                 ├── UI-Designs (Stitch)
+                                 └── Office-Dokumente (PPTX, XLSX, DOCX, PDF)
+
+RECHERCHE                        MEDIEN
+├── Deep Research (5-12 Min)     ├── Bildgenerierung + Iteration
+├── Websuche mit Quellen         ├── YouTube-Suche + Analyse
+├── URL-Abruf                    ├── Text-to-Speech (8 Stimmen)
+├── On-demand Skills             └── UI-Design-Generierung
+└── Quellenverzeichnis
 
 WISSEN                           SCHUETZEN
 ├── Persistentes Memory          ├── PII-Erkennung (9 Typen)
-├── Websuche im Chat             ├── Automatische Maskierung
-├── URL-Abruf                    ├── EU-Modell-Routing
-├── On-demand Skills             ├── Lokale Verarbeitung
-├── Projekt-Kontext              ├── Consent-Logging
-└── Custom Instructions          └── Memory DSGVO-Export
+├── Datum-Awareness              ├── Automatische Maskierung
+├── Projekt-Kontext              ├── EU-Modell-Routing
+├── Custom Instructions          ├── Lokale Verarbeitung
+└── Meine Dateien (Artifacts)    ├── Consent-Logging
+                                 └── Memory DSGVO-Export
 ```
