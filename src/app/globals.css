@@ -540,3 +540,22 @@
   background: oklch(from var(--muted) l c h / 0.9);
   border-color: var(--border);
 }
+
+/* Streaming stop button: animated ring + breathing icon */
+@keyframes ring-pulse {
+  0%, 100% { box-shadow: 0 0 0 2px oklch(from var(--primary) l c h / 0.5); }
+  50% { box-shadow: 0 0 0 2px oklch(from var(--primary) l c h / 0.2); }
+}
+
+@keyframes breathe {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(0.8); opacity: 0.6; }
+}
+
+.streaming-stop-btn {
+  animation: ring-pulse 2s ease-in-out infinite;
+}
+
+.streaming-stop-btn svg {
+  animation: breathe 2s ease-in-out infinite;
+}

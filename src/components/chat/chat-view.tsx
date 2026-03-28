@@ -235,6 +235,7 @@ export function ChatView({ chatId, initialModelId, initialProjectId, initialArti
     addToolOutput,
     status,
     setMessages,
+    stop,
   } = useChat({
     transport,
     id: chatId ?? "new",
@@ -340,6 +341,35 @@ export function ChatView({ chatId, initialModelId, initialProjectId, initialArti
     },
     [setExpert]
   )
+
+  const handleStop = useCallback(() => {
+    stop()
+    // Clean up incomplete tool calls so the next request doesn't fail with missing tool results
+    setMessages(prev => {
+      const lastMsg = prev[prev.length - 1]
+      if (!lastMsg || lastMsg.role !== "assistant") return prev
+
+      const hasIncompleteTools = lastMsg.parts.some(part => {
+        if ("state" in part && "toolCallId" in part) {
+          return part.state !== "output-available" && part.state !== "output-error" && part.state !== "output-denied"
+        }
+        return false
+      })
+
+      if (!hasIncompleteTools) return prev
+
+      const cleanParts = lastMsg.parts.filter(part => {
+        if ("state" in part && "toolCallId" in part) {
+          return part.state === "output-available" || part.state === "output-error" || part.state === "output-denied"
+        }
+        return true
+      })
+
+      const updated = [...prev]
+      updated[updated.length - 1] = { ...lastMsg, parts: cleanParts }
+      return updated
+    })
+  }, [stop, setMessages])
 
   const handleToolResult = useCallback(
     (toolCallId: string, toolName: string, result: unknown) => {
@@ -667,7 +697,7 @@ export function ChatView({ chatId, initialModelId, initialProjectId, initialArti
                   lang="de-DE"
                   onTranscript={(text) => setInput((prev) => prev ? `${prev} ${text}` : text)}
                 />
-                <SubmitButton status={status} input={input} />
+                <SubmitButton status={status} input={input} onStop={handleStop} />
               </div>
             </PromptInputFooter>
           </PromptInput>
@@ -855,12 +885,15 @@ function ExpertSwitchButton({
 }
 
 /** Submit button that enables when text or files are present (must be inside PromptInput) */
-function SubmitButton({ status, input }: { status: ChatStatus; input: string }) {
+function SubmitButton({ status, input, onStop }: { status: ChatStatus; input: string; onStop: () => void }) {
   const { files } = usePromptInputAttachments()
+  const isGenerating = status === "submitted" || status === "streaming"
   return (
     <PromptInputSubmit
       status={status}
-      disabled={!input.trim() && files.length === 0}
+      onStop={onStop}
+      disabled={isGenerating ? false : !input.trim() && files.length === 0}
+      className={isGenerating ? "streaming-stop-btn" : ""}
     />
   )
 }
