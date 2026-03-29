@@ -62,15 +62,14 @@ async function main() {
   const db = getDb()
   const allModels = await db.select().from(models)
 
-  let updated = 0
-  let skipped = 0
-
-  for (const model of allModels) {
+  // ⚡ Bolt Optimization: Replaced sequential `for...of` loop with `Promise.all` + `.map`.
+  // Impact: Reduces N+1 queries by executing DB updates concurrently, speeding up the seeding process significantly.
+  // Note: Unbounded concurrency is safe here since `allModels` is a small, known dataset.
+  const results = await Promise.all(allModels.map(async (model) => {
     const prices = MODEL_PRICES[model.modelId]
     if (!prices) {
       console.log(`  ? ${model.modelId} — kein Preis bekannt, uebersprungen`)
-      skipped++
-      continue
+      return { updated: false }
     }
 
     await db
@@ -83,8 +82,11 @@ async function main() {
       .where(eq(models.id, model.id))
 
     console.log(`  ✓ ${model.name} (${model.modelId}) → $${prices.input}/$${prices.output} per 1M`)
-    updated++
-  }
+    return { updated: true }
+  }))
+
+  const updated = results.filter((r) => r.updated).length
+  const skipped = results.length - updated
 
   console.log(`\n${updated} aktualisiert, ${skipped} uebersprungen`)
   process.exit(0)
