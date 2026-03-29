@@ -29,7 +29,7 @@ interface ChatHeaderProps {
 
 export function ChatHeader({ isAdmin, user }: ChatHeaderProps) {
   const pathname = usePathname()
-  const { projectName } = useProject()
+  const { projectName, isSharedProject } = useProject()
   const [projectDialogOpen, setProjectDialogOpen] = useState(false)
 
   const chatId = pathname.startsWith("/c/")
@@ -105,7 +105,7 @@ export function ChatHeader({ isAdmin, user }: ChatHeaderProps) {
 
         {projectName && (
           <div className="flex items-center gap-1 rounded-md bg-primary-foreground/10 px-2 py-1 text-xs font-medium text-primary-foreground md:gap-1.5 md:px-2.5">
-            <Folder className="size-3" />
+            {isSharedProject ? <Users className="size-3" /> : <Folder className="size-3" />}
             <span className="max-w-[120px] truncate md:max-w-[200px]">{projectName}</span>
           </div>
         )}

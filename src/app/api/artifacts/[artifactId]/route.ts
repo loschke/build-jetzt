@@ -2,7 +2,7 @@ import { z } from "zod"
 
 import { requireAuth } from "@/lib/api-guards"
 import { getArtifactById, updateArtifactContent } from "@/lib/db/queries/artifacts"
-import { getChatById } from "@/lib/db/queries/chats"
+import { canAccessChat } from "@/lib/db/queries/access"
 import { checkRateLimit, RATE_LIMITS, rateLimitResponse } from "@/lib/rate-limit"
 
 const ID_PATTERN = /^[a-zA-Z0-9_-]{1,21}$/
@@ -39,9 +39,9 @@ export async function GET(
     return Response.json({ error: "Not found" }, { status: 404 })
   }
 
-  // Ownership check: artifact → chat → userId
-  const chat = await getChatById(artifact.chatId)
-  if (!chat || chat.userId !== user.id) {
+  // Access check: artifact → chat → canAccessChat
+  const access = await canAccessChat(artifact.chatId, user.id)
+  if (!access.hasAccess) {
     return Response.json({ error: "Not found" }, { status: 404 })
   }
 

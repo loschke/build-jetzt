@@ -2,8 +2,10 @@ import { z } from "zod"
 
 import { requireAuth } from "@/lib/api-guards"
 import { getChatById, getChatWithMessages, getMessageCount, deleteChat, updateChatTitle, toggleChatPin, updateChatModel, updateChatProject } from "@/lib/db/queries/chats"
+import { canAccessChat } from "@/lib/db/queries/access"
 import { getProjectById } from "@/lib/db/queries/projects"
 import { getExpertById } from "@/lib/db/queries/experts"
+import { getUserProfile } from "@/lib/db/queries/users"
 import { getModelById } from "@/config/models"
 import { checkRateLimit, RATE_LIMITS, rateLimitResponse } from "@/lib/rate-limit"
 
@@ -49,17 +51,24 @@ export async function GET(
     }
   }
 
-  const paginationOptions = limit > 0 ? { limit, offset } : undefined
-  const chat = await getChatWithMessages(chatId, paginationOptions)
-
-  if (!chat || chat.userId !== user.id) {
+  // Check access: owner, project member, or chat share recipient
+  const access = await canAccessChat(chatId, user.id)
+  if (!access.hasAccess) {
     return Response.json({ error: "Nicht gefunden" }, { status: 404 })
   }
 
-  // Resolve expert and project names in parallel (avoids extra client-side fetches)
-  const [expert, project] = await Promise.all([
+  const paginationOptions = limit > 0 ? { limit, offset } : undefined
+  const chat = await getChatWithMessages(chatId, paginationOptions)
+
+  if (!chat) {
+    return Response.json({ error: "Nicht gefunden" }, { status: 404 })
+  }
+
+  // Resolve expert, project, and owner names in parallel
+  const [expert, project, ownerInfo] = await Promise.all([
     chat.expertId ? getExpertById(chat.expertId) : null,
     chat.projectId ? getProjectById(chat.projectId) : null,
+    !access.isOwner ? getUserProfile(chat.userId) : null,
   ])
 
   const enriched = {
@@ -67,6 +76,11 @@ export async function GET(
     expertName: expert?.name ?? null,
     expertIcon: expert?.icon ?? null,
     projectName: project?.name ?? null,
+    // Collaboration metadata
+    isOwner: access.isOwner,
+    accessVia: access.via,
+    readOnly: access.via === "chat_share",
+    ownerName: ownerInfo?.name ?? ownerInfo?.email ?? null,
   }
 
   // Include pagination metadata when limit is specified

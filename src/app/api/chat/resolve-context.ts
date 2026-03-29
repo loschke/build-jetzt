@@ -5,6 +5,7 @@ import { createChat, getChatById } from "@/lib/db/queries/chats"
 import { getUserPreferences } from "@/lib/db/queries/users"
 import { getExpertById } from "@/lib/db/queries/experts"
 import { getProjectById } from "@/lib/db/queries/projects"
+import { canAccessProject, canAccessChat } from "@/lib/db/queries/access"
 import { getProjectDocumentsForPrompt } from "@/lib/db/queries/project-documents"
 import { getModelById, getModels } from "@/config/models"
 import { discoverSkills, getSkillContent } from "@/lib/ai/skills/discovery"
@@ -101,14 +102,17 @@ export async function resolveContext(params: ResolveContextParams): Promise<Chat
   let project: Awaited<ReturnType<typeof getProjectById>> | null = null
   const effectiveProjectId = requestProjectId ?? existingChat?.projectId ?? null
   if (effectiveProjectId) {
-    project = await getProjectById(effectiveProjectId)
-    if (project && project.userId !== userId) {
-      project = null
+    const projectAccess = await canAccessProject(effectiveProjectId, userId)
+    if (projectAccess.hasAccess) {
+      project = await getProjectById(effectiveProjectId)
     }
   }
 
   if (requestChatId) {
-    if (!existingChat || existingChat.userId !== userId) {
+    // Check chat access: owner or project member (write-level)
+    const chatAccess = await canAccessChat(requestChatId, userId)
+    if (!existingChat || !chatAccess.hasAccess || chatAccess.via === "chat_share") {
+      // chat_share = read-only, cannot send messages
       return Response.json({ error: "Chat nicht gefunden" }, { status: 404 })
     }
     resolvedChatId = requestChatId

@@ -2,7 +2,6 @@ import { nanoid } from "nanoid"
 import { eq, and, sql, desc } from "drizzle-orm"
 import { getDb } from "@/lib/db"
 import { messages } from "@/lib/db/schema/messages"
-import { chats } from "@/lib/db/schema/chats"
 
 interface MessageInput {
   chatId: string
@@ -37,29 +36,33 @@ export async function updateMessageMetadata(messageId: string, metadata: Record<
     .where(eq(messages.id, messageId))
 }
 
-/** Get message metadata (lightweight, no parts/content). Validates ownership via chat userId. */
-export async function getMessageMetadata(messageId: string, userId: string): Promise<Record<string, unknown> | null> {
+/**
+ * Get message metadata (lightweight, no parts/content).
+ * Scoped to chatId to prevent cross-chat metadata access.
+ * Access control must be verified by caller via canAccessChat().
+ */
+export async function getMessageMetadata(messageId: string, chatId: string): Promise<Record<string, unknown> | null> {
   const db = getDb()
   const [row] = await db
     .select({ metadata: messages.metadata })
     .from(messages)
-    .innerJoin(chats, eq(messages.chatId, chats.id))
-    .where(and(eq(messages.id, messageId), eq(chats.userId, userId)))
+    .where(and(eq(messages.id, messageId), eq(messages.chatId, chatId)))
     .limit(1)
   return (row?.metadata as Record<string, unknown>) ?? null
 }
 
-/** Get metadata of the last assistant message in a chat. Validates ownership. */
-export async function getLastAssistantMetadata(chatId: string, userId: string): Promise<Record<string, unknown> | null> {
+/**
+ * Get metadata of the last assistant message in a chat.
+ * Access control must be verified by caller via canAccessChat().
+ */
+export async function getLastAssistantMetadata(chatId: string): Promise<Record<string, unknown> | null> {
   const db = getDb()
   const [row] = await db
     .select({ metadata: messages.metadata })
     .from(messages)
-    .innerJoin(chats, eq(messages.chatId, chats.id))
     .where(and(
       eq(messages.chatId, chatId),
       eq(messages.role, "assistant"),
-      eq(chats.userId, userId),
     ))
     .orderBy(desc(messages.createdAt))
     .limit(1)

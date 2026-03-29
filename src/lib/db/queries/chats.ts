@@ -135,12 +135,16 @@ export async function deleteChat(chatId: string, userId: string) {
     .where(and(eq(chats.id, chatId), eq(chats.userId, userId)))
 }
 
-export async function touchChat(chatId: string, userId: string) {
+/**
+ * Update chat's updatedAt timestamp.
+ * Access control must be verified by caller via canAccessChat().
+ */
+export async function touchChat(chatId: string) {
   const db = getDb()
   await db
     .update(chats)
     .set({ updatedAt: new Date() })
-    .where(and(eq(chats.id, chatId), eq(chats.userId, userId)))
+    .where(eq(chats.id, chatId))
 }
 
 export async function toggleChatPin(chatId: string, userId: string, isPinned: boolean) {

@@ -1,5 +1,5 @@
 import { requireAuth } from "@/lib/api-guards"
-import { getProjectById } from "@/lib/db/queries/projects"
+import { canAccessProject } from "@/lib/db/queries/access"
 import {
   getProjectDocuments,
   getDocumentStats,
@@ -25,8 +25,8 @@ export async function GET(
   if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfterMs)
 
   const { projectId } = await params
-  const project = await getProjectById(projectId)
-  if (!project || project.userId !== user.id) {
+  const access = await canAccessProject(projectId, user.id)
+  if (!access.hasAccess) {
     return Response.json({ error: "Nicht gefunden" }, { status: 404 })
   }
 
@@ -58,8 +58,8 @@ export async function POST(
   if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfterMs)
 
   const { projectId } = await params
-  const project = await getProjectById(projectId)
-  if (!project || project.userId !== user.id) {
+  const access = await canAccessProject(projectId, user.id)
+  if (!access.hasAccess) {
     return Response.json({ error: "Nicht gefunden" }, { status: 404 })
   }
 

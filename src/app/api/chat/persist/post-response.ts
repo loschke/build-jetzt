@@ -61,15 +61,15 @@ export function generateTitle({ resolvedChatId, userId, isNewChat, userMsg }: Ti
             return updateChatTitle(resolvedChatId, userId, title)
           }
         })
-        .then(() => touchChat(resolvedChatId, userId))
+        .then(() => touchChat(resolvedChatId))
         .catch((err) => console.warn("Title generation failed:", getErrorMessage(err)))
     } else {
       // Fire-and-forget touchChat for new chats without text
-      touchChat(resolvedChatId, userId).catch(console.error)
+      touchChat(resolvedChatId).catch(console.error)
     }
   } else {
     // Fire-and-forget touchChat for existing chats
-    touchChat(resolvedChatId, userId).catch(console.error)
+    touchChat(resolvedChatId).catch(console.error)
   }
 }
 

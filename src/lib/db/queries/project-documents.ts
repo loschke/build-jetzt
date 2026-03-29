@@ -2,7 +2,6 @@ import { eq, and, asc, sql } from "drizzle-orm"
 import { nanoid } from "nanoid"
 import { getDb } from "@/lib/db"
 import { projectDocuments } from "@/lib/db/schema/project-documents"
-import { projects } from "@/lib/db/schema/projects"
 
 /** Get all documents for a project (sorted by sortOrder, then createdAt). */
 export async function getProjectDocuments(projectId: string) {
@@ -67,23 +66,16 @@ export async function createProjectDocument(
   return doc
 }
 
-/** Delete a document with ownership check via projects join. */
-export async function deleteProjectDocument(documentId: string, userId: string) {
+/**
+ * Delete a document by ID and projectId.
+ * Access control must be verified by caller via canAccessProject().
+ */
+export async function deleteProjectDocument(documentId: string, projectId: string) {
   const db = getDb()
-
-  // Verify ownership through project
-  const [doc] = await db
-    .select({ id: projectDocuments.id, projectId: projectDocuments.projectId })
-    .from(projectDocuments)
-    .innerJoin(projects, eq(projectDocuments.projectId, projects.id))
-    .where(and(eq(projectDocuments.id, documentId), eq(projects.userId, userId)))
-    .limit(1)
-
-  if (!doc) return null
 
   const [deleted] = await db
     .delete(projectDocuments)
-    .where(eq(projectDocuments.id, documentId))
+    .where(and(eq(projectDocuments.id, documentId), eq(projectDocuments.projectId, projectId)))
     .returning()
   return deleted ?? null
 }

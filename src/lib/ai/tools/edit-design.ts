@@ -36,7 +36,7 @@ export function editDesignTool(chatId: string, userId: string) {
     }),
     execute: async ({ artifactId, prompt, deviceType }) => {
       // 1. Load existing artifact with metadata
-      const existing = await getArtifactByIdForUser(artifactId, userId)
+      const existing = await getArtifactByIdForUser(artifactId)
       if (!existing) {
         return { error: "Design-Artifact nicht gefunden oder kein Zugriff." }
       }

@@ -63,7 +63,7 @@ export function generateImageTool(chatId: string, userId: string, uploadedImages
 
       // 1a. Load from existing artifacts (for iteration/editing) — parallel fetch
       if (referenceArtifactIds && referenceArtifactIds.length > 0) {
-        const artifacts = await Promise.all(referenceArtifactIds.map((id) => getArtifactByIdForUser(id, userId)))
+        const artifacts = await Promise.all(referenceArtifactIds.map((id) => getArtifactByIdForUser(id)))
         const imageUrls = artifacts
           .filter((a): a is NonNullable<typeof a> => a !== null)
           .map((a) => getLatestImageUrl(a.content))
@@ -100,7 +100,7 @@ export function generateImageTool(chatId: string, userId: string, uploadedImages
 
       // 1c. Auto-load previous image for iteration even if referenceArtifactIds was forgotten
       if (targetArtifactId && referenceImages.length === 0) {
-        const existing = await getArtifactByIdForUser(targetArtifactId, userId)
+        const existing = await getArtifactByIdForUser(targetArtifactId)
         if (existing && existing.type === "image") {
           const imageUrl = getLatestImageUrl(existing.content)
           if (imageUrl) {
@@ -155,7 +155,7 @@ export function generateImageTool(chatId: string, userId: string, uploadedImages
 
       if (targetArtifactId) {
         // Iteration: append to existing gallery
-        const existing = await getArtifactByIdForUser(targetArtifactId, userId)
+        const existing = await getArtifactByIdForUser(targetArtifactId)
         if (existing && existing.type === "image") {
           const gallery = parseImageGallery(existing.content)
           gallery.push(newEntry)

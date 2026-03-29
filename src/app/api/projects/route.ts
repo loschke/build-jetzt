@@ -1,5 +1,6 @@
 import { requireAuth } from "@/lib/api-guards"
 import { getUserProjects, createProject } from "@/lib/db/queries/projects"
+import { getUserSharedProjects, ensureProjectOwnerMember } from "@/lib/db/queries/project-members"
 import { checkRateLimit, RATE_LIMITS, rateLimitResponse } from "@/lib/rate-limit"
 import { createProjectSchema } from "@/lib/validations/project"
 
@@ -13,9 +14,15 @@ export async function GET() {
     return rateLimitResponse(rateCheck.retryAfterMs)
   }
 
-  const projects = await getUserProjects(user.id)
+  const [ownProjects, sharedProjects] = await Promise.all([
+    getUserProjects(user.id),
+    getUserSharedProjects(user.id),
+  ])
 
-  return Response.json(projects)
+  return Response.json({
+    own: ownProjects,
+    shared: sharedProjects,
+  })
 }
 
 export async function POST(req: Request) {
@@ -42,6 +49,7 @@ export async function POST(req: Request) {
   }
 
   const project = await createProject(user.id, parsed.data)
+  await ensureProjectOwnerMember(project.id, user.id)
   return Response.json({
     id: project.id,
     name: project.name,

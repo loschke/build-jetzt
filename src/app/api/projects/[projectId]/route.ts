@@ -1,5 +1,6 @@
 import { requireAuth } from "@/lib/api-guards"
 import { getProjectById, updateProject, deleteProject } from "@/lib/db/queries/projects"
+import { canAccessProject } from "@/lib/db/queries/access"
 import { checkRateLimit, RATE_LIMITS, rateLimitResponse } from "@/lib/rate-limit"
 import { updateProjectSchema } from "@/lib/validations/project"
 
@@ -17,12 +18,13 @@ export async function GET(
   }
 
   const { projectId } = await params
-  const project = await getProjectById(projectId)
-  if (!project || project.userId !== user.id) {
+  const access = await canAccessProject(projectId, user.id)
+  if (!access.hasAccess) {
     return Response.json({ error: "Nicht gefunden" }, { status: 404 })
   }
 
-  return Response.json(project)
+  const project = await getProjectById(projectId)
+  return Response.json({ ...project, role: access.role, isOwner: access.isOwner })
 }
 
 export async function PATCH(
@@ -40,9 +42,9 @@ export async function PATCH(
 
   const { projectId } = await params
 
-  // Verify ownership
-  const project = await getProjectById(projectId)
-  if (!project || project.userId !== user.id) {
+  // Verify access (owner or editor)
+  const access = await canAccessProject(projectId, user.id)
+  if (!access.hasAccess) {
     return Response.json({ error: "Nicht gefunden" }, { status: 404 })
   }
 
@@ -59,7 +61,19 @@ export async function PATCH(
     return Response.json({ error: firstError }, { status: 400 })
   }
 
-  const updated = await updateProject(projectId, user.id, parsed.data)
+  // Editors may not change isArchived
+  if (!access.isOwner && parsed.data.isArchived !== undefined) {
+    return Response.json({ error: "Nur der Owner kann Projekte archivieren" }, { status: 403 })
+  }
+
+  // updateProject uses userId-scoped WHERE for owners.
+  // For editors, we need the project owner's userId.
+  const project = await getProjectById(projectId)
+  if (!project) {
+    return Response.json({ error: "Nicht gefunden" }, { status: 404 })
+  }
+
+  const updated = await updateProject(projectId, project.userId, parsed.data)
   if (!updated) {
     return Response.json({ error: "Aktualisierung fehlgeschlagen" }, { status: 500 })
   }

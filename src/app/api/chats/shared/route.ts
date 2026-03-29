@@ -1,11 +1,18 @@
 import { requireAuth } from "@/lib/api-guards"
-import { getUserSharedChatIds } from "@/lib/db/queries/shared-chats"
+import { getUserSharedChatIds as getPublicSharedChatIds } from "@/lib/db/queries/shared-chats"
+import { getUserSharedChatIds as getUserShareChatIds } from "@/lib/db/queries/chat-shares"
 
-/** Returns the set of chatIds that the current user has shared. */
+/** Returns chatIds the user has shared (public links + user-to-user shares). */
 export async function GET() {
   const auth = await requireAuth()
   if (auth.error) return auth.error
 
-  const sharedIds = await getUserSharedChatIds(auth.user.id)
-  return Response.json({ chatIds: [...sharedIds] })
+  const [publicIds, userShareIds] = await Promise.all([
+    getPublicSharedChatIds(auth.user.id),
+    getUserShareChatIds(auth.user.id),
+  ])
+
+  // Merge both sets
+  const allIds = new Set([...publicIds, ...userShareIds])
+  return Response.json({ chatIds: [...allIds] })
 }

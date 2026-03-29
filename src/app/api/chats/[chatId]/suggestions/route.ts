@@ -1,4 +1,5 @@
 import { requireAuth } from "@/lib/api-guards"
+import { canAccessChat } from "@/lib/db/queries/access"
 import { getLastAssistantMetadata } from "@/lib/db/queries/messages"
 import { checkRateLimit, RATE_LIMITS, rateLimitResponse } from "@/lib/rate-limit"
 
@@ -20,7 +21,12 @@ export async function GET(
     return Response.json({ error: "Ungültige Chat-ID" }, { status: 400 })
   }
 
-  const metadata = await getLastAssistantMetadata(chatId, auth.user.id)
+  const access = await canAccessChat(chatId, auth.user.id)
+  if (!access.hasAccess) {
+    return Response.json({ error: "Nicht gefunden" }, { status: 404 })
+  }
+
+  const metadata = await getLastAssistantMetadata(chatId)
   const suggestedReplies = (metadata?.suggestedReplies as string[]) ?? null
 
   return Response.json({ suggestedReplies })

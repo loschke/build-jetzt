@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback, useMemo, useDeferredValue, useRef } from "react"
 import { usePathname, useRouter } from "next/navigation"
-import { MessageSquare, MoreHorizontal, Trash2, Pin, PinOff, FolderInput, Share2, Search, Folder, Plus, Settings, ChevronRight, Loader2, Layers, Pencil, X } from "lucide-react"
+import { MessageSquare, MoreHorizontal, Trash2, Pin, PinOff, FolderInput, Share2, Search, Folder, Plus, Settings, ChevronRight, Loader2, Layers, Pencil, X, Users } from "lucide-react"
 import {
   SidebarGroup,
   SidebarGroupLabel,
@@ -39,6 +39,7 @@ import { groupChatsByDate } from "@/lib/utils/date-groups"
 import { ProjectMoveDialog } from "./project-move-dialog"
 import { ProjectSettingsDialog } from "./project-settings-dialog"
 import { ShareDialog } from "./share-dialog"
+import { UserShareDialog } from "./user-share-dialog"
 
 interface ChatItem {
   id: string
@@ -53,6 +54,24 @@ interface ProjectItem {
   name: string
   description: string | null
   chatCount: number
+}
+
+interface SharedProjectItem {
+  id: string
+  name: string
+  description: string | null
+  role: string
+  ownerName: string | null
+  ownerEmail: string | null
+}
+
+interface SharedWithMeChat {
+  id: string
+  title: string
+  projectId: string | null
+  sharedAt: string
+  ownerName: string | null
+  ownerEmail: string | null
 }
 
 function LoadMoreSentinel({ loadMore, isLoading }: { loadMore: () => void; isLoading: boolean }) {
@@ -81,6 +100,8 @@ export function ChatSidebarContent() {
   const isCollapsed = sidebarState === "collapsed"
   const [chats, setChats] = useState<ChatItem[]>([])
   const [projects, setProjects] = useState<ProjectItem[]>([])
+  const [sharedProjects, setSharedProjects] = useState<SharedProjectItem[]>([])
+  const [sharedWithMeChats, setSharedWithMeChats] = useState<SharedWithMeChat[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState("")
   const [hasMore, setHasMore] = useState(false)
@@ -92,6 +113,7 @@ export function ChatSidebarContent() {
   const [renameValue, setRenameValue] = useState("")
   const [sharedChatIds, setSharedChatIds] = useState<Set<string>>(new Set())
   const [shareChatId, setShareChatId] = useState<string | null>(null)
+  const [userShareChatId, setUserShareChatId] = useState<string | null>(null)
   const [projectDialogState, setProjectDialogState] = useState<{
     open: boolean
     project?: ProjectItem | null
@@ -102,10 +124,11 @@ export function ChatSidebarContent() {
 
   const fetchData = useCallback(async () => {
     try {
-      const [chatsRes, projectsRes, sharedRes] = await Promise.all([
+      const [chatsRes, projectsRes, sharedRes, sharedWithMeRes] = await Promise.all([
         fetch("/api/chats?limit=50"),
         fetch("/api/projects"),
         fetch("/api/chats/shared"),
+        fetch("/api/chats/shared-with-me"),
       ])
       if (chatsRes.ok) {
         const data = await chatsRes.json()
@@ -114,11 +137,17 @@ export function ChatSidebarContent() {
         setNextCursor(data.nextCursor)
       }
       if (projectsRes.ok) {
-        setProjects(await projectsRes.json())
+        const data = await projectsRes.json()
+        // API now returns { own, shared }
+        setProjects(data.own ?? data)
+        setSharedProjects(data.shared ?? [])
       }
       if (sharedRes.ok) {
         const data = await sharedRes.json()
         setSharedChatIds(new Set(data.chatIds))
+      }
+      if (sharedWithMeRes.ok) {
+        setSharedWithMeChats(await sharedWithMeRes.json())
       }
     } catch {
       // Silently fail — sidebar is non-critical
@@ -358,7 +387,7 @@ export function ChatSidebarContent() {
     )
   }
 
-  if (chats.length === 0 && projects.length === 0) {
+  if (chats.length === 0 && projects.length === 0 && sharedProjects.length === 0 && sharedWithMeChats.length === 0) {
     return (
       <SidebarGroup>
         <SidebarGroupLabel>Chats</SidebarGroupLabel>
@@ -412,7 +441,10 @@ export function ChatSidebarContent() {
               <Pencil className="mr-2 size-4" /> Umbenennen
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => setShareChatId(chat.id)}>
-              <Share2 className="mr-2 size-4" /> {isShared ? "Link verwalten" : "Teilen"}
+              <Share2 className="mr-2 size-4" /> {isShared ? "Link verwalten" : "Link teilen"}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setUserShareChatId(chat.id)}>
+              <Users className="mr-2 size-4" /> Mit Nutzer teilen
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
@@ -523,6 +555,96 @@ export function ChatSidebarContent() {
               </CollapsibleContent>
             </Collapsible>
           )}
+
+          {/* Shared projects */}
+          {sharedProjects.length > 0 && (
+            <Collapsible defaultOpen>
+              <SidebarMenu>
+                <SidebarMenuItem>
+                  <CollapsibleTrigger asChild>
+                    <SidebarMenuButton className="[&[data-state=open]>svg:last-child]:rotate-90">
+                      <Users className="size-4" />
+                      <span>Geteilte Projekte</span>
+                      <ChevronRight className="ml-auto size-4 transition-transform" />
+                    </SidebarMenuButton>
+                  </CollapsibleTrigger>
+                </SidebarMenuItem>
+              </SidebarMenu>
+              <CollapsibleContent>
+                {sharedProjects.map((sp) => {
+                  // Show own chats in this shared project
+                  const projectChats = chats.filter((c) => !c.isPinned && c.projectId === sp.id)
+                  // + chats shared with me that belong to this project
+                  const sharedChatsInProject = sharedWithMeChats.filter((sc) => sc.projectId === sp.id)
+                  return (
+                    <Collapsible key={sp.id} defaultOpen={projectChats.length > 0 || sharedChatsInProject.length > 0}>
+                      <div className="group/project flex w-full items-center pl-4 pr-2">
+                        <CollapsibleTrigger className="flex flex-1 items-center gap-1.5 rounded-md px-2 py-1.5 text-[13px] font-medium text-muted-foreground hover:text-foreground [&[data-state=open]>svg:first-child]:rotate-90">
+                          <ChevronRight className="size-3 shrink-0 transition-transform" />
+                          <div className="flex flex-col truncate">
+                            <span className="truncate">{sp.name}</span>
+                            <span className="truncate text-[11px] font-normal text-muted-foreground/70">
+                              {sp.ownerName ?? sp.ownerEmail}
+                            </span>
+                          </div>
+                        </CollapsibleTrigger>
+                        <div className="flex shrink-0 items-center gap-0.5 opacity-0 group-hover/project:opacity-100">
+                          <button
+                            type="button"
+                            className="rounded p-0.5 text-muted-foreground hover:text-foreground"
+                            onClick={() => window.location.href = `/?project=${sp.id}`}
+                            title="Neuer Chat im Projekt"
+                          >
+                            <Plus className="size-3" />
+                          </button>
+                          {sp.role === "editor" && (
+                            <button
+                              type="button"
+                              className="rounded p-0.5 text-muted-foreground hover:text-foreground"
+                              onClick={() => setProjectDialogState({ open: true, project: { id: sp.id, name: sp.name, description: sp.description, chatCount: 0 } })}
+                              title="Bearbeiten"
+                            >
+                              <Settings className="size-3" />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      <CollapsibleContent>
+                        {(projectChats.length > 0 || sharedChatsInProject.length > 0) ? (
+                          <SidebarMenu className="pl-4">
+                            {projectChats.map(renderChatItem)}
+                            {sharedChatsInProject.map((sc) => (
+                              <SidebarMenuItem key={sc.id}>
+                                <SidebarMenuButton
+                                  asChild
+                                  isActive={sc.id === activeChatId}
+                                  tooltip={`${sc.title} (${sc.ownerName ?? "geteilt"})`}
+                                >
+                                  <a href={`/c/${sc.id}`}>
+                                    <Users className="size-4 text-muted-foreground" />
+                                    <span className="truncate">{sc.title}</span>
+                                  </a>
+                                </SidebarMenuButton>
+                              </SidebarMenuItem>
+                            ))}
+                          </SidebarMenu>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => window.location.href = `/?project=${sp.id}`}
+                            className="mx-3 my-1 ml-8 flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+                          >
+                            <Plus className="size-3" />
+                            Chat starten
+                          </button>
+                        )}
+                      </CollapsibleContent>
+                    </Collapsible>
+                  )
+                })}
+              </CollapsibleContent>
+            </Collapsible>
+          )}
         </SidebarGroup>
       )}
 
@@ -551,6 +673,38 @@ export function ChatSidebarContent() {
           </SidebarMenu>
         </SidebarGroup>
       )}
+
+      {/* Shared with me — chats not in a shared project */}
+      {(() => {
+        const standaloneSharedChats = sharedWithMeChats.filter((sc) => !sharedProjects.some((sp) => sp.id === sc.projectId))
+        if (standaloneSharedChats.length === 0) return null
+        return (
+        <SidebarGroup>
+          <SidebarGroupLabel>Mit mir geteilt</SidebarGroupLabel>
+          <SidebarMenu>
+            {standaloneSharedChats.map((sc) => (
+                <SidebarMenuItem key={sc.id}>
+                  <SidebarMenuButton
+                    asChild
+                    isActive={sc.id === activeChatId}
+                    tooltip={`${sc.title} — von ${sc.ownerName ?? sc.ownerEmail}`}
+                  >
+                    <a href={`/c/${sc.id}`}>
+                      <Users className="size-4 text-muted-foreground" />
+                      <div className="flex flex-col truncate">
+                        <span className="truncate">{sc.title}</span>
+                        <span className="truncate text-[11px] text-muted-foreground/70">
+                          {sc.ownerName ?? sc.ownerEmail}
+                        </span>
+                      </div>
+                    </a>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+          </SidebarMenu>
+        </SidebarGroup>
+        )
+      })()}
 
       {/* Ungrouped chats (chronological) */}
       {groupedChats.map((group) => (
@@ -702,7 +856,7 @@ export function ChatSidebarContent() {
         />
       )}
 
-      {/* Share dialog */}
+      {/* Share dialog (public link) */}
       {shareChatId && (
         <ShareDialog
           open={!!shareChatId}
@@ -711,6 +865,16 @@ export function ChatSidebarContent() {
           chatTitle={chats.find((c) => c.id === shareChatId)?.title ?? ""}
           onShared={() => setSharedChatIds((prev) => new Set([...prev, shareChatId]))}
           onUnshared={() => setSharedChatIds((prev) => { const next = new Set(prev); next.delete(shareChatId); return next })}
+        />
+      )}
+
+      {/* User share dialog (share with specific user) */}
+      {userShareChatId && (
+        <UserShareDialog
+          open={!!userShareChatId}
+          onOpenChange={(open) => { if (!open) setUserShareChatId(null) }}
+          chatId={userShareChatId}
+          chatTitle={chats.find((c) => c.id === userShareChatId)?.title ?? ""}
         />
       )}
     </>

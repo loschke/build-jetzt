@@ -82,10 +82,18 @@ export function ProjectSettingsDialog({
     }
   }, [project?.id])
 
+  // Load full project data (instructions etc.) when dialog opens
   useEffect(() => {
-    if (open && project?.id) {
-      loadDocuments()
-    }
+    if (!open || !project?.id) return
+    loadDocuments()
+    fetch(`/api/projects/${project.id}`)
+      .then((res) => res.ok ? res.json() : null)
+      .then((data) => {
+        if (!data) return
+        if (data.instructions !== undefined) setInstructions(data.instructions ?? "")
+        if (data.description !== undefined) setDescription(data.description ?? "")
+      })
+      .catch(() => {})
   }, [open, project?.id, loadDocuments])
 
   async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {

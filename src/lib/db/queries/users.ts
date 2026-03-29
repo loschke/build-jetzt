@@ -111,6 +111,28 @@ export async function ensureUserExists(params: {
   }
 }
 
+/** Look up a user by email. Returns logtoId, name, email or null. */
+export async function getUserByEmail(email: string) {
+  const db = getDb()
+  const [user] = await db
+    .select({ logtoId: users.logtoId, name: users.name, email: users.email })
+    .from(users)
+    .where(eq(users.email, email))
+    .limit(1)
+  return user ?? null
+}
+
+/** Get basic profile (name, email) by logtoId. */
+export async function getUserProfile(logtoId: string) {
+  const db = getDb()
+  const [user] = await db
+    .select({ name: users.name, email: users.email })
+    .from(users)
+    .where(eq(users.logtoId, logtoId))
+    .limit(1)
+  return user ?? null
+}
+
 export async function getCustomInstructions(logtoId: string): Promise<string | null> {
   const db = getDb()
   const [user] = await db

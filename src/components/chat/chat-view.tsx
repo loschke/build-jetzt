@@ -79,6 +79,8 @@ export function ChatView({ chatId, initialModelId, initialProjectId, initialArti
   const [hasAttachedFiles, setHasAttachedFiles] = useState(false)
   const [creditError, setCreditError] = useState<string | null>(null)
   const [suggestedRepliesEnabled, setSuggestedRepliesEnabled] = useState(true)
+  const [readOnly, setReadOnly] = useState(false)
+  const [sharedByName, setSharedByName] = useState<string | null>(null)
   const projectIdRef = useRef<string | null>(initialProjectId ?? null)
   const quicktaskRef = useRef<{ slug: string; data: Record<string, string> } | null>(null)
   const navigatedRef = useRef(false)
@@ -313,8 +315,17 @@ export function ChatView({ chatId, initialModelId, initialProjectId, initialArti
         if (data.projectId) {
           projectIdRef.current = data.projectId
           if (data.projectName) {
-            setProject(data.projectId, data.projectName)
+            const isShared = data.accessVia === "project_member"
+            setProject(data.projectId, data.projectName, isShared)
           }
+        }
+        // Collaboration: read-only mode for shared chats
+        if (data.readOnly) {
+          setReadOnly(true)
+        }
+        if (data.accessVia === "chat_share") {
+          // Find owner name from enriched response or sharedWithMe data
+          setSharedByName(data.ownerName ?? null)
         }
       } catch (error) {
         if (error instanceof DOMException && error.name === "AbortError") return
@@ -641,6 +652,17 @@ export function ChatView({ chatId, initialModelId, initialProjectId, initialArti
 
         {/* Input area */}
         <div className={`mx-auto w-full px-3 pb-3 md:px-6 md:pb-6 ${hasArtifact ? "max-w-2xl" : "max-w-3xl"}`}>
+          {readOnly ? (
+            <div className="flex items-center gap-2 rounded-lg border border-border/50 bg-muted/50 px-4 py-3 text-sm text-muted-foreground">
+              <Users className="size-4 shrink-0" />
+              <span>
+                {sharedByName
+                  ? `Von ${sharedByName} geteilt`
+                  : "Geteilter Chat"}
+                {" — nur Ansicht"}
+              </span>
+            </div>
+          ) : (<>
           {creditError && (
             <div className="mb-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/30 dark:text-red-400">
               {creditError}
@@ -702,6 +724,7 @@ export function ChatView({ chatId, initialModelId, initialProjectId, initialArti
               </div>
             </PromptInputFooter>
           </PromptInput>
+          </>)}
         </div>
       </div>
 

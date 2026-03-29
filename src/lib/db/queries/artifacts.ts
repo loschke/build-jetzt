@@ -57,8 +57,11 @@ export async function getArtifactById(id: string) {
   return artifact ?? null
 }
 
-/** Get artifact by ID with ownership check (artifact → chat → userId). */
-export async function getArtifactByIdForUser(id: string, userId: string) {
+/**
+ * Get artifact by ID with chat join.
+ * Access control must be verified by caller via canAccessChat().
+ */
+export async function getArtifactByIdForUser(id: string) {
   const db = getDb()
   const [artifact] = await db
     .select({
@@ -74,13 +77,16 @@ export async function getArtifactByIdForUser(id: string, userId: string) {
       createdAt: artifacts.createdAt,
     })
     .from(artifacts)
-    .innerJoin(chats, eq(artifacts.chatId, chats.id))
-    .where(and(eq(artifacts.id, id), eq(chats.userId, userId)))
+    .where(eq(artifacts.id, id))
     .limit(1)
   return artifact ?? null
 }
 
-export async function getArtifactsByChatId(chatId: string, userId: string) {
+/**
+ * Get all artifacts for a chat.
+ * Access control must be verified by caller via canAccessChat().
+ */
+export async function getArtifactsByChatId(chatId: string) {
   const db = getDb()
   return db
     .select({
@@ -97,8 +103,7 @@ export async function getArtifactsByChatId(chatId: string, userId: string) {
       updatedAt: artifacts.updatedAt,
     })
     .from(artifacts)
-    .innerJoin(chats, eq(artifacts.chatId, chats.id))
-    .where(and(eq(artifacts.chatId, chatId), eq(chats.userId, userId)))
+    .where(eq(artifacts.chatId, chatId))
     .orderBy(artifacts.createdAt)
 }
 

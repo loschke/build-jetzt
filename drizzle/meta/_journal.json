@@ -64,6 +64,13 @@
       "when": 1774475356466,
       "tag": "0008_unique_loners",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1774783261892,
+      "tag": "0009_naive_leopardon",
+      "breakpoints": true
     }
   ]
 }
