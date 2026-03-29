@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { FileOutput, Volume2 } from "lucide-react"
+import { FileOutput, FileText, Volume2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import {
@@ -10,6 +10,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover"
 import { Textarea } from "@/components/ui/textarea"
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { WRAPUP_TYPES } from "@/config/wrapup"
 
 interface SessionWrapupPopoverProps {
@@ -94,27 +95,23 @@ export function SessionWrapupPopover({ onSubmit, disabled, ttsEnabled }: Session
             className="resize-none text-sm"
           />
           {ttsEnabled && (
-            <button
-              type="button"
-              onClick={() => setFormat((f) => f === "text" ? "audio" : "text")}
-              className="flex w-full items-center justify-between rounded-md border border-border px-3 py-2 text-xs transition-colors hover:bg-muted/50"
+            <ToggleGroup
+              type="single"
+              variant="outline"
+              size="sm"
+              value={format}
+              onValueChange={(v) => { if (v) setFormat(v as "text" | "audio") }}
+              className="w-full"
             >
-              <span className="flex items-center gap-1.5 text-muted-foreground">
+              <ToggleGroupItem value="text" className="flex-1 gap-1.5 text-xs">
+                <FileText className="size-3.5" />
+                Text
+              </ToggleGroupItem>
+              <ToggleGroupItem value="audio" className="flex-1 gap-1.5 text-xs">
                 <Volume2 className="size-3.5" />
-                Audio-Ausgabe
-              </span>
-              <span
-                className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full transition-colors ${
-                  format === "audio" ? "bg-primary" : "bg-muted"
-                }`}
-              >
-                <span
-                  className={`pointer-events-none inline-block size-4 rounded-full bg-background shadow-sm ring-0 transition-transform ${
-                    format === "audio" ? "translate-x-4" : "translate-x-0.5"
-                  } mt-0.5`}
-                />
-              </span>
-            </button>
+                Audio
+              </ToggleGroupItem>
+            </ToggleGroup>
           )}
           <Button
             size="sm"

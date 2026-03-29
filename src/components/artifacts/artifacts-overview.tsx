@@ -9,6 +9,7 @@ import {
   ClipboardCheck,
   MessageSquareMore,
   Image as ImageIcon,
+  Volume2,
   Layers,
   Loader2,
   Info,
@@ -37,6 +38,7 @@ const TYPE_ICON_MAP: Record<string, LucideIcon> = {
   quiz: ClipboardCheck,
   review: MessageSquareMore,
   image: ImageIcon,
+  audio: Volume2,
   markdown: FileText,
 }
 
@@ -47,6 +49,7 @@ const TYPE_LABELS: Record<string, string> = {
   quiz: "Quiz",
   review: "Review",
   image: "Bild",
+  audio: "Audio",
 }
 
 const TYPE_COLORS: Record<string, string> = {
@@ -56,6 +59,7 @@ const TYPE_COLORS: Record<string, string> = {
   quiz: "bg-violet-500/15 text-violet-700 dark:text-violet-400",
   review: "bg-amber-500/15 text-amber-700 dark:text-amber-400",
   image: "bg-pink-500/15 text-pink-700 dark:text-pink-400",
+  audio: "bg-cyan-500/15 text-cyan-700 dark:text-cyan-400",
 }
 
 const TYPE_PREVIEW_BG: Record<string, string> = {
@@ -65,6 +69,7 @@ const TYPE_PREVIEW_BG: Record<string, string> = {
   quiz: "bg-violet-500/8 dark:bg-violet-500/10",
   review: "bg-amber-500/8 dark:bg-amber-500/10",
   image: "bg-pink-500/8 dark:bg-pink-500/10",
+  audio: "bg-cyan-500/8 dark:bg-cyan-500/10",
 }
 
 const FILTER_TYPES = [
@@ -74,6 +79,7 @@ const FILTER_TYPES = [
   { value: "html", label: "HTML", icon: null },
   { value: "code", label: "Code", icon: null },
   { value: "image", label: "Bilder", icon: null },
+  { value: "audio", label: "Audio", icon: null },
   { value: "quiz", label: "Quiz", icon: null },
   { value: "review", label: "Review", icon: null },
 ] as const
@@ -137,7 +143,12 @@ export function ArtifactsOverview() {
   }, [offset, typeFilter, fetchArtifacts])
 
   const handleCardClick = useCallback((artifact: ArtifactItem) => {
-    router.push(`/c/${artifact.chatId}?artifact=${artifact.id}`)
+    if (artifact.type === "audio") {
+      // Audio has no panel view — navigate to the chat where the inline player is visible
+      router.push(`/c/${artifact.chatId}`)
+    } else {
+      router.push(`/c/${artifact.chatId}?artifact=${artifact.id}`)
+    }
   }, [router])
 
   return (

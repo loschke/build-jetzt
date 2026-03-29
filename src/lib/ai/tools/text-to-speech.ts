@@ -58,6 +58,24 @@ export function textToSpeechTool(chatId: string, userId: string) {
         console.warn("[text_to_speech] Credits insufficient after generation:", creditError)
       }
 
+      // Persist as artifact so audio appears in "Meine Dateien"
+      try {
+        const { createArtifact } = await import("@/lib/db/queries/artifacts")
+        await createArtifact({
+          chatId,
+          type: "audio",
+          title,
+          content: text,
+          fileUrl: audioUrl,
+          metadata: {
+            durationSeconds: Math.round(result.durationSeconds * 10) / 10,
+            voice: result.voice,
+          },
+        })
+      } catch (e) {
+        console.warn("[text_to_speech] Failed to persist artifact:", e)
+      }
+
       return {
         title,
         url: audioUrl,
