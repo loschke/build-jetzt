@@ -51,14 +51,28 @@ export async function getExpertBySlug(slug: string) {
   return expert ?? null
 }
 
-/** Get all experts visible to a user: global (userId IS NULL) + own. */
+/** Get all experts visible to a user: global + own + public from others. */
 export async function getExperts(userId: string) {
   const db = getDb()
   return db
     .select()
     .from(experts)
-    .where(or(isNull(experts.userId), eq(experts.userId, userId)))
+    .where(or(
+      isNull(experts.userId),
+      eq(experts.userId, userId),
+      eq(experts.isPublic, true),
+    ))
     .orderBy(asc(experts.sortOrder), asc(experts.name))
+}
+
+/** Get only user-owned experts (for workspace). */
+export async function getUserExperts(userId: string) {
+  const db = getDb()
+  return db
+    .select()
+    .from(experts)
+    .where(eq(experts.userId, userId))
+    .orderBy(asc(experts.name))
 }
 
 /** Update expert. Only own experts (not global). */
@@ -85,9 +99,38 @@ export async function deleteExpert(id: string, userId: string) {
   return deleted ?? null
 }
 
-/** Upsert expert by slug. Used for idempotent seeding. */
+/** Upsert global expert by slug. Used for idempotent seeding (userId=NULL only). */
 export async function upsertExpertBySlug(data: CreateExpertInput) {
   const db = getDb()
+
+  const [existing] = await db
+    .select({ id: experts.id })
+    .from(experts)
+    .where(and(eq(experts.slug, data.slug), isNull(experts.userId)))
+    .limit(1)
+
+  if (existing) {
+    const [updated] = await db
+      .update(experts)
+      .set({
+        name: data.name,
+        description: data.description,
+        icon: data.icon ?? null,
+        systemPrompt: data.systemPrompt,
+        skillSlugs: data.skillSlugs ?? [],
+        modelPreference: data.modelPreference ?? null,
+        temperature: data.temperature ?? null,
+        allowedTools: data.allowedTools ?? [],
+        mcpServerIds: data.mcpServerIds ?? [],
+        isPublic: data.isPublic ?? true,
+        sortOrder: data.sortOrder ?? 0,
+        updatedAt: new Date(),
+      })
+      .where(eq(experts.id, existing.id))
+      .returning()
+    return updated
+  }
+
   const id = nanoid(12)
   const [expert] = await db
     .insert(experts)
@@ -106,23 +149,6 @@ export async function upsertExpertBySlug(data: CreateExpertInput) {
       mcpServerIds: data.mcpServerIds ?? [],
       isPublic: data.isPublic ?? true,
       sortOrder: data.sortOrder ?? 0,
-    })
-    .onConflictDoUpdate({
-      target: experts.slug,
-      set: {
-        name: data.name,
-        description: data.description,
-        icon: data.icon ?? null,
-        systemPrompt: data.systemPrompt,
-        skillSlugs: data.skillSlugs ?? [],
-        modelPreference: data.modelPreference ?? null,
-        temperature: data.temperature ?? null,
-        allowedTools: data.allowedTools ?? [],
-        mcpServerIds: data.mcpServerIds ?? [],
-        isPublic: data.isPublic ?? true,
-        sortOrder: data.sortOrder ?? 0,
-        updatedAt: new Date(),
-      },
     })
     .returning()
   return expert

@@ -117,7 +117,7 @@ export async function buildTools(params: BuildToolsParams): Promise<BuildToolsRe
 
   // Add load_skill tool if skills are available (skip for quicktasks — self-contained)
   if (skills.length > 0 && !hasQuicktask) {
-    tools.load_skill = createLoadSkillTool(skills)
+    tools.load_skill = createLoadSkillTool(skills, userId)
     if (skills.some((s) => s.hasResources)) {
       tools.load_skill_resource = createLoadSkillResourceTool()
     }

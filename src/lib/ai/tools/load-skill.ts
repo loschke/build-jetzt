@@ -10,7 +10,7 @@ import type { ToolRegistration } from "./registry"
  * Factory: creates the load_skill tool with access to available skills.
  * The skill name is validated against the discovered skills list (no path traversal possible).
  */
-export function createLoadSkillTool(availableSkills: SkillMetadata[]) {
+export function createLoadSkillTool(availableSkills: SkillMetadata[], userId?: string) {
   const skillNames = availableSkills.map((s) => s.slug)
 
   return tool({
@@ -25,7 +25,8 @@ export function createLoadSkillTool(availableSkills: SkillMetadata[]) {
         return { error: `Skill "${name}" not found. Available: ${skillNames.join(", ")}` }
       }
 
-      const skillRow = await getSkillBySlug(name)
+      // allowPublic=true is safe here because `name` was validated against the pre-approved discovery list
+      const skillRow = await getSkillBySlug(name, userId, true)
       if (!skillRow || !skillRow.isActive) {
         return { error: `Skill "${name}" could not be loaded` }
       }

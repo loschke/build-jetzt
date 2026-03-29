@@ -28,18 +28,20 @@ export async function GET(
     return Response.json({ error: "Not found" }, { status: 404 })
   }
 
-  // Visibility check: global experts are visible to all, user experts only to owner
-  if (expert.userId !== null && expert.userId !== user.id) {
+  // Visibility check: global + public experts are visible to all, private user experts only to owner
+  if (expert.userId !== null && expert.userId !== user.id && !expert.isPublic) {
     return Response.json({ error: "Not found" }, { status: 404 })
   }
 
+  // Only expose systemPrompt to owner or for global experts (admin-managed)
+  const isOwner = expert.userId === null || expert.userId === user.id
   return Response.json({
     id: expert.id,
     name: expert.name,
     slug: expert.slug,
     description: expert.description,
     icon: expert.icon,
-    systemPrompt: expert.systemPrompt,
+    ...(isOwner ? { systemPrompt: expert.systemPrompt } : {}),
     skillSlugs: expert.skillSlugs,
     modelPreference: expert.modelPreference,
     temperature: expert.temperature,

@@ -1,6 +1,6 @@
 import { requireAuth } from "@/lib/api-guards"
 import { checkRateLimit, RATE_LIMITS, rateLimitResponse } from "@/lib/rate-limit"
-import { discoverQuicktasks } from "@/lib/ai/skills/discovery"
+import { discoverQuicktasksForUser } from "@/lib/ai/skills/discovery"
 
 export async function GET() {
   const auth = await requireAuth()
@@ -11,7 +11,7 @@ export async function GET() {
     return rateLimitResponse(rateCheck.retryAfterMs)
   }
 
-  const quicktasks = (await discoverQuicktasks()).map((q) => ({
+  const quicktasks = (await discoverQuicktasksForUser(auth.user.id)).map((q) => ({
     slug: q.slug,
     name: q.name,
     description: q.description,

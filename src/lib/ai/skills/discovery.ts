@@ -1,4 +1,4 @@
-import { getActiveSkills, getActiveQuicktasks, getSkillBySlug } from "@/lib/db/queries/skills"
+import { getActiveSkills, getActiveQuicktasks, getSkillBySlug, getSkillsForUser, getQuicktasksForUser } from "@/lib/db/queries/skills"
 import { skillResources } from "@/lib/db/schema/skill-resources"
 import { getDb } from "@/lib/db"
 import type { SkillFieldSchema as SkillField } from "@/lib/db/schema/skills"
@@ -80,10 +80,10 @@ export async function discoverSkills(): Promise<SkillMetadata[]> {
 
 /**
  * Get the content of a specific skill by slug.
- * Returns the markdown content, or null if not found.
+ * If userId provided, checks user-owned first, then public, then global.
  */
-export async function getSkillContent(slug: string): Promise<string | null> {
-  const skill = await getSkillBySlug(slug)
+export async function getSkillContent(slug: string, userId?: string): Promise<string | null> {
+  const skill = await getSkillBySlug(slug, userId)
   if (!skill || !skill.isActive) return null
   return skill.content
 }
@@ -101,6 +101,57 @@ export async function discoverQuicktasks(): Promise<SkillMetadata[]> {
     return cachedQuicktasks
   } catch {
     return []
+  }
+}
+
+/**
+ * Discover skills for a specific user: cached globals + fresh user-owned + public user-skills.
+ * De-duplicates by slug (user-owned wins over public, public wins over global).
+ */
+export async function discoverSkillsForUser(userId: string): Promise<SkillMetadata[]> {
+  try {
+    const [globalSkills, userSkills] = await Promise.all([
+      discoverSkills(), // cached globals
+      getSkillsForUser(userId), // fresh: own + public user-skills
+    ])
+
+    // User skills take priority over globals on slug collision
+    const slugMap = new Map<string, SkillMetadata>()
+    for (const s of globalSkills) {
+      slugMap.set(s.slug, s)
+    }
+    for (const row of userSkills) {
+      // User's own skill always wins over global; public user-skill also wins over global
+      slugMap.set(row.slug, mapToMetadata(row))
+    }
+
+    return Array.from(slugMap.values())
+  } catch {
+    return discoverSkills()
+  }
+}
+
+/**
+ * Discover quicktasks for a specific user: cached globals + fresh user quicktasks.
+ */
+export async function discoverQuicktasksForUser(userId: string): Promise<SkillMetadata[]> {
+  try {
+    const [globalQuicktasks, userQuicktasks] = await Promise.all([
+      discoverQuicktasks(), // cached globals
+      getQuicktasksForUser(userId), // fresh: own + public
+    ])
+
+    const slugMap = new Map<string, SkillMetadata>()
+    for (const s of globalQuicktasks) {
+      slugMap.set(s.slug, s)
+    }
+    for (const row of userQuicktasks) {
+      slugMap.set(row.slug, mapToMetadata(row))
+    }
+
+    return Array.from(slugMap.values())
+  } catch {
+    return discoverQuicktasks()
   }
 }
 

@@ -1,7 +1,6 @@
 "use client"
 
-import { useState } from "react"
-import { LogOut, Settings, Shield, User } from "lucide-react"
+import { LogOut, LayoutGrid, Shield, User } from "lucide-react"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
@@ -13,7 +12,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { CustomInstructionsDialog } from "@/components/chat/custom-instructions-dialog"
 import type { AppUser } from "@/lib/auth"
 
 interface NavUserProps {
@@ -45,8 +43,6 @@ function getInitials(user: AppUser): string {
 }
 
 export function NavUser({ user, isAdmin }: NavUserProps) {
-  const [instructionsOpen, setInstructionsOpen] = useState(false)
-
   if (!user) {
     return (
       <Button variant="ghost" size="sm" asChild>
@@ -88,9 +84,11 @@ export function NavUser({ user, isAdmin }: NavUserProps) {
             </div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => setInstructionsOpen(true)} className="cursor-pointer">
-            <Settings className="size-4" />
-            <span>Einstellungen</span>
+          <DropdownMenuItem asChild>
+            <a href="/workspace" className="flex items-center gap-2">
+              <LayoutGrid className="size-4" />
+              <span>Workspace</span>
+            </a>
           </DropdownMenuItem>
           {isAdmin && (
             <DropdownMenuItem asChild>
@@ -110,10 +108,6 @@ export function NavUser({ user, isAdmin }: NavUserProps) {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <CustomInstructionsDialog
-        open={instructionsOpen}
-        onOpenChange={setInstructionsOpen}
-      />
     </>
   )
 }

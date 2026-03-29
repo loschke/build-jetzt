@@ -3,16 +3,21 @@
 import { useState, useEffect, useCallback } from "react"
 import { Check, AlertCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { Switch } from "@/components/ui/switch"
+import { Label } from "@/components/ui/label"
 import { MarkdownEditor } from "@/components/shared/markdown-editor"
 
-interface SkillEditorProps {
-  skillId: string
+interface WorkspaceSkillEditorProps {
+  skillId?: string
+  initialContent?: string
   onSuccess: () => void
 }
 
-export function SkillEditor({ skillId, onSuccess }: SkillEditorProps) {
-  const [content, setContent] = useState("")
-  const [loading, setLoading] = useState(true)
+export function WorkspaceSkillEditor({ skillId, initialContent, onSuccess }: WorkspaceSkillEditorProps) {
+  const isNew = !skillId
+  const [content, setContent] = useState(initialContent ?? "")
+  const [isPublic, setIsPublic] = useState(false)
+  const [loading, setLoading] = useState(!isNew)
   const [status, setStatus] = useState<"idle" | "saving" | "success" | "error">("idle")
   const [message, setMessage] = useState("")
 
@@ -22,12 +27,14 @@ export function SkillEditor({ skillId, onSuccess }: SkillEditorProps) {
   }, [])
 
   useEffect(() => {
+    if (!skillId) return
     async function loadSkill() {
       try {
-        const res = await fetch(`/api/admin/skills/${skillId}`)
+        const res = await fetch(`/api/user/skills/${skillId}`)
         if (res.ok) {
           const data = await res.json()
           setContent(data.raw)
+          setIsPublic(data.isPublic)
         } else {
           setMessage("Skill konnte nicht geladen werden")
           setStatus("error")
@@ -47,18 +54,22 @@ export function SkillEditor({ skillId, onSuccess }: SkillEditorProps) {
     setMessage("")
 
     try {
-      const res = await fetch(`/api/admin/skills/${skillId}`, {
-        method: "PUT",
+      const url = isNew ? "/api/user/skills" : `/api/user/skills/${skillId}`
+      const method = isNew ? "POST" : "PUT"
+      const body = isNew ? { content } : { content, isPublic }
+
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content }),
+        body: JSON.stringify(body),
       })
 
       const data = await res.json()
 
       if (res.ok) {
         setStatus("success")
-        setMessage("Skill aktualisiert.")
-        setTimeout(onSuccess, 1000)
+        setMessage(isNew ? "Skill erstellt." : "Skill aktualisiert.")
+        setTimeout(onSuccess, 800)
       } else {
         setStatus("error")
         setMessage(data.error ?? "Speichern fehlgeschlagen")
@@ -76,13 +87,25 @@ export function SkillEditor({ skillId, onSuccess }: SkillEditorProps) {
   return (
     <div className="space-y-4">
       <div className="space-y-2">
-        <label className="text-sm font-medium">SKILL.md-Content (Frontmatter + Markdown)</label>
+        <label className="text-sm font-medium">SKILL.md (Frontmatter + Markdown)</label>
         <MarkdownEditor
           value={content}
           onChange={handleEditorChange}
-          minHeight="500px"
         />
       </div>
+
+      {!isNew && (
+        <div className="flex items-center gap-3">
+          <Switch
+            id="skill-public"
+            checked={isPublic}
+            onCheckedChange={setIsPublic}
+          />
+          <Label htmlFor="skill-public" className="text-sm">
+            Oeffentlich — andere Nutzer koennen diesen Skill verwenden
+          </Label>
+        </div>
+      )}
 
       {message && (
         <div className={`flex items-center gap-2 rounded-md p-3 text-sm ${
@@ -97,7 +120,7 @@ export function SkillEditor({ skillId, onSuccess }: SkillEditorProps) {
         onClick={handleSave}
         disabled={!content.trim() || status === "saving"}
       >
-        {status === "saving" ? "Speichere..." : "Speichern"}
+        {status === "saving" ? "Speichere..." : isNew ? "Erstellen" : "Speichern"}
       </Button>
     </div>
   )

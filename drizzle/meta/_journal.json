@@ -71,6 +71,13 @@
       "when": 1774783261892,
       "tag": "0009_naive_leopardon",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1774811168846,
+      "tag": "0010_small_adam_warlock",
+      "breakpoints": true
     }
   ]
 }

@@ -1,4 +1,5 @@
 import { pgTable, text, timestamp, boolean, integer, jsonb, index, uniqueIndex } from "drizzle-orm/pg-core"
+import { sql } from "drizzle-orm"
 
 export const experts = pgTable("experts", {
   id: text("id").primaryKey(),
@@ -23,5 +24,6 @@ export const experts = pgTable("experts", {
     .notNull(),
 }, (t) => [
   index("experts_user_id_idx").on(t.userId),
-  uniqueIndex("experts_slug_idx").on(t.slug),
+  uniqueIndex("experts_slug_global_idx").on(t.slug).where(sql`${t.userId} IS NULL`),
+  uniqueIndex("experts_slug_per_user_idx").on(t.userId, t.slug).where(sql`${t.userId} IS NOT NULL`),
 ])

@@ -83,7 +83,10 @@
   },
   "pnpm": {
     "overrides": {
-      "mermaid": "11.13.0"
+      "mermaid": "11.13.0",
+      "@codemirror/state": "6.6.0",
+      "@codemirror/view": "6.39.15",
+      "@codemirror/commands": "6.10.2"
     }
   },
   "devDependencies": {

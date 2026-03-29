@@ -266,6 +266,18 @@ Zentral in `src/config/features.ts`. Drei Patterns:
 
 Details: `docs/feature-flags-konfiguration.md`
 
+### EU/Local-Kompatibilitaet (WICHTIG)
+
+Die Plattform unterstuetzt drei Deployment-Profile: SaaS (Gateway), EU (Direct), Local (Ollama/LiteLLM).
+**Bei jedem neuen Feature pruefen:**
+
+- Externe Provider-Abhaengigkeit hinter Feature Flag in `features.ts`
+- Tools bedingt registrieren in `build-tools.ts` (kein Tool ohne Feature-Guard)
+- LLM-Aufrufe ueber `resolveModel()` aus `model-resolver.ts`, nie direkt `gateway()`
+- Storage ueber S3-kompatible API, nicht R2-spezifisch
+- Admin Features-Seite (`/admin/features`) mit Datenfluss-Info aktualisieren
+- `.env.example` und `.env.eu.example` synchron halten
+
 ---
 
 ## Security (Kurzfassung)

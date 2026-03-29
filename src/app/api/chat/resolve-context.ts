@@ -8,7 +8,7 @@ import { getProjectById } from "@/lib/db/queries/projects"
 import { canAccessProject, canAccessChat } from "@/lib/db/queries/access"
 import { getProjectDocumentsForPrompt } from "@/lib/db/queries/project-documents"
 import { getModelById, getModels } from "@/config/models"
-import { discoverSkills, getSkillContent } from "@/lib/ai/skills/discovery"
+import { discoverSkills, discoverSkillsForUser, getSkillContent } from "@/lib/ai/skills/discovery"
 import { renderTemplate } from "@/lib/ai/skills/template"
 import { searchMemories, formatMemoriesForPrompt } from "@/lib/memory"
 import type { SkillMetadata } from "@/lib/ai/skills/discovery"
@@ -80,7 +80,7 @@ export async function resolveContext(params: ResolveContextParams): Promise<Chat
   const [existingChat, userPrefs, allSkills] = await Promise.all([
     requestChatId ? getChatById(requestChatId, userId) : null,
     getUserPreferences(userId),
-    discoverSkills(),
+    discoverSkillsForUser(userId),
     getModels(), // Warm model cache from DB for sync getModelById() calls below
     mcpCacheWarmup, // Warm MCP cache in parallel
   ])
@@ -121,7 +121,7 @@ export async function resolveContext(params: ResolveContextParams): Promise<Chat
     const expertId = requestExpertId ?? existingChat.expertId
     if (expertId) {
       expert = await getExpertById(expertId)
-      if (expert && expert.userId !== null && expert.userId !== userId) {
+      if (expert && expert.userId !== null && expert.userId !== userId && !expert.isPublic) {
         expert = null
       }
     }
@@ -129,7 +129,7 @@ export async function resolveContext(params: ResolveContextParams): Promise<Chat
     // Validate expertId if provided
     if (requestExpertId) {
       expert = await getExpertById(requestExpertId)
-      if (!expert || (expert.userId !== null && expert.userId !== userId)) {
+      if (!expert || (expert.userId !== null && expert.userId !== userId && !expert.isPublic)) {
         return Response.json({ error: "Expert nicht gefunden" }, { status: 400 })
       }
     }
@@ -137,7 +137,7 @@ export async function resolveContext(params: ResolveContextParams): Promise<Chat
     // Use project's defaultExpertId if no expert selected
     if (!expert && project?.defaultExpertId) {
       expert = await getExpertById(project.defaultExpertId)
-      if (expert && expert.userId !== null && expert.userId !== userId) {
+      if (expert && expert.userId !== null && expert.userId !== userId && !expert.isPublic) {
         expert = null
       }
     }
@@ -158,7 +158,7 @@ export async function resolveContext(params: ResolveContextParams): Promise<Chat
   if (quicktaskSlug) {
     const quicktask = allSkills.find((s) => s.slug === quicktaskSlug && s.mode === "quicktask")
     if (quicktask) {
-      const content = await getSkillContent(quicktaskSlug)
+      const content = await getSkillContent(quicktaskSlug, userId)
       if (content) {
         quicktaskPrompt = renderTemplate(content, quicktaskData ?? {})
         if (quicktask.outputAsArtifact) {
