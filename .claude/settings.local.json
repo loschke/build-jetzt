@@ -132,7 +132,23 @@
       "Bash(cd:*)",
       "mcp__plugin_playwright_playwright__browser_press_key",
       "Bash(taskkill //F //IM node.exe)",
-      "Bash(openssl rand:*)"
+      "Bash(openssl rand:*)",
+      "Bash(xargs basename:*)",
+      "Bash(find /c/Users/losch/Projekte/loschke-hub/loschke-chat/src -type f \\\\\\(-name *.ts -o -name *.tsx \\\\\\))",
+      "Bash(for f:*)",
+      "Bash(do echo:*)",
+      "Read(//c/Users/losch/Projekte/loschke-hub/loschke-chat/**)",
+      "Bash(done)",
+      "Bash(find /c/Users/losch/Projekte/loschke-hub/loschke-chat/src/lib -type f \\\\\\(-name *.ts -o -name *.tsx \\\\\\))",
+      "Bash(find /c/Users/losch/Projekte/loschke-hub/loschke-chat/src/config -type f \\\\\\(-name *.ts -o -name *.tsx \\\\\\))",
+      "Bash(find /c/Users/losch/Projekte/loschke-hub/loschke-chat/src/hooks -type f \\\\\\(-name *.ts -o -name *.tsx \\\\\\))",
+      "Bash(npx tsx:*)",
+      "mcp__claude_ai_Vercel__list_teams",
+      "mcp__claude_ai_Vercel__list_projects",
+      "mcp__claude_ai_Vercel__list_deployments",
+      "mcp__claude_ai_Vercel__get_deployment_build_logs",
+      "Bash(timeout 60 bash -c 'while ! grep -q \"\"Done\\\\|added\\\\|Already\"\" C:/Users/losch/AppData/Local/Temp/claude/C--Users-losch-Projekte-loschke-hub-loschke-chat/bdc47c9d-ada1-456f-83ac-2e90efcc9be5/tasks/bq4mdaazn.output 2>/dev/null; do sleep 2; done; cat C:/Users/losch/AppData/Local/Temp/claude/C--Users-losch-Projekte-loschke-hub-loschke-chat/bdc47c9d-ada1-456f-83ac-2e90efcc9be5/tasks/bq4mdaazn.output | tail -10')",
+      "Bash(find /c/Users/losch/Projekte/loschke-hub/loschke-chat/src -type f \\\\\\(-name *.tsx -o -name *.ts -o -name *.css \\\\\\))"
     ]
   }
 }
