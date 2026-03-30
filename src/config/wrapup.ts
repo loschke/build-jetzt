@@ -87,6 +87,26 @@ Was ist explizit NICHT Teil des Scopes?
 ## Offene Fragen
 Ungeklärte Punkte die vor der Umsetzung entschieden werden müssen.`,
   },
+  {
+    key: "memories",
+    label: "Wichtiges merken",
+    description: "Relevante Infos aus der Session für zukünftige Chats speichern",
+    icon: "Brain",
+    promptTemplate: `Analysiere den gesamten bisherigen Dialog und identifiziere Informationen die für zukünftige Gespräche relevant wären.
+
+Suche gezielt nach:
+- Persönliche Präferenzen und Arbeitsweisen des Nutzers
+- Projekt-Kontext, Entscheidungen, technische Rahmenbedingungen
+- Wiederkehrende Anforderungen oder Workflows
+- Fachliche Rollen, Verantwortlichkeiten, Team-Strukturen
+
+Ignoriere:
+- Triviale Fakten oder Smalltalk
+- Einmalige Fragen ohne Wiederkehr-Relevanz
+- Informationen die bereits im Memory gespeichert sind
+
+Nutze das suggest_memory Tool um die Vorschläge dem User zur Auswahl zu präsentieren. Formuliere jeden Memory-Text klar, kompakt und eigenständig verständlich. Gib für jeden Vorschlag einen kurzen Grund an warum er relevant ist.`,
+  },
 ]
 
 export function getWrapupType(key: string): WrapupType | undefined {
@@ -104,10 +124,12 @@ export function buildWrapupPrompt(type: WrapupType, userContext?: string, format
     sections.push(`### Zusätzliche Hinweise des Nutzers\n${userContext.trim()}`)
   }
 
-  if (format === "audio") {
-    sections.push(`WICHTIG: Erstelle das Ergebnis als Audio mit dem \`text_to_speech\` Tool. Formuliere den Text als gesprochene Zusammenfassung — natürlich, flüssig, ohne Markdown-Formatierung, ohne Aufzählungszeichen oder Tabellen. Halte dich kompakt (max. 4000 Zeichen), damit die Sprachausgabe gut funktioniert. Beginne direkt mit dem Inhalt, keine Meta-Einleitung wie "Hier ist deine Zusammenfassung".`)
-  } else {
-    sections.push(`WICHTIG: Erstelle das Ergebnis als Artifact mit dem \`create_artifact\` Tool (type: "markdown"). Wähle einen passenden Titel im Format "${type.label}: [Thema aus der Konversation]".`)
+  if (type.key !== "memories") {
+    if (format === "audio") {
+      sections.push(`WICHTIG: Erstelle das Ergebnis als Audio mit dem \`text_to_speech\` Tool. Formuliere den Text als gesprochene Zusammenfassung — natürlich, flüssig, ohne Markdown-Formatierung, ohne Aufzählungszeichen oder Tabellen. Halte dich kompakt (max. 4000 Zeichen), damit die Sprachausgabe gut funktioniert. Beginne direkt mit dem Inhalt, keine Meta-Einleitung wie "Hier ist deine Zusammenfassung".`)
+    } else {
+      sections.push(`WICHTIG: Erstelle das Ergebnis als Artifact mit dem \`create_artifact\` Tool (type: "markdown"). Wähle einen passenden Titel im Format "${type.label}: [Thema aus der Konversation]".`)
+    }
   }
 
   return sections.join("\n\n")

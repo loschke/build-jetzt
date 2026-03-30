@@ -32,7 +32,7 @@ export default async function HomePage({
     const { project: projectId } = await searchParams
     return (
       <ChatShell>
-        <ChatView userName={user.name} initialProjectId={projectId} ttsEnabled={features.tts.enabled} />
+        <ChatView userName={user.name} initialProjectId={projectId} ttsEnabled={features.tts.enabled} memoryEnabled={features.memory.enabled} />
       </ChatShell>
     )
   }

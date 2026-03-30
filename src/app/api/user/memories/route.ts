@@ -1,8 +1,50 @@
 import { requireAuth } from "@/lib/api-guards"
 import { features } from "@/config/features"
 import { checkRateLimit, RATE_LIMITS, rateLimitResponse } from "@/lib/rate-limit"
-import { listMemories, deleteAllMemories } from "@/lib/memory"
+import { listMemories, deleteAllMemories, saveMemory } from "@/lib/memory"
 import { getErrorMessage } from "@/lib/errors"
+import { z } from "zod"
+
+const saveMemorySchema = z.object({
+  memory: z.string().min(3).max(2000).transform((s) => s.trim()),
+})
+
+/**
+ * POST /api/user/memories — Save a single memory (used by suggest_memory widget)
+ */
+export async function POST(req: Request) {
+  if (!features.memory.enabled) {
+    return Response.json({ error: "Memory ist deaktiviert" }, { status: 404 })
+  }
+
+  const auth = await requireAuth()
+  if (auth.error) return auth.error
+
+  const rateCheck = checkRateLimit(auth.user.id, RATE_LIMITS.api)
+  if (!rateCheck.allowed) {
+    return rateLimitResponse(rateCheck.retryAfterMs)
+  }
+
+  let body: unknown
+  try {
+    body = await req.json()
+  } catch {
+    return Response.json({ error: "Ungültige Anfrage" }, { status: 400 })
+  }
+
+  const parsed = saveMemorySchema.safeParse(body)
+  if (!parsed.success) {
+    return Response.json({ error: "Ungültige Eingabe" }, { status: 400 })
+  }
+
+  try {
+    await saveMemory(auth.user.id, parsed.data.memory)
+    return Response.json({ saved: true })
+  } catch (error) {
+    console.error("[memory] Save failed:", getErrorMessage(error))
+    return Response.json({ error: "Memory-Service nicht erreichbar" }, { status: 503 })
+  }
+}
 
 export async function GET(req: Request) {
   if (!features.memory.enabled) {

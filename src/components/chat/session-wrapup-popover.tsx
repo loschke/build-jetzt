@@ -17,9 +17,10 @@ interface SessionWrapupPopoverProps {
   onSubmit: (type: string, context?: string, format?: "text" | "audio") => void
   disabled?: boolean
   ttsEnabled?: boolean
+  memoryEnabled?: boolean
 }
 
-export function SessionWrapupPopover({ onSubmit, disabled, ttsEnabled }: SessionWrapupPopoverProps) {
+export function SessionWrapupPopover({ onSubmit, disabled, ttsEnabled, memoryEnabled }: SessionWrapupPopoverProps) {
   const [open, setOpen] = useState(false)
   const [selectedType, setSelectedType] = useState<string | null>(null)
   const [context, setContext] = useState("")
@@ -66,7 +67,7 @@ export function SessionWrapupPopover({ onSubmit, disabled, ttsEnabled }: Session
         <div className="space-y-3">
           <p className="text-sm font-medium">Session abschließen</p>
           <div className="flex flex-wrap gap-1.5">
-            {WRAPUP_TYPES.map((t) => (
+            {WRAPUP_TYPES.filter((t) => t.key !== "memories" || memoryEnabled).map((t) => (
               <button
                 key={t.key}
                 type="button"
@@ -89,12 +90,12 @@ export function SessionWrapupPopover({ onSubmit, disabled, ttsEnabled }: Session
           <Textarea
             value={context}
             onChange={(e) => setContext(e.target.value)}
-            placeholder="Zusätzliche Hinweise (optional)"
+            placeholder={selectedType === "memories" ? "Worauf soll ich mich konzentrieren? (optional)" : "Zusätzliche Hinweise (optional)"}
             rows={2}
             maxLength={1000}
             className="resize-none text-sm"
           />
-          {ttsEnabled && (
+          {ttsEnabled && selectedType !== "memories" && (
             <ToggleGroup
               type="single"
               variant="outline"

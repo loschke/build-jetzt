@@ -14,7 +14,7 @@ import type { ChatContext } from "../resolve-context"
 
 import { persistFilePartsToR2, persistCodeExecutionFiles } from "./persist-files"
 import { assembleAssistantParts, detectAndCreateFakeArtifact } from "./assemble-parts"
-import { generateTitle, deductUsageCredits, triggerSuggestedReplies, triggerMemoryExtraction, updateExpertIfChanged } from "./post-response"
+import { generateTitle, deductUsageCredits, triggerSuggestedReplies, updateExpertIfChanged } from "./post-response"
 
 interface MCPHandle {
   close: () => Promise<void>
@@ -33,7 +33,6 @@ interface CreateOnFinishParams {
     content?: string | unknown[]
   }>
   mcpHandle?: MCPHandle | null
-  userMemoryEnabled: boolean
   userSuggestedRepliesEnabled: boolean
 }
 
@@ -44,7 +43,7 @@ interface CreateOnFinishParams {
  */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function createOnFinish(params: CreateOnFinishParams): StreamTextOnFinishCallback<Record<string, any>> {
-  const { resolvedChatId, isNewChat, userId, finalModelId, expert, existingExpertId, messages, mcpHandle, userMemoryEnabled, userSuggestedRepliesEnabled } = params
+  const { resolvedChatId, isNewChat, userId, finalModelId, expert, existingExpertId, messages, mcpHandle, userSuggestedRepliesEnabled } = params
 
   return async ({ response, totalUsage, steps }) => {
     try {
@@ -130,15 +129,6 @@ export function createOnFinish(params: CreateOnFinishParams): StreamTextOnFinish
         triggerSuggestedReplies({ resolvedChatId, userId, messages, savedAssistantMessageId, finalModelId })
       }
 
-      // 11. Memory extraction (fire-and-forget)
-      if (userMemoryEnabled) {
-        await triggerMemoryExtraction({
-          userId,
-          resolvedChatId,
-          messages,
-          totalMessageCount: messages.length + 1,
-        })
-      }
     } catch (error) {
       console.error("Failed to persist chat data:", getErrorMessage(error))
     } finally {

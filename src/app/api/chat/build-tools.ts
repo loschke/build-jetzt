@@ -10,6 +10,7 @@ import { createLoadSkillTool } from "@/lib/ai/tools/load-skill"
 import { createLoadSkillResourceTool } from "@/lib/ai/tools/load-skill-resource"
 import { createSaveMemoryTool } from "@/lib/ai/tools/save-memory"
 import { createRecallMemoryTool } from "@/lib/ai/tools/recall-memory"
+import { suggestMemoryTool } from "@/lib/ai/tools/suggest-memory"
 import { generateImageTool, type UploadedImage } from "@/lib/ai/tools/generate-image"
 import { youtubeSearchTool } from "@/lib/ai/tools/youtube-search"
 import { youtubeAnalyzeTool } from "@/lib/ai/tools/youtube-analyze"
@@ -74,6 +75,7 @@ export async function buildTools(params: BuildToolsParams): Promise<BuildToolsRe
   if (memoryEnabled && features.memory.enabled) {
     tools.save_memory = createSaveMemoryTool(userId)
     tools.recall_memory = createRecallMemoryTool(userId)
+    tools.suggest_memory = suggestMemoryTool
   }
 
   // Add image generation tool if enabled and no privacy routing

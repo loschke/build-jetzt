@@ -124,26 +124,6 @@ export function triggerSuggestedReplies({ resolvedChatId, userId, messages, save
   })
 }
 
-interface MemoryExtractionParams {
-  userId: string
-  resolvedChatId: string
-  messages: Array<{ role: string; parts?: Array<Record<string, unknown>>; content?: string | unknown[] }>
-  totalMessageCount: number
-}
-
-/** Trigger memory extraction (fire-and-forget) */
-export async function triggerMemoryExtraction({ userId, resolvedChatId, messages, totalMessageCount }: MemoryExtractionParams): Promise<void> {
-  if (!features.memory.enabled) return
-
-  const { memoryConfig } = await import("@/config/memory")
-  if (totalMessageCount >= memoryConfig.minMessages) {
-    fireAndForget("memory", async () => {
-      const { extractMemories } = await import("@/lib/memory")
-      await extractMemories(userId, resolvedChatId, messages)
-    })
-  }
-}
-
 interface ExpertUpdateParams {
   resolvedChatId: string
   userId: string

@@ -5,6 +5,7 @@ import { type ReactNode } from "react"
 import { ArtifactCard } from "@/components/assistant/artifact-card"
 import { artifactTypeToIcon } from "@/components/assistant/artifact-utils"
 import { AskUser } from "@/components/generative-ui/ask-user"
+import { MemorySuggestion } from "@/components/generative-ui/memory-suggestion"
 import { ContentAlternatives } from "@/components/generative-ui/content-alternatives"
 import { YouTubeResults, YouTubeResultsSkeleton, type YouTubeVideo } from "@/components/generative-ui/youtube-results"
 import { SearchGroundingResults, SearchGroundingResultsSkeleton, type GroundingSourceItem, type GroundingPlaceItem } from "@/components/generative-ui/search-grounding-results"
@@ -552,6 +553,34 @@ function renderCodeExecution(ctx: ToolRenderContext, key: string): ReactNode {
   )
 }
 
+function renderSuggestMemory(ctx: ToolRenderContext, key: string): ReactNode {
+  const data = extractInlineToolData(ctx.part, "suggest_memory")
+  if (!data?.input) return null
+
+  const input = data.input as { suggestions?: Array<{ memory: string; reason: string }> }
+  if (!input.suggestions?.length) return null
+
+  const isAnswered = data.state === "output-available" || data.state === "result"
+  const rawOutput = data.output as { saved?: string[]; dismissed?: string[] } | undefined
+  const previousResult = isAnswered && rawOutput
+    ? { saved: rawOutput.saved ?? [], dismissed: rawOutput.dismissed ?? [] }
+    : undefined
+
+  return (
+    <MemorySuggestion
+      key={key}
+      suggestions={input.suggestions}
+      isReadOnly={isAnswered}
+      previousResult={previousResult}
+      onSubmit={(result) => {
+        if (ctx.onToolResult && data.toolCallId) {
+          ctx.onToolResult(data.toolCallId, "suggest_memory", result)
+        }
+      }}
+    />
+  )
+}
+
 // ---------------------------------------------------------------------------
 // Registry
 // ---------------------------------------------------------------------------
@@ -574,6 +603,7 @@ const TOOL_RENDERERS: Record<string, ToolRenderer> = {
   edit_design: renderDesign,
   deep_research: renderDeepResearch,
   code_execution: renderCodeExecution,
+  suggest_memory: renderSuggestMemory,
 }
 
 /**

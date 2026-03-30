@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
+import { MemoryManagementDialog } from "@/components/chat/memory-management-dialog"
 
 const MAX_LENGTH = 2000
 
@@ -34,6 +35,7 @@ export function WorkspaceSettings() {
   const [isLoading, setIsLoading] = useState(true)
   const [status, setStatus] = useState<"idle" | "saving" | "success" | "error">("idle")
   const [message, setMessage] = useState("")
+  const [memoryDialogOpen, setMemoryDialogOpen] = useState(false)
 
   const loadData = useCallback(async () => {
     setIsLoading(true)
@@ -137,15 +139,27 @@ export function WorkspaceSettings() {
       </div>
 
       {memoryAvailable && (
-        <div className="flex items-center gap-3">
-          <Switch
-            id="memory-toggle"
-            checked={memoryEnabled}
-            onCheckedChange={(val) => { setMemoryEnabled(val); setStatus("idle") }}
-          />
-          <Label htmlFor="memory-toggle" className="text-sm">
-            Memory — KI merkt sich Informationen ueber Gespraeche hinweg
-          </Label>
+        <div className="space-y-2">
+          <div className="flex items-center gap-3">
+            <Switch
+              id="memory-toggle"
+              checked={memoryEnabled}
+              onCheckedChange={(val) => { setMemoryEnabled(val); setStatus("idle") }}
+            />
+            <Label htmlFor="memory-toggle" className="text-sm">
+              Memory — KI merkt sich Informationen ueber Gespraeche hinweg
+            </Label>
+          </div>
+          {memoryEnabled && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs"
+              onClick={() => setMemoryDialogOpen(true)}
+            >
+              Erinnerungen verwalten
+            </Button>
+          )}
         </div>
       )}
 
@@ -180,6 +194,8 @@ export function WorkspaceSettings() {
       <Button onClick={handleSave} disabled={status === "saving"}>
         {status === "saving" ? "Speichere..." : "Speichern"}
       </Button>
+
+      <MemoryManagementDialog open={memoryDialogOpen} onOpenChange={setMemoryDialogOpen} />
     </div>
   )
 }

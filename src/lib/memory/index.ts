@@ -12,6 +12,20 @@ export interface MemoryEntry {
   updated_at?: string
 }
 
+// --- Helpers ---
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapToMemoryEntry(r: any): MemoryEntry {
+  return {
+    id: r.id,
+    memory: r.memory ?? "",
+    metadata: r.metadata as Record<string, unknown> | undefined,
+    score: r.score,
+    created_at: r.created_at ? String(r.created_at) : undefined,
+    updated_at: r.updated_at ? String(r.updated_at) : undefined,
+  }
+}
+
 // --- Circuit Breaker ---
 
 const FAILURE_THRESHOLD = 5
@@ -78,80 +92,13 @@ export async function searchMemories(
 
     if (!Array.isArray(results)) return []
 
-    return results.map((r) => ({
-      id: r.id,
-      memory: r.memory ?? "",
-      metadata: r.metadata as Record<string, unknown> | undefined,
-      score: r.score,
-      created_at: r.created_at ? String(r.created_at) : undefined,
-      updated_at: r.updated_at ? String(r.updated_at) : undefined,
-    }))
+    return results
+      .filter((r) => (r.score ?? 1) >= memoryConfig.minRelevanceScore)
+      .map(mapToMemoryEntry)
   } catch (error) {
     recordFailure()
     console.error("[memory] Search failed:", getErrorMessage(error))
     return []
-  }
-}
-
-// --- Extraction ---
-
-/**
- * Convert chat messages (UIMessage-style with parts) to Mem0-compatible format.
- * Only text parts are included — files, tool-calls and tool-results are skipped.
- */
-function toMem0Messages(
-  messages: Array<{ role: string; parts?: Array<Record<string, unknown>>; content?: string | unknown[] }>
-): Array<{ role: "user" | "assistant"; content: string }> {
-  const result: Array<{ role: "user" | "assistant"; content: string }> = []
-
-  for (const msg of messages) {
-    if (msg.role !== "user" && msg.role !== "assistant") continue
-
-    let text = ""
-    if (msg.parts) {
-      text = msg.parts
-        .filter((p) => p.type === "text" && typeof p.text === "string")
-        .map((p) => p.text as string)
-        .join("")
-    } else if (typeof msg.content === "string") {
-      text = msg.content
-    }
-
-    if (text.trim()) {
-      result.push({ role: msg.role as "user" | "assistant", content: text })
-    }
-  }
-
-  return result
-}
-
-/**
- * Extract memories from a chat conversation via Mem0 client.add().
- * Fire-and-forget — errors are logged, never thrown.
- */
-export async function extractMemories(
-  userId: string,
-  chatId: string,
-  messages: Array<{ role: string; parts?: Array<Record<string, unknown>>; content?: string | unknown[] }>
-): Promise<void> {
-  if (isCircuitOpen()) return
-
-  const mem0Messages = toMem0Messages(messages)
-  if (mem0Messages.length === 0) return
-
-  try {
-    const { getMemoryClient } = await import("@/config/memory")
-    const client = await getMemoryClient()
-
-    await client.add(mem0Messages, {
-      user_id: userId,
-      metadata: { chatId },
-    })
-
-    recordSuccess()
-  } catch (error) {
-    recordFailure()
-    console.error("[memory] Extraction failed:", getErrorMessage(error))
   }
 }
 
@@ -204,14 +151,7 @@ export async function listMemories(userId: string): Promise<MemoryEntry[]> {
 
     if (!Array.isArray(results)) return []
 
-    return results.map((r) => ({
-      id: r.id,
-      memory: r.memory ?? "",
-      metadata: r.metadata as Record<string, unknown> | undefined,
-      score: r.score,
-      created_at: r.created_at ? String(r.created_at) : undefined,
-      updated_at: r.updated_at ? String(r.updated_at) : undefined,
-    }))
+    return results.map(mapToMemoryEntry)
   } catch (error) {
     recordFailure()
     throw error

@@ -255,7 +255,6 @@ export async function POST(req: Request) {
       existingExpertId,
       messages,
       mcpHandle,
-      userMemoryEnabled,
       userSuggestedRepliesEnabled,
     }),
   })

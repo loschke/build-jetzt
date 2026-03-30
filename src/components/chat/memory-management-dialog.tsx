@@ -159,7 +159,7 @@ export function MemoryManagementDialog({ open, onOpenChange }: MemoryManagementD
               <BrainIcon className="size-8 text-muted-foreground/50" />
               <p className="text-sm text-muted-foreground">Noch keine Erinnerungen gespeichert.</p>
               <p className="text-xs text-muted-foreground/70">
-                Memories werden automatisch aus deinen Chats extrahiert oder wenn du die KI bittest sich etwas zu merken.
+                Nutze &ldquo;Erinnerungen&rdquo; im Session-Abschluss oder bitte die KI direkt, sich etwas zu merken.
               </p>
             </div>
           ) : (

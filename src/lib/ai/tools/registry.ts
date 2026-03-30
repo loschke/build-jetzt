@@ -62,6 +62,7 @@ import { registration as loadSkill } from "./load-skill"
 import { registration as loadSkillResource } from "./load-skill-resource"
 import { registration as saveMemory } from "./save-memory"
 import { registration as recallMemory } from "./recall-memory"
+import { registration as suggestMemory } from "./suggest-memory"
 import { registration as generateImage } from "./generate-image"
 import { registration as youtubeSearch } from "./youtube-search"
 import { registration as youtubeAnalyze } from "./youtube-analyze"
@@ -84,6 +85,7 @@ const builtins: ToolRegistration[] = [
   loadSkillResource,
   saveMemory,
   recallMemory,
+  suggestMemory,
   generateImage,
   youtubeSearch,
   youtubeAnalyze,

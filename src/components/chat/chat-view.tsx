@@ -67,9 +67,10 @@ interface ChatViewProps {
   initialArtifactId?: string
   userName?: string
   ttsEnabled?: boolean
+  memoryEnabled?: boolean
 }
 
-export function ChatView({ chatId, initialModelId, initialProjectId, initialArtifactId, userName, ttsEnabled }: ChatViewProps) {
+export function ChatView({ chatId, initialModelId, initialProjectId, initialArtifactId, userName, ttsEnabled, memoryEnabled }: ChatViewProps) {
   const [input, setInput] = useState("")
   const [initialMessagesLoaded, setInitialMessagesLoaded] = useState(!chatId)
   const [modelId, setModelId] = useState(initialModelId ?? "")
@@ -719,6 +720,7 @@ export function ChatView({ chatId, initialModelId, initialProjectId, initialArti
                       onSubmit={handleWrapupSubmit}
                       disabled={isGenerating}
                       ttsEnabled={ttsEnabled}
+                      memoryEnabled={memoryEnabled}
                     />
                     <div className="mx-0.5 h-4 w-px bg-border" />
                   </>
