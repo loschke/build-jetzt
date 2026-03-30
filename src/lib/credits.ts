@@ -12,7 +12,7 @@
 import { getModelById } from "@/config/models"
 import { getErrorMessage } from "@/lib/errors"
 
-const CREDITS_PER_DOLLAR = parseInt(process.env.CREDITS_PER_DOLLAR ?? "100000", 10)
+const CREDITS_PER_DOLLAR = parseInt(process.env.CREDITS_PER_DOLLAR ?? "100", 10)
 const FALLBACK_INPUT_PRICE = parseFloat(process.env.FALLBACK_INPUT_PRICE ?? "1.0")
 const FALLBACK_OUTPUT_PRICE = parseFloat(process.env.FALLBACK_OUTPUT_PRICE ?? "5.0")
 const CACHE_DISCOUNT = 0.9
@@ -46,63 +46,63 @@ export function getBalanceColorClass(balance: number): string {
 }
 
 /** Flat credit cost for image generation (not token-based). */
-const IMAGE_GENERATION_CREDITS = parseInt(process.env.IMAGE_GENERATION_CREDITS ?? "8000", 10)
+const IMAGE_GENERATION_CREDITS = parseInt(process.env.IMAGE_GENERATION_CREDITS ?? "8", 10)
 
 export function calculateImageCredits(): number {
   return IMAGE_GENERATION_CREDITS
 }
 
 /** Flat credit cost for YouTube search. */
-const YOUTUBE_SEARCH_CREDITS = parseInt(process.env.YOUTUBE_SEARCH_CREDITS ?? "200", 10)
+const YOUTUBE_SEARCH_CREDITS = parseInt(process.env.YOUTUBE_SEARCH_CREDITS ?? "1", 10)
 
 export function calculateYouTubeSearchCredits(): number {
   return YOUTUBE_SEARCH_CREDITS
 }
 
 /** Flat credit cost for YouTube video analysis. */
-const YOUTUBE_ANALYZE_CREDITS = parseInt(process.env.YOUTUBE_ANALYZE_CREDITS ?? "5000", 10)
+const YOUTUBE_ANALYZE_CREDITS = parseInt(process.env.YOUTUBE_ANALYZE_CREDITS ?? "5", 10)
 
 export function calculateYouTubeAnalyzeCredits(): number {
   return YOUTUBE_ANALYZE_CREDITS
 }
 
 /** Flat credit cost for text-to-speech generation. */
-const TTS_CREDITS = parseInt(process.env.TTS_CREDITS ?? "3000", 10)
+const TTS_CREDITS = parseInt(process.env.TTS_CREDITS ?? "3", 10)
 
 export function calculateTTSCredits(): number {
   return TTS_CREDITS
 }
 
 /** Flat credit cost for branding extraction. */
-const BRANDING_CREDITS = parseInt(process.env.BRANDING_CREDITS ?? "500", 10)
+const BRANDING_CREDITS = parseInt(process.env.BRANDING_CREDITS ?? "1", 10)
 
 export function calculateBrandingCredits(): number {
   return BRANDING_CREDITS
 }
 
 /** Flat credit cost for Stitch design generation. */
-const STITCH_GENERATION_CREDITS = parseInt(process.env.STITCH_GENERATION_CREDITS ?? "5000", 10)
+const STITCH_GENERATION_CREDITS = parseInt(process.env.STITCH_GENERATION_CREDITS ?? "5", 10)
 
 export function calculateStitchGenerationCredits(): number {
   return STITCH_GENERATION_CREDITS
 }
 
 /** Flat credit cost for Stitch design editing/iteration. */
-const STITCH_EDIT_CREDITS = parseInt(process.env.STITCH_EDIT_CREDITS ?? "3000", 10)
+const STITCH_EDIT_CREDITS = parseInt(process.env.STITCH_EDIT_CREDITS ?? "3", 10)
 
 export function calculateStitchEditCredits(): number {
   return STITCH_EDIT_CREDITS
 }
 
 /** Flat credit cost for deep research. */
-const DEEP_RESEARCH_CREDITS = parseInt(process.env.DEEP_RESEARCH_CREDITS ?? "50000", 10)
+const DEEP_RESEARCH_CREDITS = parseInt(process.env.DEEP_RESEARCH_CREDITS ?? "400", 10)
 
 export function calculateDeepResearchCredits(): number {
   return DEEP_RESEARCH_CREDITS
 }
 
 /** Flat credit cost for Google Search with grounding. */
-const GOOGLE_SEARCH_CREDITS = parseInt(process.env.GOOGLE_SEARCH_CREDITS ?? "500", 10)
+const GOOGLE_SEARCH_CREDITS = parseInt(process.env.GOOGLE_SEARCH_CREDITS ?? "1", 10)
 
 export function calculateGoogleSearchCredits(): number {
   return GOOGLE_SEARCH_CREDITS
