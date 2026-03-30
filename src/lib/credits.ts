@@ -30,18 +30,19 @@ export interface CreditCalculationInput {
  */
 export function formatCredits(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1).replace(".", ",")}M`
-  if (n >= 10_000) return `${Math.round(n / 1_000)}k`
+  if (n >= 100_000) return `${Math.round(n / 1_000)}k`
   if (n >= 1_000) return `${(n / 1_000).toFixed(1).replace(".", ",")}k`
-  return n.toLocaleString("de-DE")
+  return String(n)
 }
 
 /**
  * Get Tailwind color class for credit balance indicator.
+ * Uses semantic theme colors for readability across all themes.
  */
 export function getBalanceColorClass(balance: number): string {
-  if (balance > 10_000) return "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
-  if (balance > 1_000) return "bg-amber-500/15 text-amber-600 dark:text-amber-400"
-  return "bg-red-500/15 text-red-600 dark:text-red-400"
+  if (balance > 50) return "bg-muted text-muted-foreground"
+  if (balance > 10) return "bg-accent text-accent-foreground"
+  return "bg-destructive/15 text-destructive"
 }
 
 /** Flat credit cost for image generation (not token-based). */

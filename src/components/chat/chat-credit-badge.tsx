@@ -47,7 +47,7 @@ export function ChatCreditBadge({ chatId }: ChatCreditBadgeProps) {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
-        <div className="flex items-center gap-1 rounded-md bg-primary-foreground/10 px-2 py-0.5 text-xs font-medium text-primary-foreground">
+        <div className="flex items-center gap-1 rounded-md bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
           <Coins className="size-3" />
           <span>{formatCredits(credits)}</span>
         </div>

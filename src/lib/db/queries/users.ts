@@ -1,8 +1,10 @@
-import { eq, desc } from "drizzle-orm"
+import { eq, desc, sql } from "drizzle-orm"
 import { getDb } from "@/lib/db"
 import { users } from "@/lib/db/schema/users"
 import type { UserRole, UserStatus } from "@/lib/db/schema/users"
 import { features } from "@/config/features"
+
+const INITIAL_CREDITS = Math.max(0, parseInt(process.env.INITIAL_CREDITS ?? "0", 10) || 0)
 
 // --- User Preferences Cache (60s TTL, same pattern as models.ts) ---
 const PREFS_CACHE_TTL_MS = 60_000
@@ -148,7 +150,9 @@ export async function ensureUserExists(params: {
     ? "approved"
     : "pending"
 
-  await db
+  const shouldGrantCredits = features.credits.enabled && INITIAL_CREDITS > 0
+
+  const [upserted] = await db
     .insert(users)
     .values({
       logtoId: params.logtoId,
@@ -165,6 +169,14 @@ export async function ensureUserExists(params: {
         updatedAt: new Date(),
       },
     })
+    .returning({ createdAt: users.createdAt, updatedAt: users.updatedAt })
+
+  // Grant welcome credits for newly created users (createdAt === updatedAt means just inserted)
+  const isNewUser = upserted && upserted.createdAt.getTime() === upserted.updatedAt.getTime()
+  if (isNewUser && shouldGrantCredits) {
+    const { grantCredits } = await import("@/lib/db/queries/credits")
+    await grantCredits(params.logtoId, INITIAL_CREDITS, `Willkommens-Guthaben: ${INITIAL_CREDITS} Credits`)
+  }
 
   // Auto-promote to superadmin if email matches SUPERADMIN_EMAIL
   if (isSuperadminEmail) {
