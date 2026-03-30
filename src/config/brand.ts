@@ -5,6 +5,7 @@ export interface BrandConfig {
   name: string
   description: string
   domain: string
+  websiteUrl?: string
 }
 
 const brands: Record<BrandId, BrandConfig> = {
@@ -13,18 +14,21 @@ const brands: Record<BrandId, BrandConfig> = {
     name: "lernen.diy",
     description: "Praxisorientierte KI-Lernmodule",
     domain: "lernen.diy",
+    websiteUrl: "https://lernen.diy",
   },
   unlearn: {
     id: "unlearn",
     name: "unlearn.how",
     description: "KI-Beratung und Workshops",
     domain: "unlearn.how",
+    websiteUrl: "https://unlearn.how",
   },
   loschke: {
     id: "loschke",
     name: "loschke.ai",
     description: "AI Transformation Insights",
     domain: "loschke.ai",
+    websiteUrl: "https://loschke.ai",
   },
   prototype: {
     id: "prototype",

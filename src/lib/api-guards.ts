@@ -3,7 +3,8 @@
  */
 
 import { getUser, type AppUser } from "@/lib/auth"
-import { ensureUserExists } from "@/lib/db/queries/users"
+import { ensureUserExists, getUserStatus, getUserRole } from "@/lib/db/queries/users"
+import { isAdminRole } from "@/lib/admin-guard"
 
 const DEFAULT_MAX_BODY = 1024 * 1024 // 1MB
 
@@ -33,6 +34,18 @@ export async function requireAuth(): Promise<AuthSuccess | AuthFailure> {
   if (!knownUserIds.has(user.id)) {
     await ensureUserExists({ logtoId: user.id, email: user.email, name: user.name })
     knownUserIds.add(user.id)
+  }
+
+  // Check user approval status — admins/superadmins bypass
+  const [status, role] = await Promise.all([
+    getUserStatus(user.id),
+    getUserRole(user.id),
+  ])
+  if (status !== "approved" && !isAdminRole(role)) {
+    const message = status === "rejected"
+      ? "Dein Account wurde abgelehnt. Bitte kontaktiere den Administrator."
+      : "Dein Account wartet auf Freischaltung durch einen Administrator."
+    return { error: Response.json({ error: message, code: "USER_NOT_APPROVED", status }, { status: 403 }) }
   }
 
   return { user }

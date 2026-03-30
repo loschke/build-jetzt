@@ -1,7 +1,8 @@
 import { eq, desc } from "drizzle-orm"
 import { getDb } from "@/lib/db"
 import { users } from "@/lib/db/schema/users"
-import type { UserRole } from "@/lib/db/schema/users"
+import type { UserRole, UserStatus } from "@/lib/db/schema/users"
+import { features } from "@/config/features"
 
 // --- User Preferences Cache (60s TTL, same pattern as models.ts) ---
 const PREFS_CACHE_TTL_MS = 60_000
@@ -10,6 +11,10 @@ const prefsCache = new Map<string, { data: { customInstructions: string | null; 
 // --- User Role Cache (60s TTL) ---
 const ROLE_CACHE_TTL_MS = 60_000
 const roleCache = new Map<string, { data: UserRole; expires: number }>()
+
+// --- User Status Cache (60s TTL) ---
+const STATUS_CACHE_TTL_MS = 60_000
+const statusCache = new Map<string, { data: UserStatus; expires: number }>()
 
 /** Clear user role cache. Pass logtoId to clear one entry, omit to clear all. */
 export function clearRoleCache(logtoId?: string) {
@@ -39,6 +44,34 @@ export async function getUserRole(logtoId: string): Promise<UserRole> {
   return role
 }
 
+/** Clear user status cache. Pass logtoId to clear one entry, omit to clear all. */
+export function clearStatusCache(logtoId?: string) {
+  if (logtoId) {
+    statusCache.delete(logtoId)
+  } else {
+    statusCache.clear()
+  }
+}
+
+/** Get user status from DB with 60s cache. */
+export async function getUserStatus(logtoId: string): Promise<UserStatus> {
+  const now = Date.now()
+  const cached = statusCache.get(logtoId)
+  if (cached && now < cached.expires) {
+    return cached.data
+  }
+
+  const db = getDb()
+  const [user] = await db
+    .select({ status: users.status })
+    .from(users)
+    .where(eq(users.logtoId, logtoId))
+    .limit(1)
+  const status = (user?.status as UserStatus) ?? "pending"
+  statusCache.set(logtoId, { data: status, expires: now + STATUS_CACHE_TTL_MS })
+  return status
+}
+
 /** List all users with their roles (for superadmin UI). */
 export async function listUsersWithRoles() {
   const db = getDb()
@@ -48,8 +81,10 @@ export async function listUsersWithRoles() {
       email: users.email,
       name: users.name,
       role: users.role,
+      status: users.status,
       creditsBalance: users.creditsBalance,
       createdAt: users.createdAt,
+      approvedAt: users.approvedAt,
     })
     .from(users)
     .orderBy(desc(users.createdAt))
@@ -64,6 +99,26 @@ export async function updateUserRole(logtoId: string, role: UserRole): Promise<U
     .where(eq(users.logtoId, logtoId))
   clearRoleCache(logtoId)
   return role
+}
+
+/** Update a user's status (approve/reject). Returns the new status. */
+export async function updateUserStatus(
+  logtoId: string,
+  status: UserStatus,
+  approvedByLogtoId?: string
+): Promise<UserStatus> {
+  const db = getDb()
+  await db
+    .update(users)
+    .set({
+      status,
+      approvedAt: status === "approved" ? new Date() : null,
+      approvedBy: status === "approved" ? (approvedByLogtoId ?? null) : null,
+      updatedAt: new Date(),
+    })
+    .where(eq(users.logtoId, logtoId))
+  clearStatusCache(logtoId)
+  return status
 }
 
 /** Clear user preferences cache. Pass userId to clear one entry, omit to clear all. */
@@ -85,12 +140,22 @@ export async function ensureUserExists(params: {
   name?: string | null
 }) {
   const db = getDb()
+
+  // Determine initial status for new users
+  const superadminEmail = process.env.SUPERADMIN_EMAIL?.trim().toLowerCase()
+  const isSuperadminEmail = superadminEmail && params.email?.trim().toLowerCase() === superadminEmail
+  const initialStatus: UserStatus = (isSuperadminEmail || features.openRegistration.enabled)
+    ? "approved"
+    : "pending"
+
   await db
     .insert(users)
     .values({
       logtoId: params.logtoId,
       email: params.email ?? undefined,
       name: params.name ?? undefined,
+      status: initialStatus,
+      approvedAt: initialStatus === "approved" ? new Date() : undefined,
     })
     .onConflictDoUpdate({
       target: users.logtoId,
@@ -102,11 +167,15 @@ export async function ensureUserExists(params: {
     })
 
   // Auto-promote to superadmin if email matches SUPERADMIN_EMAIL
-  const superadminEmail = process.env.SUPERADMIN_EMAIL?.trim().toLowerCase()
-  if (superadminEmail && params.email?.trim().toLowerCase() === superadminEmail) {
+  if (isSuperadminEmail) {
     const currentRole = await getUserRole(params.logtoId)
     if (currentRole !== "superadmin") {
       await updateUserRole(params.logtoId, "superadmin")
+    }
+    // Superadmin is always approved
+    const currentStatus = await getUserStatus(params.logtoId)
+    if (currentStatus !== "approved") {
+      await updateUserStatus(params.logtoId, "approved", params.logtoId)
     }
   }
 }

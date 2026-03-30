@@ -245,6 +245,11 @@ export function ChatView({ chatId, initialModelId, initialProjectId, initialArti
     id: chatId ?? "new",
     sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
     onError: (error) => {
+      // Detect 403 User Not Approved — redirect to pending page
+      if (error?.message?.includes("USER_NOT_APPROVED")) {
+        window.location.href = "/pending-approval"
+        return
+      }
       // Detect 402 Payment Required (credits exhausted)
       if (error?.message?.includes("402") || (error as { status?: number })?.status === 402) {
         setCreditError("Dein Credit-Guthaben ist aufgebraucht. Bitte wende dich an den Administrator.")

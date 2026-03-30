@@ -1,6 +1,7 @@
 import { pgTable, text, timestamp, uuid, boolean, integer } from "drizzle-orm/pg-core"
 
 export type UserRole = "user" | "admin" | "superadmin"
+export type UserStatus = "pending" | "approved" | "rejected"
 
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -9,6 +10,9 @@ export const users = pgTable("users", {
   name: text("name"),
   avatarUrl: text("avatar_url"),
   role: text("role").$type<UserRole>().default("user").notNull(),
+  status: text("status").$type<UserStatus>().default("pending").notNull(),
+  approvedAt: timestamp("approved_at", { withTimezone: true }),
+  approvedBy: text("approved_by"),
   customInstructions: text("custom_instructions"),
   defaultModelId: text("default_model_id"),
   memoryEnabled: boolean("memory_enabled").default(false).notNull(),

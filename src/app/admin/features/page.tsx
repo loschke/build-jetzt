@@ -134,6 +134,13 @@ function buildFeatureList(): FeatureInfo[] {
       dataFlow: { target: "local", label: "Lokal (DB)" },
       envHint: "NEXT_PUBLIC_CREDITS_ENABLED",
     },
+    {
+      name: "Offene Registrierung",
+      description: "Selbstregistrierung ohne Admin-Freischaltung",
+      enabled: features.openRegistration.enabled,
+      dataFlow: { target: "local", label: "Lokal (DB)" },
+      envHint: "NEXT_PUBLIC_OPEN_REGISTRATION",
+    },
   ]
 }
 

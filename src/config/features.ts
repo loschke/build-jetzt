@@ -64,4 +64,7 @@ export const features = {
   userSkills: {
     enabled: process.env.NEXT_PUBLIC_USER_SKILLS_ENABLED === "true",
   },
+  openRegistration: {
+    enabled: process.env.NEXT_PUBLIC_OPEN_REGISTRATION === "true",
+  },
 } as const
