@@ -26,9 +26,17 @@ function extractComment(answer: string | string[] | undefined): string {
 }
 
 export function AskUser({ questions, onSubmit, isReadOnly, previousAnswers }: AskUserProps) {
-  const [answers, setAnswers] = useState<Record<string, string | string[]>>(
-    previousAnswers ?? {}
-  )
+  const [answers, setAnswers] = useState<Record<string, string | string[]>>(() => {
+    if (!previousAnswers) return {}
+    // previousAnswers is keyed by question text, but component uses numeric indices
+    const indexed: Record<string, string | string[]> = {}
+    questions.forEach((q, i) => {
+      if (previousAnswers[q.question] !== undefined) {
+        indexed[i] = previousAnswers[q.question]
+      }
+    })
+    return indexed
+  })
   const [comments, setComments] = useState<Record<number, string>>(() => {
     if (!previousAnswers) return {}
     const initial: Record<number, string> = {}
