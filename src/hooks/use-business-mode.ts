@@ -59,7 +59,7 @@ export type SafeChatMode = "safe" | "local"
 export interface SafeChatState {
   available: boolean
   isActive: boolean
-  /** Locked after first message — cannot toggle mid-chat */
+  /** Locked when chat has messages — cannot toggle mid-chat */
   locked: boolean
   route: PrivacyRoute
   mode: SafeChatMode
@@ -68,7 +68,6 @@ export interface SafeChatState {
   preferenceEnabled: boolean
   toggleSession: () => void
   setMode: (mode: SafeChatMode) => void
-  lock: () => void
   updatePreference: (enabled: boolean) => Promise<void>
 }
 
@@ -96,7 +95,6 @@ export function useBusinessMode() {
   const [safeChatPreference, setSafeChatPreference] = useState(false)
   const [safeChatSessionOverride, setSafeChatSessionOverride] = useState<boolean | null>(null)
   const [safeChatMode, setSafeChatMode] = useState<SafeChatMode>("safe")
-  const [safeChatLocked, setSafeChatLocked] = useState(false)
 
   // Fetch business mode status on mount; SafeChat preference loaded via initSafeChatPreference
   useEffect(() => {
@@ -281,7 +279,8 @@ export function useBusinessMode() {
     [fileDialog.files, status]
   )
 
-  // SafeChat computed state
+  // SafeChat lock — set externally via setLocked when chat has messages
+  const [safeChatLocked, setSafeChatLocked] = useState(false)
   const safeChatActive = !!(status?.safeChat) && (safeChatSessionOverride ?? safeChatPreference)
   const safeRoute = resolveSafeRoute(status)
   const effectiveRoute: PrivacyRoute = safeChatMode === "local" ? "local" : safeRoute
@@ -296,7 +295,6 @@ export function useBusinessMode() {
     hasLocalModel: status?.safeChat?.hasLocalModel ?? false,
     preferenceEnabled: safeChatPreference,
     setMode: (mode: SafeChatMode) => { if (!safeChatLocked) setSafeChatMode(mode) },
-    lock: () => setSafeChatLocked(true),
     toggleSession: () => {
       if (safeChatLocked) return
       setSafeChatSessionOverride((prev) => prev === null ? !safeChatPreference : !prev)
@@ -327,6 +325,7 @@ export function useBusinessMode() {
     handlePiiDecision,
     handleFileDecision,
     safeChat,
+    setSafeChatLocked,
     initSafeChatPreference,
   }
 }
