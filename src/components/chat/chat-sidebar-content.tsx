@@ -507,16 +507,18 @@ export function ChatSidebarContent() {
                           className="rounded p-0.5 text-muted-foreground hover:text-foreground"
                           onClick={() => window.location.href = `/?project=${project.id}`}
                           title="Neuer Chat im Projekt"
+                          aria-label="Neuer Chat im Projekt"
                         >
-                          <Plus className="size-3" />
+                          <Plus className="size-3" aria-hidden="true" />
                         </button>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <button
                               type="button"
                               className="rounded p-0.5 text-muted-foreground hover:text-foreground"
+                              aria-label="Projekt-Einstellungen"
                             >
-                              <Settings className="size-3" />
+                              <Settings className="size-3" aria-hidden="true" />
                             </button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent side="right" align="start">
@@ -594,8 +596,9 @@ export function ChatSidebarContent() {
                             className="rounded p-0.5 text-muted-foreground hover:text-foreground"
                             onClick={() => window.location.href = `/?project=${sp.id}`}
                             title="Neuer Chat im Projekt"
+                            aria-label="Neuer Chat im Projekt"
                           >
-                            <Plus className="size-3" />
+                            <Plus className="size-3" aria-hidden="true" />
                           </button>
                           {sp.role === "editor" && (
                             <button
@@ -603,8 +606,9 @@ export function ChatSidebarContent() {
                               className="rounded p-0.5 text-muted-foreground hover:text-foreground"
                               onClick={() => setProjectDialogState({ open: true, project: { id: sp.id, name: sp.name, description: sp.description, chatCount: 0 } })}
                               title="Bearbeiten"
+                              aria-label="Projekt bearbeiten"
                             >
-                              <Settings className="size-3" />
+                              <Settings className="size-3" aria-hidden="true" />
                             </button>
                           )}
                         </div>
@@ -783,8 +787,9 @@ export function ChatSidebarContent() {
                   type="button"
                   onClick={() => setRenameValue("")}
                   className="absolute right-2 top-1/2 -translate-y-1/2 rounded-sm p-0.5 text-muted-foreground hover:text-foreground"
+                  aria-label="Eingabe löschen"
                 >
-                  <X className="size-3.5" />
+                  <X className="size-3.5" aria-hidden="true" />
                 </button>
               )}
             </div>
