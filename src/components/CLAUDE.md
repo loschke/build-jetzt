@@ -1,13 +1,13 @@
 # Components
 
-Guidance fuer `src/components/` — UI-Patterns, shadcn/ui, AI Elements und Chat-UI.
+Guidance für `src/components/` — UI-Patterns, shadcn/ui, AI Elements und Chat-UI.
 
 ## Grundregeln
 
 - **Server Components** als Default. `"use client"` nur bei Event Handlern, Hooks, Browser APIs.
-- **shadcn/ui** (`ui/`): Generiert, NICHT manuell aendern. Wrapper bauen.
-- **AI Elements** (`ai-elements/`): Lokale Kopien, NICHT manuell aendern. Hinzufuegen: `npx ai-elements@latest add <component>`.
-- **Props-Interface** immer direkt ueber der Komponente, nicht in separater Datei.
+- **shadcn/ui** (`ui/`): Generiert, NICHT manuell ändern. Wrapper bauen.
+- **AI Elements** (`ai-elements/`): Lokale Kopien, NICHT manuell ändern. Hinzufügen: `npx ai-elements@latest add <component>`.
+- **Props-Interface** immer direkt über der Komponente, nicht in separater Datei.
 
 ## Ordner-Struktur
 
@@ -16,7 +16,7 @@ Guidance fuer `src/components/` — UI-Patterns, shadcn/ui, AI Elements und Chat
 | `ui/` | shadcn/ui Primitives | Nicht anfassen |
 | `ai-elements/` | AI SDK UI-Komponenten | Nicht anfassen |
 | `layout/` | App-Shell (Sidebar, Header, NavUser, CreditIndicator) | Server + Client gemischt |
-| `chat/` | Chat-UI (ChatView, EmptyState, ExpertSelector, QuicktaskForm, ToolStatus) | Primaer Client |
+| `chat/` | Chat-UI (ChatView, EmptyState, ExpertSelector, QuicktaskForm, ToolStatus) | Primär Client |
 | `assistant/` | Artifact-Panel (ArtifactPanel, HtmlPreview, CodePreview, ArtifactEditor, QuizRenderer, ReviewRenderer, ImagePreview) | Client |
 | `generative-ui/` | Interaktive KI-Widgets (AskUser, ContentAlternatives) | Client |
 | `admin/` | Admin-UI (SkillsAdmin, ExpertsAdmin, ModelsAdmin, McpServersAdmin, CreditsAdmin) | Server Page → Client Component |
@@ -27,8 +27,8 @@ Guidance fuer `src/components/` — UI-Patterns, shadcn/ui, AI Elements und Chat
 Streamdown rendert semantisches HTML. Tailwind Preflight entfernt Default-Margins.
 
 - **`.chat-prose`** Scope in `globals.css`: Line-height, Heading-Hierarchie, Listen, Tabellen, Inline-Code, Blockquotes
-- **Code-Bloecke:** `[data-streamdown="code-block"]` Selektoren in `globals.css`
-- **Streamdown Safelist:** `src/lib/streamdown-safelist.ts` — KEIN `@source` fuer node_modules (crasht Turbopack auf Windows)
+- **Code-Blöcke:** `[data-streamdown="code-block"]` Selektoren in `globals.css`
+- **Streamdown Safelist:** `src/lib/streamdown-safelist.ts` — KEIN `@source` für node_modules (crasht Turbopack auf Windows)
 
 ## Elevation-Klassen
 
@@ -52,13 +52,13 @@ src/components/admin/skills-admin.tsx (Client Component)
   → API-Calls an /api/admin/skills
 ```
 
-Jede Admin-Seite folgt diesem Pattern: Server-Page laedt Daten, Client-Component rendert interaktive UI.
+Jede Admin-Seite folgt diesem Pattern: Server-Page lädt Daten, Client-Component rendert interaktive UI.
 
 ## Generative UI
 
-Zwei Patterns fuer KI-gesteuerte UI-Widgets:
+Zwei Patterns für KI-gesteuerte UI-Widgets:
 
-### Inline-Tools (kein execute, `addToolResult` Rueckkanal)
+### Inline-Tools (kein execute, `addToolResult` Rückkanal)
 
 | Tool | Component | Verhalten |
 |------|-----------|-----------|

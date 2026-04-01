@@ -38,6 +38,7 @@ export async function GET(_req: Request, { params }: RouteParams) {
     id: skill.id,
     slug: skill.slug,
     name: skill.name,
+    description: skill.description,
     mode: skill.mode,
     isPublic: skill.isPublic,
     raw,

@@ -14,7 +14,9 @@ import {
   Activity,
   ShieldCheck,
   FolderOpen,
+  Layers,
   Settings,
+  Zap,
 } from "lucide-react"
 import type { LucideIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -36,7 +38,9 @@ const ICON_MAP: Record<string, LucideIcon> = {
   Activity,
   ShieldCheck,
   FolderOpen,
+  Layers,
   Settings,
+  Zap,
 }
 
 export interface NavItem {

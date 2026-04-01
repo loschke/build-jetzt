@@ -4,6 +4,16 @@ import { useState, useCallback } from "react"
 import { Plus, Trash2, Pencil, X, Globe } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { WorkspaceSkillEditor } from "./workspace-skill-editor"
 
 interface SkillRow {
@@ -21,25 +31,12 @@ interface WorkspaceSkillsProps {
   initialSkills: SkillRow[]
 }
 
-const SKILL_TEMPLATE = `---
-name: Mein Skill
-slug: mein-skill
-description: Kurzbeschreibung was dieser Skill tut
-mode: skill
----
-
-Hier kommt der Skill-Inhalt als Markdown.
-
-## Anweisungen
-
-Beschreibe hier, was die KI tun soll wenn dieser Skill geladen wird.
-`
-
 export function WorkspaceSkills({ initialSkills }: WorkspaceSkillsProps) {
   const [skills, setSkills] = useState(initialSkills)
   const [view, setView] = useState<"list" | "create" | "edit">("list")
   const [editingSkillId, setEditingSkillId] = useState<string | null>(null)
   const [loading, setLoading] = useState<string | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
 
   const refreshSkills = useCallback(async () => {
     try {
@@ -50,11 +47,12 @@ export function WorkspaceSkills({ initialSkills }: WorkspaceSkillsProps) {
     }
   }, [])
 
-  const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`"${name}" wirklich löschen?`)) return
-    setLoading(id)
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return
+    setLoading(deleteTarget.id)
+    setDeleteTarget(null)
     try {
-      const res = await fetch(`/api/user/skills/${id}`, { method: "DELETE" })
+      const res = await fetch(`/api/user/skills/${deleteTarget.id}`, { method: "DELETE" })
       if (res.ok) await refreshSkills()
     } catch {
       // silent
@@ -76,10 +74,9 @@ export function WorkspaceSkills({ initialSkills }: WorkspaceSkillsProps) {
           <Button variant="secondary" size="sm" onClick={() => setView("list")}>
             <X className="mr-1 size-4" /> Abbrechen
           </Button>
-          <h1 className="text-lg font-semibold">Neuer Skill</h1>
+          <h1 className="text-lg font-semibold">Neuer Quicktask</h1>
         </div>
         <WorkspaceSkillEditor
-          initialContent={SKILL_TEMPLATE}
           onSuccess={handleSuccess}
         />
       </div>
@@ -93,7 +90,7 @@ export function WorkspaceSkills({ initialSkills }: WorkspaceSkillsProps) {
           <Button variant="secondary" size="sm" onClick={() => { setView("list"); setEditingSkillId(null) }}>
             <X className="mr-1 size-4" /> Abbrechen
           </Button>
-          <h1 className="text-lg font-semibold">Skill bearbeiten</h1>
+          <h1 className="text-lg font-semibold">Quicktask bearbeiten</h1>
         </div>
         <WorkspaceSkillEditor
           skillId={editingSkillId}
@@ -106,19 +103,19 @@ export function WorkspaceSkills({ initialSkills }: WorkspaceSkillsProps) {
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <h1 className="text-lg font-semibold">Meine Skills ({skills.length})</h1>
+        <h1 className="text-lg font-semibold">Meine Quicktasks ({skills.length})</h1>
         <Button size="sm" onClick={() => setView("create")}>
-          <Plus className="mr-1 size-4" /> Neuer Skill
+          <Plus className="mr-1 size-4" /> Neuer Quicktask
         </Button>
       </div>
 
       {skills.length === 0 ? (
         <div className="rounded-lg border border-dashed p-8 text-center">
           <p className="mb-4 text-muted-foreground">
-            Du hast noch keine eigenen Fertigkeiten. Erstelle deinen ersten Skill um die KI an deine Arbeitsweise anzupassen.
+            Du hast noch keine eigenen Quicktasks. Erstelle deinen ersten Quicktask um wiederkehrende Aufgaben zu automatisieren.
           </p>
           <Button size="sm" onClick={() => setView("create")}>
-            <Plus className="mr-1 size-4" /> Neuer Skill
+            <Plus className="mr-1 size-4" /> Neuer Quicktask
           </Button>
         </div>
       ) : (
@@ -172,7 +169,7 @@ export function WorkspaceSkills({ initialSkills }: WorkspaceSkillsProps) {
                         size="icon"
                         className="size-8 text-destructive hover:text-destructive"
                         disabled={loading === skill.id}
-                        onClick={() => handleDelete(skill.id, skill.name)}
+                        onClick={() => setDeleteTarget({ id: skill.id, name: skill.name })}
                       >
                         <Trash2 className="size-4" />
                       </Button>
@@ -184,6 +181,23 @@ export function WorkspaceSkills({ initialSkills }: WorkspaceSkillsProps) {
           </table>
         </div>
       )}
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Quicktask löschen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              &ldquo;{deleteTarget?.name}&rdquo; wird unwiderruflich gelöscht.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Löschen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

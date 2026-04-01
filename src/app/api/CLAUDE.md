@@ -1,19 +1,19 @@
 # API Routes
 
-Guidance fuer `src/app/api/` — Route-Patterns, Guards, Validierung und Chat-Architektur.
+Guidance für `src/app/api/` — Route-Patterns, Guards, Validierung und Chat-Architektur.
 
 ## Auth-Guards
 
 | Guard | Verwendung | Verhalten bei Fehler |
 |-------|-----------|---------------------|
 | `requireAuth()` | Alle User-Routes | 401, stellt User-DB-Upsert sicher |
-| `requireAdmin()` | `/api/admin/*` Routes | 401/403, prueft ADMIN_EMAILS |
+| `requireAdmin()` | `/api/admin/*` Routes | 401/403, prüft ADMIN_EMAILS |
 
 **Nie `getUser()` in API-Routes verwenden** — das stellt keinen DB-Upsert sicher. Immer `requireAuth()`.
 
 ## Feature-Gating
 
-Deaktivierte Features geben 404 zurueck:
+Deaktivierte Features geben 404 zurück:
 
 ```typescript
 if (!features.storage.enabled) {
@@ -21,7 +21,7 @@ if (!features.storage.enabled) {
 }
 ```
 
-Alle optionalen Feature-Routes pruefen `features.X.enabled` als erstes.
+Alle optionalen Feature-Routes prüfen `features.X.enabled` als erstes.
 
 ## Rate-Limiting
 
@@ -49,7 +49,7 @@ In-Memory Token Bucket (`src/lib/rate-limit.ts`):
 return Response.json({ error: "Beschreibung" }, { status: 400 })
 ```
 
-Konsistent JSON mit `error` Feld. Deutsche Fehlermeldungen fuer User-facing Errors.
+Konsistent JSON mit `error` Feld. Deutsche Fehlermeldungen für User-facing Errors.
 
 ## Chat-Route Architektur
 
@@ -76,7 +76,7 @@ Dann sequenziell:
 - System-Prompt als erste Message
 - UI-Messages zu Model-Messages konvertieren
 - Anthropic Cache Control (`cacheControl: { type: "ephemeral" }`) auf System-Prompt
-- File-Parts fuer Gateway-Kompatibilitaet anpassen
+- File-Parts für Gateway-Kompatibilität anpassen
 
 ### build-tools.ts
 
@@ -100,7 +100,7 @@ Reihenfolge nach Chat-Response:
 | 8 | Memory-Extraktion | Fire-and-Forget |
 | — | MCP Cleanup | Finally |
 
-## Route-Uebersicht
+## Route-Übersicht
 
 ```
 api/

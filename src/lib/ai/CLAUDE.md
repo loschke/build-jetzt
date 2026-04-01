@@ -1,6 +1,6 @@
 # AI System
 
-Guidance fuer `src/lib/ai/` — Tools, Skills, Prompts und Bildgenerierung.
+Guidance für `src/lib/ai/` — Tools, Skills, Prompts und Bildgenerierung.
 
 ## Tool-System
 
@@ -24,7 +24,7 @@ Das LLM sieht nur Parameter und Beschreibung. Die Factory injiziert den Kontext.
 
 | Pattern | Verhalten | Beispiel |
 |---------|-----------|---------|
-| **Mit execute** | Server-seitig ausgefuehrt, Ergebnis an LLM | `create_artifact`, `web_search` |
+| **Mit execute** | Server-seitig ausgeführt, Ergebnis an LLM | `create_artifact`, `web_search` |
 | **Ohne execute** | Stream pausiert, Client rendert UI-Widget | `ask_user`, `content_alternatives` |
 
 ### Tool-Registrierung (`build-tools.ts`)
@@ -73,8 +73,8 @@ Markdown-Content mit {{variable}} Platzhaltern
 
 ### Integration
 
-- **Normaler Chat:** Skills als Uebersicht in System-Prompt Layer 3, `load_skill` Tool laedt Content on-demand
-- **Quicktask:** Template-gerendert als System-Prompt Layer 3 (ersetzt Skills-Liste), `load_skill` nicht verfuegbar
+- **Normaler Chat:** Skills als Übersicht in System-Prompt Layer 3, `load_skill` Tool lädt Content on-demand
+- **Quicktask:** Template-gerendert als System-Prompt Layer 3 (ersetzt Skills-Liste), `load_skill` nicht verfügbar
 
 ## System-Prompt-Aufbau
 
@@ -95,16 +95,16 @@ Details: `docs/system/system-prompt-architektur.md`
 - **Provider:** Gemini via `@ai-sdk/google` (Direktverbindung, NICHT Gateway)
 - **Model:** `gemini-2.5-flash-image`
 - **Gallery-Format:** `artifacts.content` = JSON `ImageGalleryEntry[]` mit `{ url, role, prompt?, timestamp }`
-- **Storage:** R2-Upload primaer, data-URL als Fallback
+- **Storage:** R2-Upload primär, data-URL als Fallback
 - **Credits:** Flat-Rate `IMAGE_GENERATION_CREDITS` (default 500)
 - **Privacy:** Tool deaktiviert bei Privacy-Routing
 
 ## Stitch Design Generation
 
 - **Provider:** Google Stitch via `@google/stitch-sdk` (MCP-basiert)
-- **Tool:** `generate_design` (fire-and-forget, gibt Stitch-Projekt-Link zurueck)
-- **Pattern:** Projekt erstellen (awaited), Generation starten (fire-and-forget), Direktlink zurueck
-- **Output:** Kein Artifact — User oeffnet Entwurf in Stitch Web-UI
+- **Tool:** `generate_design` (fire-and-forget, gibt Stitch-Projekt-Link zurück)
+- **Pattern:** Projekt erstellen (awaited), Generation starten (fire-and-forget), Direktlink zurück
+- **Output:** Kein Artifact — User öffnet Entwurf in Stitch Web-UI
 - **Credits:** Flat-Rate `STITCH_GENERATION_CREDITS` (default 5000)
 - **Feature-Flag:** `STITCH_API_KEY` (opt-in)
 
@@ -121,18 +121,18 @@ Details: `docs/system/system-prompt-architektur.md`
 
 ## Quellenverlinkung in Artifacts
 
-- **Inline-Zitate:** Unicode-Superscript `⁽¹⁾` im Fliesstext (keine eckigen Klammern — kollidiert mit Markdown)
+- **Inline-Zitate:** Unicode-Superscript `⁽¹⁾` im Fließtext (keine eckigen Klammern — kollidiert mit Markdown)
 - **Quellenverzeichnis:** `## Quellen` als nummerierte Markdown-Liste am Artifact-Ende
 - **Metadata:** `create_artifact` akzeptiert optionalen `sources`-Parameter (`[{ url, title }]`)
 - **UI:** Quellen-Badge im Artifact-Header, scrollt zum Quellenverzeichnis
 
 ## Privacy-Provider (`privacy-provider.ts`)
 
-Bypass fuer den Gateway bei Business Mode Privacy-Routing:
+Bypass für den Gateway bei Business Mode Privacy-Routing:
 - EU: `@ai-sdk/mistral` mit `BUSINESS_MODE_EU_MODEL`
 - Lokal: `@ai-sdk/openai-compatible` mit `BUSINESS_MODE_LOCAL_URL`
 
-## Dateien-Uebersicht
+## Dateien-Übersicht
 
 ```
 src/lib/ai/
@@ -140,7 +140,7 @@ src/lib/ai/
 │   ├── create-artifact.ts    — Artifact-Erstellung (Factory)
 │   ├── create-quiz.ts        — Quiz-Erstellung (Factory)
 │   ├── create-review.ts      — Review-Erstellung (Factory)
-│   ├── ask-user.ts           — Strukturierte Rueckfragen (kein execute)
+│   ├── ask-user.ts           — Strukturierte Rückfragen (kein execute)
 │   ├── content-alternatives.ts — Varianten-Auswahl (kein execute)
 │   ├── web-search.ts         — Websuche (Provider-agnostisch)
 │   ├── web-fetch.ts          — URL-Abruf (SSRF-Schutz)
@@ -150,13 +150,13 @@ src/lib/ai/
 │   ├── generate-design.ts    — UI-Design via Stitch (Factory, fire-and-forget)
 │   ├── deep-research.ts      — Deep Research starten (Factory, async Polling)
 │   ├── load-skill.ts         — Skill-Content laden (Factory)
-│   └── parse-fake-artifact.ts — Fallback fuer Models ohne Tool-Calling
+│   └── parse-fake-artifact.ts — Fallback für Models ohne Tool-Calling
 ├── skills/
 │   ├── discovery.ts          — DB-basierte Skill-Discovery (cached)
 │   ├── parser.ts             — SKILL.md Parsing (gray-matter)
 │   └── template.ts           — Mustache-Replacer
 ├── deep-research.ts          — Gemini Interactions API Wrapper (Singleton, Ownership)
 ├── image-generation.ts       — Gemini generateImage() Wrapper
-├── privacy-provider.ts       — Mistral/Local Provider fuer Business Mode
-└── suggested-replies.ts      — Antwortvorschlaege generieren
+├── privacy-provider.ts       — Mistral/Local Provider für Business Mode
+└── suggested-replies.ts      — Antwortvorschläge generieren
 ```

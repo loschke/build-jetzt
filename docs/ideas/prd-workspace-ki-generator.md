@@ -1,8 +1,9 @@
 # PRD: Workspace KI-Generator
 
-> **Status:** Konzept
+> **Status:** Implementierungsbereit
 > **Erstellt:** 2026-04-01
-> **Abhaengigkeiten:** Workspace Experts + Skills (existiert), AI SDK Chat-Completion
+> **Ueberarbeitet:** 2026-04-01 (v2 — KI-only fuer User, strukturierte Vorschau)
+> **Abhaengigkeiten:** Workspace Experts + Skills (existiert), AI SDK generateObject
 
 ---
 
@@ -12,20 +13,25 @@
 
 User sehen im Workspace "Neuer Expert" oder "Neuer Skill" und stehen vor einem leeren Formular. Einen guten System-Prompt zu schreiben erfordert Erfahrung: Welche Rolle? Welcher Ton? Welche Tools soll der Expert nutzen? Wie formuliert man Regeln, die das Modell zuverlaessig befolgt?
 
-Bei Skills kommt YAML-Frontmatter, Template-Variablen (`{{var}}`), Field-Schema und die `mode`-Unterscheidung dazu. Die meisten User werden das nicht ohne Hilfe hinbekommen.
+Bei Skills kommt YAML-Frontmatter, Template-Variablen (`{{var}}`), Field-Schema und die `mode`-Unterscheidung dazu. Fehleingaben koennen die Anwendung beeintraechtigen.
 
 ### Die Loesung
 
-Ein "Mit KI erstellen"-Modus direkt im Workspace-Editor. Der User beschreibt in natuerlicher Sprache was er braucht. Die KI stellt 2-3 gezielte Rueckfragen, generiert dann Name, Description und System-Prompt (bzw. SKILL.md). Das Ergebnis landet im Formular — editierbar, bevor der User speichert.
+Der manuelle Editor wird fuer regulaere User entfernt. Stattdessen: Ein KI-gefuehrter Wizard als **einziger Erstellungspfad**. Der User beschreibt in natuerlicher Sprache was er braucht. Die KI stellt 2-3 gezielte Rueckfragen, generiert dann das Ergebnis. Eine strukturierte Vorschau zeigt alles vor dem Speichern — mit Inline-Editing fuer gezielte Anpassungen.
+
+Der manuelle Editor bleibt im Admin-Panel fuer Admins erhalten.
 
 ### Was aendert sich gegenueber heute?
 
 | Aspekt | Heute | Neu |
 |--------|-------|-----|
-| Expert erstellen | Leeres Formular, User schreibt alles selbst | Wahlweise: Selbst schreiben ODER KI-gefuehrter Dialog |
-| Skill erstellen | Leerer Markdown-Editor, User muss Frontmatter kennen | Wahlweise: Selbst schreiben ODER KI-gefuehrter Dialog |
-| Tool-Auswahl | Nicht exponiert (korrekt) | KI entscheidet implizit ueber System-Prompt |
+| Expert erstellen (User) | Leeres Formular, User schreibt alles selbst | KI-Wizard → Vorschau → Speichern |
+| Skill erstellen (User) | Leerer Markdown-Editor, User muss Frontmatter kennen | KI-Wizard → Vorschau → Speichern |
+| Expert/Skill bearbeiten (User) | Formular/Markdown-Editor mit bestehenden Werten | Strukturierte Vorschau mit Inline-Edit |
+| Admin-Panel | Formular + Import | Unveraendert |
+| Tool-Auswahl | Nicht exponiert | KI entscheidet implizit ueber System-Prompt |
 | Einstiegshuerde | Hoch (Prompt-Engineering + Format-Wissen noetig) | Niedrig (natuerliche Sprache) |
+| Fehlerrisiko | Hoch (ungueltige Prompts, kaputtes Frontmatter) | Niedrig (KI generiert valide Struktur, Validierung vor Save) |
 
 ---
 
@@ -33,137 +39,127 @@ Ein "Mit KI erstellen"-Modus direkt im Workspace-Editor. Der User beschreibt in 
 
 ### In Scope
 
-- "Mit KI erstellen"-Button im Expert-Editor und Skill-Editor
-- Gefuehrter Mini-Dialog (2-4 Schritte) innerhalb des Editors
+- KI-Wizard als einziger Erstellungspfad fuer User (kein manuelles Formular)
+- Gefuehrter Mini-Dialog (2-3 Schritte) innerhalb des Editors
 - KI generiert: Name, Slug, Description, System-Prompt (Expert) bzw. komplettes SKILL.md (Skill)
-- Ergebnis fuellt existierendes Formular vor — User kann alles anpassen
-- Speichern ueber den existierenden Save-Flow (gleiche API, gleiche Validierung)
+- Strukturierte Vorschau mit Inline-Editing vor dem Speichern
+- Bearbeitung bestehender Experts/Skills ueber gleiche Vorschau-Komponente
+- Speichern nach Validierung ueber existierende API-Endpoints
 - Funktioniert fuer Expert-Erstellung und Skill-Erstellung (mode: skill)
 
 ### Out of Scope
 
 - Quicktask-Erstellung (Fields/Formular-Schema ist zu komplex fuer v1)
-- Aendern der API-Endpoints oder Validierung
+- "Mit KI anpassen" beim Bearbeiten (v1.1 — User editiert direkt in der Vorschau)
 - Tool-Auswahl durch den User (KI entscheidet implizit)
 - Automatisches Speichern (User hat immer die Kontrolle)
 - Sharing/Publishing von generierten Experts/Skills
+- Aenderungen am Admin-Panel
 
 ---
 
-## 3. User Flow
+## 3. User Flows
 
-### Expert erstellen mit KI
+### 3.1 Expert erstellen
 
 ```
 Workspace > Meine Experten > "Neuer Expert"
                 |
                 v
     ┌─────────────────────────┐
-    │  Wie willst du starten? │
+    │  Beschreib deinen Expert│
     │                         │
-    │  [Mit KI erstellen]     │
-    │  [Selbst schreiben]     │
-    └─────────────────────────┘
-                |
-          "Mit KI erstellen"
-                |
-                v
-    ┌─────────────────────────┐
-    │  Schritt 1:             │
-    │  "Beschreib deinen      │
-    │   Expert in ein paar    │
-    │   Saetzen. Was soll     │
-    │   er koennen?"          │
+    │  ┌─────────────────────┐│
+    │  │ Ich brauche einen   ││
+    │  │ Expert der mir bei  ││
+    │  │ Angeboten hilft...  ││
+    │  └─────────────────────┘│
     │                         │
-    │  [Textarea]             │
-    │  [Weiter →]             │
+    │           [Weiter →]    │
     └─────────────────────────┘
                 |
                 v
     ┌─────────────────────────┐
-    │  Schritt 2:             │
     │  KI stellt 2-3 gezielte │
-    │  Rueckfragen basierend  │
-    │  auf der Beschreibung:  │
+    │  Rueckfragen:           │
     │                         │
-    │  "Fuer welche Zielgruppe│
-    │   schreibt der Expert?" │
-    │  ○ B2B / Unternehmen    │
-    │  ○ B2C / Endkunden      │
-    │  ○ Intern / Team        │
+    │  "Fuer welche Branche?" │
+    │  ○ Agentur / Kreativ    │
+    │  ○ IT / Software        │
+    │  ○ Beratung             │
+    │  ○ Andere               │
     │                         │
-    │  "Welcher Ton passt?"   │
+    │  "Welcher Ton?"         │
     │  ○ Formell & sachlich   │
     │  ○ Locker & persoenlich │
     │  ○ Technisch & praezise │
     │                         │
-    │  [Generieren →]         │
+    │        [Generieren →]   │
     └─────────────────────────┘
                 |
                 v
-    ┌─────────────────────────┐
-    │  Formular (vorausgefuellt)│
-    │                         │
-    │  Name: [Social Media...]│
-    │  Slug: [social-media...]│
-    │  Beschreibung: [...]    │
-    │  System-Prompt: [...]   │
-    │                         │
-    │  ← Alles editierbar     │
-    │                         │
-    │  [Erstellen]            │
-    │  [Nochmal generieren]   │
-    └─────────────────────────┘
+    ┌─────────────────────────────────┐
+    │  Vorschau                       │
+    │                                 │
+    │  Name         [✏] Social Media..│
+    │  Beschreibung [✏] Schreibt...  │
+    │  ─────────────────────────────  │
+    │  System-Prompt            [✏]  │
+    │  ┌─────────────────────────┐   │
+    │  │ Du bist ein erfahrener  │   │
+    │  │ Texter fuer Social...   │   │
+    │  │ (formatiert, read-only) │   │
+    │  └─────────────────────────┘   │
+    │                                 │
+    │  [Nochmal generieren]           │
+    │  [Erstellen]                    │
+    └─────────────────────────────────┘
 ```
 
-### Skill erstellen mit KI
+### 3.2 Expert bearbeiten
 
-Gleicher Flow, aber:
-- Schritt 1 fragt zusaetzlich: "Was fuer ein Skill? Ein Wissensspeicher den die KI bei Bedarf laedt, oder ein Schnellzugriff (Quicktask) mit Formular?" → v1: Nur `mode: skill`
-- Ergebnis ist ein vorausgefuellter Markdown-Editor mit komplettem SKILL.md
-- User sieht das generierte Markdown und kann es anpassen
+```
+Workspace > Meine Experten > ✏ (Stift-Icon)
+                |
+                v
+    ┌─────────────────────────────────┐
+    │  Expert bearbeiten              │
+    │                                 │
+    │  Name         [✏] Social Media..│
+    │  Beschreibung [✏] Schreibt...  │
+    │  ─────────────────────────────  │
+    │  System-Prompt            [✏]  │
+    │  ┌─────────────────────────┐   │
+    │  │ Du bist ein erfahrener  │   │
+    │  │ Texter fuer Social...   │   │
+    │  │ (formatiert, read-only) │   │
+    │  └─────────────────────────┘   │
+    │                                 │
+    │  [Speichern]                    │
+    └─────────────────────────────────┘
+```
+
+Klick auf ✏ oeffnet Inline-Edit fuer das jeweilige Feld. Beim System-Prompt: Textarea ersetzt die formatierte Ansicht.
+
+### 3.3 Skill erstellen
+
+Gleicher Wizard-Flow wie Expert. Unterschiede:
+- KI generiert komplettes SKILL.md (Frontmatter + Markdown-Content)
+- Vorschau zeigt: Name, Description, Modus — und darunter den Skill-Content formatiert
+- Inline-Edit fuer Name/Description: einfache Felder
+- Inline-Edit fuer Content: Markdown-Editor (der existierende `MarkdownEditor`)
+
+### 3.4 Skill bearbeiten
+
+Gleiche Vorschau wie nach Erstellung. Name/Description als Felder, Content im Markdown-Editor.
 
 ---
 
 ## 4. Technische Architektur
 
-### KI-Integration
+### Zwei-Phasen-Ansatz mit generateObject
 
-Die Generierung laeuft als **Server-Side AI Call** — kein Chat, kein Streaming noetig. Ein einzelner API-Aufruf mit strukturiertem Output.
-
-**Neuer API-Endpoint:**
-
-```
-POST /api/workspace/generate
-```
-
-**Request:**
-```typescript
-{
-  type: "expert" | "skill"
-  description: string        // User-Beschreibung aus Schritt 1
-  answers?: Record<string, string>  // Antworten aus Schritt 2
-}
-```
-
-**Response (Expert):**
-```typescript
-{
-  name: string
-  slug: string
-  description: string
-  systemPrompt: string
-}
-```
-
-**Response (Skill):**
-```typescript
-{
-  content: string  // Komplettes SKILL.md mit Frontmatter
-}
-```
-
-### Zwei-Phasen-Ansatz
+Die Generierung laeuft als **Server-Side AI Call** — kein Chat, kein Streaming. Structured Output via `generateObject()`.
 
 **Phase 1 — Rueckfragen generieren:**
 ```
@@ -174,37 +170,18 @@ Response: { questions: [{ key, label, options: string[] }] }
 
 Die KI analysiert die Beschreibung und generiert 2-3 kontextspezifische Fragen. Keine generischen Fragen — die Fragen haengen davon ab, was der User beschrieben hat.
 
-Beispiel: "Ich brauche einen Expert fuer Angebote" → Fragen zu Branche, Formatlitaet, Angebotsstruktur.
+Beispiel: "Ich brauche einen Expert fuer Angebote" → Fragen zu Branche, Formalitaet, Angebotsstruktur.
 Beispiel: "Hilfe beim Programmieren" → Fragen zu Sprachen, Framework-Praeferenzen, Code-Stil.
 
 **Phase 2 — Generieren:**
 ```
 POST /api/workspace/generate
-Body: { type, description, answers }
-Response: { name, slug, description, systemPrompt } oder { content }
+Body: { type: "expert" | "skill", description: string, answers: Record<string, string> }
+Response (Expert): { name, slug, description, systemPrompt }
+Response (Skill):  { content }   // Komplettes SKILL.md
 ```
 
-### System-Prompt fuer den Generator
-
-Der Generator braucht einen eigenen System-Prompt der:
-- Die verfuegbaren Tools der Plattform kennt (web_search, create_artifact, generate_image, etc.)
-- Weiss wie ein guter System-Prompt aufgebaut ist (Rolle, Prinzipien, Tool-Sektion, Grenzen)
-- Tool-Entscheidungen implizit trifft (nicht exponiert)
-- Die bestehenden Seed-Experten als Qualitaetsreferenz hat
-- SKILL.md Format mit Frontmatter und Template-Syntax beherrscht
-
-**Speicherort:** `src/lib/ai/prompts/workspace-generator.ts`
-
-Der System-Prompt enthaelt:
-1. Rollendesfinition des Generators
-2. Struktur eines guten System-Prompts (aus den existierenden Seeds abstrahiert)
-3. Liste der verfuegbaren Tools mit Kurzbeschreibung (damit der Generator weiss, was er im System-Prompt referenzieren kann)
-4. Qualitaetsregeln (keine KI-Woerter, konkrete Anweisungen, Grenzen definieren)
-5. Fuer Skills: SKILL.md Format-Spezifikation mit Frontmatter-Schema
-
-### Structured Output
-
-Beide Phasen nutzen **Zod-Schema + `generateObject()`** aus dem AI SDK fuer garantiert validen Output:
+### Structured Output Schemas
 
 ```typescript
 // Phase 1: Rueckfragen
@@ -217,22 +194,34 @@ const questionsSchema = z.object({
 })
 
 // Phase 2: Expert
-const expertSchema = z.object({
-  name: z.string(),
-  slug: z.string(),
-  description: z.string(),
-  systemPrompt: z.string(),
+const expertResultSchema = z.object({
+  name: z.string().min(2).max(100),
+  slug: z.string().min(2).max(80),
+  description: z.string().min(5).max(500),
+  systemPrompt: z.string().min(10).max(10000),
 })
 
 // Phase 2: Skill
-const skillSchema = z.object({
-  content: z.string(), // Komplettes SKILL.md
+const skillResultSchema = z.object({
+  content: z.string().min(50),  // SKILL.md mit Frontmatter
 })
 ```
 
-### Kein neues Modell noetig
+### System-Prompt fuer den Generator
 
-Der Generator nutzt den Default-Model via `resolveModel()`. Structured Output funktioniert mit allen unterstuetzten Modellen (Anthropic, Google, OpenAI). Kein spezielles Modell noetig.
+**Speicherort:** `src/lib/ai/prompts/workspace-generator.ts`
+
+Der System-Prompt enthaelt:
+1. Rollendefinition: "Du generierst Expert-Definitionen / Skill-Dateien fuer eine KI-Chat-Plattform"
+2. Struktur eines guten System-Prompts (Rolle → Prinzipien → Tools → Ausgabeformat → Grenzen)
+3. Liste der verfuegbaren Tools mit Kurzbeschreibung (damit der Generator weiss, welche Tools er im System-Prompt referenzieren kann — ohne dass der User davon erfaehrt)
+4. Qualitaetsregeln: Keine KI-Woerter, konkrete Anweisungen, Grenzen definieren, deutscher Output
+5. Fuer Skills: SKILL.md Format-Spezifikation mit Frontmatter-Schema und Template-Syntax
+6. Beispiel-Referenz: Struktur der bestehenden Seed-Experten als Qualitaetsmassstab
+
+### Model Resolution
+
+Der Generator nutzt den Default-Model via `resolveModel()`. Structured Output funktioniert mit allen unterstuetzten Modellen. Kein spezielles Modell noetig.
 
 ---
 
@@ -242,36 +231,56 @@ Der Generator nutzt den Default-Model via `resolveModel()`. Structured Output fu
 
 | Komponente | Datei | Beschreibung |
 |-----------|-------|-------------|
-| `WorkspaceGeneratorWizard` | `workspace/workspace-generator-wizard.tsx` | 2-Schritt-Dialog (Beschreibung → Rueckfragen → Generieren) |
+| `WorkspaceGeneratorWizard` | `workspace/workspace-generator-wizard.tsx` | 2-Schritt-Wizard (Beschreibung → Rueckfragen → Callback) |
+| `WorkspaceExpertPreview` | `workspace/workspace-expert-preview.tsx` | Strukturierte Vorschau mit Inline-Edit fuer Expert-Felder |
+| `WorkspaceSkillPreview` | `workspace/workspace-skill-preview.tsx` | Strukturierte Vorschau mit Inline-Edit fuer Skill-Felder + Content |
 
-### Geaenderte Komponenten
+### Umgebaute Komponenten
 
 | Komponente | Aenderung |
 |-----------|-----------|
-| `WorkspaceExpertEditor` | Neuer State "generator" vor dem Formular. Toggle zwischen "Mit KI erstellen" und "Selbst schreiben". Wenn Generator fertig: Felder vorausfuellen. |
-| `WorkspaceSkillEditor` | Gleiche Erweiterung. Generator liefert `content` das in den Markdown-Editor gesetzt wird. |
+| `WorkspaceExpertEditor` | Komplett umgebaut: Wizard → Preview → Save. Kein leeres Formular mehr. Bearbeiten = Preview mit Inline-Edit. |
+| `WorkspaceSkillEditor` | Komplett umgebaut: Wizard → Preview → Save. Kein Markdown-Editor als Startpunkt. Bearbeiten = Preview mit Inline-Edit. |
 
-### Wizard-Design
-
-Der Wizard ist **kein Modal und kein separater Dialog**. Er ersetzt temporaer den Editor-Bereich:
+### Preview-Komponente (Expert)
 
 ```
-┌─────────────────────────────────────┐
-│  ← Selbst schreiben                │   ← Link zurueck zum leeren Editor
-│                                     │
-│  Beschreib deinen Expert            │   ← Ueberschrift
-│                                     │
-│  ┌─────────────────────────────┐    │
-│  │ Ich brauche einen Expert    │    │   ← Textarea, autofocus
-│  │ der mir hilft Angebote zu   │    │
-│  │ schreiben fuer meine...     │    │
-│  └─────────────────────────────┘    │
-│                                     │
-│                    [Weiter →]       │
-└─────────────────────────────────────┘
+┌───────────────────────────────────────────┐
+│  Name                                      │
+│  ┌──────────────────────────────────┐ [✏] │
+│  │ Social Media Texter              │      │
+│  └──────────────────────────────────┘      │
+│                                            │
+│  Beschreibung                              │
+│  ┌──────────────────────────────────┐ [✏] │
+│  │ Schreibt Posts fuer LinkedIn,    │      │
+│  │ Instagram und Twitter/X.        │      │
+│  └──────────────────────────────────┘      │
+│                                            │
+│  System-Prompt                             │
+│  ┌──────────────────────────────────┐ [✏] │
+│  │ ## Rolle                        │      │
+│  │ Du bist ein erfahrener Texter   │      │
+│  │ fuer Social Media...            │      │
+│  │                                  │      │
+│  │ ## Prinzipien                   │      │
+│  │ - Kurz und praegnant            │      │
+│  │ - Aktivierende Sprache          │      │
+│  │ ...                              │      │
+│  └──────────────────────────────────┘      │
+│                                            │
+│  [Nochmal generieren]  [Erstellen]         │
+│  (nur bei Neu-Erstellung)                  │
+│                                            │
+│  [Speichern]                               │
+│  (nur bei Bearbeitung)                     │
+└───────────────────────────────────────────┘
 ```
 
-Nach "Weiter": Ladeindikator, dann Rueckfragen als Radio-Gruppen. Nach "Generieren": Ladeindikator, dann Wechsel zum vorausgefuellten Formular.
+**Inline-Edit Verhalten:**
+- Klick auf ✏ bei Name/Description: Input/Textarea wird editierbar, ✏ wird zu ✓ (Bestaetigen)
+- Klick auf ✏ bei System-Prompt: Formatierte Ansicht wird zu Textarea, ✏ wird zu ✓
+- System-Prompt Vorschau: Markdown-artige Formatierung (Headings, Listen erkennbar) aber kein voller Renderer — einfaches `pre` mit Syntax-Highlighting reicht
 
 ---
 
@@ -279,25 +288,25 @@ Nach "Weiter": Ladeindikator, dann Rueckfragen als Radio-Gruppen. Nach "Generier
 
 ### Validierung
 
-- Der generierte Output durchlaeuft die **identische Validierung** wie manuell erstellte Experts/Skills
+- Der generierte Output durchlaeuft die **identische Validierung** wie bisher
 - Expert: Zod-Schema (`createExpertSchema`) — Name 2-100, Slug Regex, Description 5-500, SystemPrompt 10-10000
 - Skill: `parseSkillMarkdown()` — Frontmatter-Pflichtfelder, Slug-Regex, Content-Limits
 - `isPublic: false` wird serverseitig erzwungen (unveraendert)
 - userId-Scoping auf allen Mutations (unveraendert)
 - 20-Skill-Limit (unveraendert)
+- Validierung passiert **vor dem Speichern** client-seitig (Laengen, Pflichtfelder) UND server-seitig (API-Endpoint)
 
 ### Rate Limiting
 
-- `/api/workspace/generate` und `/api/workspace/generate/questions` bekommen eigenes Rate Limit
-- Empfehlung: 10 Requests/Minute (LLM-Calls sind teuer)
-- Nutzt das existierende Token-Bucket-System
+- `/api/workspace/generate/*` Endpoints: 10 Requests/Minute (LLM-Calls sind teuer)
+- Nutzt das existierende Token-Bucket-System aus `src/lib/rate-limit.ts`
 
 ### Prompt Injection
 
 - Der User-Input (Beschreibung + Antworten) geht als **User-Message** an die KI, nicht als System-Prompt
 - Der Generator-System-Prompt ist server-seitig, nicht manipulierbar
-- Der generierte System-Prompt wird dem User zur Review gezeigt bevor er speichert
-- Worst Case: Der Generator erzeugt einen schlechten System-Prompt → User sieht ihn im Formular und kann ihn aendern oder verwerfen
+- Der generierte Output wird dem User in der Vorschau gezeigt bevor er speichert
+- Worst Case: Der Generator erzeugt einen unpassenden System-Prompt → User sieht ihn in der Vorschau und kann ihn aendern oder verwerfen
 
 ### Credits
 
@@ -319,47 +328,50 @@ Nach "Weiter": Ladeindikator, dann Rueckfragen als Radio-Gruppen. Nach "Generier
 1. System-Prompt schreiben (Tool-Liste, Qualitaetsregeln, Format-Specs)
 2. Zod-Schemas fuer structured output definieren
 3. API-Endpoints mit `generateObject()`, Rate Limiting, Auth
-4. Manuell testen (curl/Postman)
 
-### Milestone 2: Wizard-Komponente
-
-**Dateien:**
-- `src/components/workspace/workspace-generator-wizard.tsx` — Der 2-Schritt-Wizard
-
-**Tasks:**
-1. Wizard mit 3 States: `describe` → `questions` → `generating`
-2. API-Integration (fetch → render questions → fetch → callback)
-3. Loading-States, Error-Handling
-4. `onComplete` Callback mit generiertem Expert/Skill
-
-### Milestone 3: Editor-Integration
+### Milestone 2: Preview-Komponenten
 
 **Dateien:**
-- `src/components/workspace/workspace-expert-editor.tsx` — Toggle + Prefill
-- `src/components/workspace/workspace-skill-editor.tsx` — Toggle + Prefill
+- `src/components/workspace/workspace-expert-preview.tsx` — Expert-Vorschau mit Inline-Edit
+- `src/components/workspace/workspace-skill-preview.tsx` — Skill-Vorschau mit Inline-Edit
 
 **Tasks:**
-1. Neuer State `mode: "manual" | "generator"` im Editor
-2. "Mit KI erstellen" / "Selbst schreiben" Toggle
-3. Wizard-`onComplete` fuellt Formular-Felder vor
-4. "Nochmal generieren" Button im vorausgefuellten Formular
-5. Edge Cases: Slug-Kollision, Validation-Fehler nach Generierung
+1. Strukturierte Vorschau mit Read-Only-Feldern
+2. Inline-Edit Toggle pro Feld (✏ → ✓)
+3. System-Prompt als formatiertes `pre` / Textarea Toggle
+4. Save-Handler (POST fuer Neu, PATCH/PUT fuer Edit)
+5. Validation-Fehler anzeigen (Slug-Kollision, Pflichtfelder)
+
+### Milestone 3: Wizard + Editor-Umbau
+
+**Dateien:**
+- `src/components/workspace/workspace-generator-wizard.tsx` — 2-Schritt-Wizard
+- `src/components/workspace/workspace-expert-editor.tsx` — Umbau: Wizard → Preview
+- `src/components/workspace/workspace-skill-editor.tsx` — Umbau: Wizard → Preview
+
+**Tasks:**
+1. Wizard-Komponente: `describe` → `questions` → `generating` States
+2. Expert-Editor: Neu = Wizard → Preview. Edit = Preview direkt.
+3. Skill-Editor: Gleicher Umbau.
+4. "Nochmal generieren" → Zurueck zum Wizard mit vorheriger Beschreibung
+5. Loading-States, Error-Handling
 
 ### Milestone 4: Review + Polish
 
 **Tasks:**
-1. Qualitaet der generierten Prompts pruefen (5-10 verschiedene Use Cases)
+1. Qualitaet der generierten Prompts pruefen (5-10 verschiedene Use Cases testen)
 2. Generator-System-Prompt iterieren basierend auf Ergebnissen
 3. Mobile-Responsiveness testen
-4. Error-States und Edge Cases (Netzwerkfehler, leere Beschreibung, Rate Limit)
+4. Edge Cases: Netzwerkfehler, leere Beschreibung, Rate Limit, Slug-Kollision
 
 ---
 
-## 8. Offene Fragen
+## 8. Offene Fragen (entschieden)
 
-| Frage | Empfehlung |
-|-------|-----------|
+| Frage | Entscheidung |
+|-------|-------------|
+| Manueller Editor fuer User? | Nein. KI-Wizard ist der einzige Erstellungspfad. Manuell bleibt im Admin-Panel. |
+| Tool-Auswahl exponieren? | Nein. KI entscheidet implizit ueber den System-Prompt. |
 | Quicktask-Generierung in v1? | Nein. Field-Schema + Template-Variablen sind zu komplex. Spaeter als v2. |
-| Soll der Generator bestehende Experts als Kontext bekommen? | Nein in v1. Haelt den Prompt schlank. Spaeter: "Aehnlich wie mein Expert X" als Option. |
-| Braucht der Wizard mehr als 2-3 Rueckfragen? | Nein. Mehr Fragen = hoeherer Abbruch. Die KI soll mit wenig Input gute Ergebnisse liefern. |
+| "Mit KI anpassen" beim Bearbeiten? | Nicht in v1. User editiert direkt in der Vorschau. Spaeter als v1.1. |
 | Credits fuer Generator-Calls? | Ja, wenn Credit-System aktiv. Sonst: Rate Limit reicht. |

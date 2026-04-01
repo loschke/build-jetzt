@@ -3,6 +3,16 @@
 import { useState, useCallback } from "react"
 import { Plus, Trash2, Pencil, X, Globe } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { WorkspaceExpertEditor } from "./workspace-expert-editor"
 
 interface ExpertRow {
@@ -30,6 +40,7 @@ export function WorkspaceExperts({ initialExperts }: WorkspaceExpertsProps) {
   const [view, setView] = useState<"list" | "create" | "edit">("list")
   const [editingExpertId, setEditingExpertId] = useState<string | null>(null)
   const [loading, setLoading] = useState<string | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
 
   const refreshExperts = useCallback(async () => {
     try {
@@ -43,11 +54,12 @@ export function WorkspaceExperts({ initialExperts }: WorkspaceExpertsProps) {
     }
   }, [])
 
-  const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`"${name}" wirklich löschen?`)) return
-    setLoading(id)
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return
+    setLoading(deleteTarget.id)
+    setDeleteTarget(null)
     try {
-      const res = await fetch(`/api/experts/${id}`, { method: "DELETE" })
+      const res = await fetch(`/api/experts/${deleteTarget.id}`, { method: "DELETE" })
       if (res.ok) await refreshExperts()
     } catch {
       // silent
@@ -153,7 +165,7 @@ export function WorkspaceExperts({ initialExperts }: WorkspaceExpertsProps) {
                         size="icon"
                         className="size-8 text-destructive hover:text-destructive"
                         disabled={loading === expert.id}
-                        onClick={() => handleDelete(expert.id, expert.name)}
+                        onClick={() => setDeleteTarget({ id: expert.id, name: expert.name })}
                       >
                         <Trash2 className="size-4" />
                       </Button>
@@ -165,6 +177,23 @@ export function WorkspaceExperts({ initialExperts }: WorkspaceExpertsProps) {
           </table>
         </div>
       )}
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Expert löschen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              &ldquo;{deleteTarget?.name}&rdquo; wird unwiderruflich gelöscht.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Löschen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

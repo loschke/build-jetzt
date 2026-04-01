@@ -1,14 +1,14 @@
 # Database
 
-Guidance fuer `src/lib/db/` — Schema, Queries, Migrations und Seeding.
+Guidance für `src/lib/db/` — Schema, Queries, Migrations und Seeding.
 
 ## Schema-Konventionen
 
 - **PKs:** nanoid text (nicht UUID, nicht auto-increment)
-- **User-ID:** Logto `sub` claim als text. Kein FK zu users-Tabelle noetig.
-- **Arrays:** `jsonb` fuer Listen (skillSlugs, allowedTools, mcpServerIds, categories)
+- **User-ID:** Logto `sub` claim als text. Kein FK zu users-Tabelle nötig.
+- **Arrays:** `jsonb` für Listen (skillSlugs, allowedTools, mcpServerIds, categories)
 - **Timestamps:** `createdAt` (default now), `updatedAt` (manuell setzen bei Mutations)
-- **Soft Delete:** Nicht verwendet. Loeschen ist endgueltig.
+- **Soft Delete:** Nicht verwendet. Löschen ist endgültig.
 - **Naming:** Tabellen snake_case plural (credit_transactions), Spalten camelCase in Drizzle
 
 ## Schema-Dateien (`schema/`)
@@ -18,7 +18,7 @@ Guidance fuer `src/lib/db/` — Schema, Queries, Migrations und Seeding.
 | `users.ts` | users (creditsBalance, customInstructions, memoryEnabled, defaultModelId) |
 | `chats.ts` | chats (userId, expertId, projectId, title, isPinned, modelId) |
 | `messages.ts` | messages (chatId FK cascade, role, parts jsonb, metadata jsonb) |
-| `artifacts.ts` | artifacts (chatId, type, title, content, version fuer Optimistic Locking) |
+| `artifacts.ts` | artifacts (chatId, type, title, content, version für Optimistic Locking) |
 | `experts.ts` | experts (userId nullable=global, slug unique, systemPrompt, skillSlugs) |
 | `skills.ts` | skills (slug unique, mode skill/quicktask, fields jsonb, content) |
 | `models.ts` | models (modelId unique, inputPrice/outputPrice jsonb, capabilities) |
@@ -34,15 +34,15 @@ Re-Export via `schema/index.ts`.
 ## Query-Pattern
 
 - Alle Queries in `queries/` als benannte Funktionen, nicht inline in Route-Handlern.
-- **userId-Scoping:** Alle Mutations (update, delete) pruefen `WHERE userId = ?` (defense-in-depth).
+- **userId-Scoping:** Alle Mutations (update, delete) prüfen `WHERE userId = ?` (defense-in-depth).
 - **Pagination:** SQL-Level `LIMIT/OFFSET`, kein JS-Slicing.
-- **Atomare Transaktionen:** `db.transaction()` fuer Credit-Deduktion (Balance + Audit-Log).
+- **Atomare Transaktionen:** `db.transaction()` für Credit-Deduktion (Balance + Audit-Log).
 
 ## Cache-Pattern
 
 DB-backed Konfigurationen nutzen Module-Level TTL-Caches:
 
-| Entitaet | TTL | Cache-Funktion | Invalidierung |
+| Entität | TTL | Cache-Funktion | Invalidierung |
 |----------|-----|----------------|---------------|
 | Models | 60s | `getModels()` | `clearModelCache()` |
 | Skills | 60s | `discoverSkills()` | `clearSkillCache()` |
@@ -50,7 +50,7 @@ DB-backed Konfigurationen nutzen Module-Level TTL-Caches:
 | MCP-Server | 60s | `getMcpServers()` | `clearMcpServerCache()` |
 | User-Prefs | 60s | `getUserPreferences()` | Kein expliziter Clear |
 
-Admin-Mutations rufen `clearCache()` auf → Aenderungen wirksam in Sekunden.
+Admin-Mutations rufen `clearCache()` auf → Änderungen wirksam in Sekunden.
 
 ## Migration-Workflow
 
@@ -72,7 +72,7 @@ pnpm db:seed
 Reihenfolge: Experts → Skills → Models → MCP-Server.
 Idempotent via upsert (by slug/modelId/serverId). Kann beliebig oft laufen.
 
-Alle Entitaeten werden aus Markdown-Dateien in `seeds/` gelesen:
+Alle Entitäten werden aus Markdown-Dateien in `seeds/` gelesen:
 
 - Experts: `seeds/experts/*.md` (Frontmatter + System-Prompt als Content)
 - Skills: `seeds/skills/*.md` (Frontmatter + Skill-Content als Content)

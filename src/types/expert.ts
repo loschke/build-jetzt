@@ -63,4 +63,5 @@ export interface ExpertPublic {
   isPublic: boolean
   sortOrder: number
   isGlobal: boolean
+  isOwned?: boolean
 }

@@ -27,6 +27,7 @@ export async function GET() {
     isPublic: e.isPublic,
     sortOrder: e.sortOrder,
     isGlobal: e.userId === null,
+    isOwned: e.userId === user.id,
   }))
 
   return new Response(JSON.stringify(data), {

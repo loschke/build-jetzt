@@ -12,6 +12,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 interface ProjectRow {
   id: string
@@ -33,6 +43,7 @@ export function WorkspaceProjects({ initialProjects }: WorkspaceProjectsProps) {
   const [editingProject, setEditingProject] = useState<ProjectRow | null>(null)
   const [loading, setLoading] = useState<string | null>(null)
   const [membersProjectId, setMembersProjectId] = useState<string | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
 
   const refreshProjects = useCallback(async () => {
     try {
@@ -46,11 +57,12 @@ export function WorkspaceProjects({ initialProjects }: WorkspaceProjectsProps) {
     }
   }, [])
 
-  const handleDelete = async (id: string, name: string) => {
-    if (!confirm(`Projekt "${name}" wirklich löschen? Chats werden nicht gelöscht.`)) return
-    setLoading(id)
+  const handleDeleteConfirm = async () => {
+    if (!deleteTarget) return
+    setLoading(deleteTarget.id)
+    setDeleteTarget(null)
     try {
-      const res = await fetch(`/api/projects/${id}`, { method: "DELETE" })
+      const res = await fetch(`/api/projects/${deleteTarget.id}`, { method: "DELETE" })
       if (res.ok) await refreshProjects()
     } catch {
       // silent
@@ -175,7 +187,7 @@ export function WorkspaceProjects({ initialProjects }: WorkspaceProjectsProps) {
                         size="icon"
                         className="size-8 text-destructive hover:text-destructive"
                         disabled={loading === project.id}
-                        onClick={() => handleDelete(project.id, project.name)}
+                        onClick={() => setDeleteTarget({ id: project.id, name: project.name })}
                       >
                         <Trash2 className="size-4" />
                       </Button>
@@ -192,6 +204,23 @@ export function WorkspaceProjects({ initialProjects }: WorkspaceProjectsProps) {
         projectId={membersProjectId}
         onClose={() => setMembersProjectId(null)}
       />
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(open) => { if (!open) setDeleteTarget(null) }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Projekt löschen?</AlertDialogTitle>
+            <AlertDialogDescription>
+              &ldquo;{deleteTarget?.name}&rdquo; wird unwiderruflich gelöscht. Bestehende Chats bleiben erhalten.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Abbrechen</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteConfirm} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Löschen
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

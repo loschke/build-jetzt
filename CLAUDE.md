@@ -1,10 +1,10 @@
 # CLAUDE.md
 
-> Projektkontext fuer Claude Code. Beschreibt Architektur, Konventionen und Struktur der KI-Chat-Plattform.
+> Projektkontext für Claude Code. Beschreibt Architektur, Konventionen und Struktur der KI-Chat-Plattform.
 
 ---
 
-## Projekt-Ueberblick
+## Projekt-Überblick
 
 **Repository:** `loschke-chat`
 **Zweck:** KI-Chat-Plattform mit Expert-System, Artifact-Erstellung, Memory, Bildgenerierung, YouTube-Suche/Analyse, Text-to-Speech, Deep Research, Websuche und MCP-Integration.
@@ -26,11 +26,11 @@
 - `/api/user/*` — User-Einstellungen, Memories
 - `/api/business-mode/*` — PII-Check, Redaction, Consent
 - `/share/[token]` — Geteilter Chat (public, read-only)
-- `/api/chats/[chatId]/share` — Share erstellen/widerrufen/pruefen
-- `/api/share/[token]` — Public Chat-Daten fuer Share-Ansicht
+- `/api/chats/[chatId]/share` — Share erstellen/widerrufen/prüfen
+- `/api/share/[token]` — Public Chat-Daten für Share-Ansicht
 - `/api/cron/retention` — Chat Retention Cron (CRON_SECRET Auth)
 - `/api/deep-research/[interactionId]` — Deep Research Polling + Completion
-- `/api/admin/*` — Admin CRUD + Export fuer Skills, Experts, Models, MCP-Server, Credits, Users
+- `/api/admin/*` — Admin CRUD + Export für Skills, Experts, Models, MCP-Server, Credits, Users
 
 ---
 
@@ -40,13 +40,13 @@
 
 ### Wann recherchieren?
 
-1. **Zu Beginn jedes groesseren Features** — context7 MCP fuer die relevanten Libraries abfragen
+1. **Zu Beginn jedes größeren Features** — context7 MCP für die relevanten Libraries abfragen
 2. **Bei unerwarteten Type-Errors oder fehlenden APIs** — sofort recherchieren, nicht raten
-3. **Bei Unsicherheit ueber API-Patterns** — lieber einmal zu viel nachschlagen als einen Workaround bauen
+3. **Bei Unsicherheit über API-Patterns** — lieber einmal zu viel nachschlagen als einen Workaround bauen
 
 ### Wie recherchieren?
 
-1. **Context7 MCP** (primaer): `resolve-library-id` → `query-docs` fuer:
+1. **Context7 MCP** (primär): `resolve-library-id` → `query-docs` für:
    - AI SDK: `/vercel/ai` oder `/websites/ai-sdk_dev`
    - Next.js: `/vercel/next.js`
    - Drizzle ORM: entsprechende Library-ID
@@ -56,7 +56,7 @@
 
 ### Antiregel
 
-**NIEMALS** eine unbekannte API erraten und dann einen Workaround bauen, wenn der erste Versuch fehlschlaegt.
+**NIEMALS** eine unbekannte API erraten und dann einen Workaround bauen, wenn der erste Versuch fehlschlägt.
 
 ---
 
@@ -95,16 +95,16 @@
 
 ### TypeScript
 
-- **Strict mode** aktiv. Keine `any` Types, ausser in absoluten Ausnahmen mit `// eslint-disable-next-line` und Begruendung.
-- Interfaces fuer Props, Config-Objekte und API-Responses definieren.
-- Zod fuer Runtime-Validierung von externen Daten (API Responses, Form Input).
+- **Strict mode** aktiv. Keine `any` Types, außer in absoluten Ausnahmen mit `// eslint-disable-next-line` und Begründung.
+- Interfaces für Props, Config-Objekte und API-Responses definieren.
+- Zod für Runtime-Validierung von externen Daten (API Responses, Form Input).
 - Utility Types (`Pick`, `Omit`, `Partial`) nutzen statt Typen zu duplizieren.
 
 ### Komponenten
 
-- **Server Components** als Default. `"use client"` nur wenn noetig (Event Handler, Hooks, Browser APIs).
-- Client Components so klein wie moeglich halten.
-- Props-Interface immer direkt ueber der Komponente definieren.
+- **Server Components** als Default. `"use client"` nur wenn nötig (Event Handler, Hooks, Browser APIs).
+- Client Components so klein wie möglich halten.
+- Props-Interface immer direkt über der Komponente definieren.
 - shadcn/ui und AI Elements NICHT modifizieren. Wrapper-Komponenten bauen.
 
 ### Dateistruktur
@@ -121,28 +121,28 @@
 - Dateien: `kebab-case.tsx` (Next.js Konvention)
 - Komponenten: `PascalCase`
 - Funktionen/Variables: `camelCase`
-- Konstanten: `UPPER_SNAKE_CASE` nur fuer echte Konstanten (ENV, Magic Numbers)
-- CSS Klassen: Tailwind Utilities, keine Custom Classes ausser in `globals.css`
+- Konstanten: `UPPER_SNAKE_CASE` nur für echte Konstanten (ENV, Magic Numbers)
+- CSS Klassen: Tailwind Utilities, keine Custom Classes außer in `globals.css`
 
 ### Imports
 
 - Absolute Imports via `@/*` Alias (zeigt auf `src/`)
 - Reihenfolge: React/Next → External Libraries → Internal (`@/`) → Relative (`./`)
-- Keine Default Exports ausser fuer Page/Layout Komponenten (Next.js Anforderung)
+- Keine Default Exports außer für Page/Layout Komponenten (Next.js Anforderung)
 
 ### Error Handling
 
 - Async Operationen immer mit try/catch.
 - User-facing Errors: Klare deutsche Fehlermeldungen, keine technischen Details.
 - Next.js `error.tsx` Boundaries in relevanten Route-Segmenten.
-- `loading.tsx` fuer Suspense-States in jeder Route.
+- `loading.tsx` für Suspense-States in jeder Route.
 
 ### Performance
 
-- Images ueber `next/image` mit definierten Dimensions.
-- Dynamische Imports (`next/dynamic`) fuer schwere Client Components.
-- Keine Client-Side Data Fetching wenn Server Components moeglich.
-- `Suspense` Boundaries fuer granulares Streaming.
+- Images über `next/image` mit definierten Dimensions.
+- Dynamische Imports (`next/dynamic`) für schwere Client Components.
+- Keine Client-Side Data Fetching wenn Server Components möglich.
+- `Suspense` Boundaries für granulares Streaming.
 
 ---
 
@@ -150,7 +150,7 @@
 
 - **Pattern:** `@logto/next` Server Actions Pattern (App Router, NICHT Pages Router)
 - **Proxy:** `src/proxy.ts` statt `middleware.ts` (Next.js 16). Export: `proxy()`, Node.js Runtime.
-- **Dev-Bypass:** Wenn `LOGTO_APP_ID` nicht gesetzt → alles frei zugaenglich.
+- **Dev-Bypass:** Wenn `LOGTO_APP_ID` nicht gesetzt → alles frei zugänglich.
 - **User-Helper:** `getUser()` (nur Claims, kein HTTP-Call) vs. `getUserFull()` (mit fetchUserInfo).
 - **User-ID:** Logto `sub` claim als Foreign Key. Nie eigene ID generieren.
 - **Redirect-Throw:** `signIn()`/`signOut()` werfen intern `redirect()`. In try/catch: Error mit `"digest"` Property re-thrown.
@@ -176,8 +176,8 @@
 
 - **Theme:** Light + Dark Mode via `next-themes`. Feature-Flag: `NEXT_PUBLIC_DARK_MODE`.
 - **Tailwind v4:** CSS-first mit `@theme` Direktiven (kein `tailwind.config.ts`).
-- **Streamdown:** Safelist in `src/lib/streamdown-safelist.ts`. KEIN `@source` fuer node_modules (crasht Turbopack auf Windows).
-- **Chat-Prose:** `.chat-prose` Scope in `globals.css` fuer Chat-Typografie.
+- **Streamdown:** Safelist in `src/lib/streamdown-safelist.ts`. KEIN `@source` für node_modules (crasht Turbopack auf Windows).
+- **Chat-Prose:** `.chat-prose` Scope in `globals.css` für Chat-Typografie.
 
 ### Elevation-Klassen (globals.css)
 
@@ -214,7 +214,7 @@ ChatShell (Server Component)
 ```
 
 **Chat-Route:** `/api/chat/route.ts` ist Orchestrator. Logik in 4 Modulen:
-- `resolve-context.ts` — Expert/Model/Skills/Memory-Aufloesung
+- `resolve-context.ts` — Expert/Model/Skills/Memory-Auflösung
 - `build-messages.ts` — Message-Transformation, Cache Control
 - `build-tools.ts` — Tool-Registry (bedingte Registrierung)
 - `persist.ts` — onFinish: Message Save, Usage, Credits, Title, Memory
@@ -231,11 +231,11 @@ Details: `src/app/api/CLAUDE.md` und `docs/system/technical-architecture.md`
 
 ## Next.js 16 Besonderheiten
 
-- **Turbopack ist Default** — kein `--turbopack` Flag noetig
+- **Turbopack ist Default** — kein `--turbopack` Flag nötig
 - **`proxy.ts` statt `middleware.ts`** — Export `proxy()`, Node.js Runtime
 - **Async Request APIs** — `cookies()`, `headers()`, `params`, `searchParams` sind nur noch async
 - **ESLint Flat Config** — `eslint.config.js` statt `.eslintrc`
-- **React 19.2** — View Transitions, `useEffectEvent`, Activity verfuegbar
+- **React 19.2** — View Transitions, `useEffectEvent`, Activity verfügbar
 - **Keine `next/legacy/image`** — Nur `next/image` verwenden
 
 ---
@@ -266,15 +266,15 @@ Zentral in `src/config/features.ts`. Drei Patterns:
 
 Details: `docs/system/feature-flags-konfiguration.md`
 
-### EU/Local-Kompatibilitaet (WICHTIG)
+### EU/Local-Kompatibilität (WICHTIG)
 
-Die Plattform unterstuetzt drei Deployment-Profile: SaaS (Gateway), EU (Direct), Local (Ollama/LiteLLM).
-**Bei jedem neuen Feature pruefen:**
+Die Plattform unterstützt drei Deployment-Profile: SaaS (Gateway), EU (Direct), Local (Ollama/LiteLLM).
+**Bei jedem neuen Feature prüfen:**
 
-- Externe Provider-Abhaengigkeit hinter Feature Flag in `features.ts`
+- Externe Provider-Abhängigkeit hinter Feature Flag in `features.ts`
 - Tools bedingt registrieren in `build-tools.ts` (kein Tool ohne Feature-Guard)
-- LLM-Aufrufe ueber `resolveModel()` aus `model-resolver.ts`, nie direkt `gateway()`
-- Storage ueber S3-kompatible API, nicht R2-spezifisch
+- LLM-Aufrufe über `resolveModel()` aus `model-resolver.ts`, nie direkt `gateway()`
+- Storage über S3-kompatible API, nicht R2-spezifisch
 - Admin Features-Seite (`/admin/features`) mit Datenfluss-Info aktualisieren
 - `.env.example` und `.env.eu.example` synchron halten
 
@@ -282,21 +282,21 @@ Die Plattform unterstuetzt drei Deployment-Profile: SaaS (Gateway), EU (Direct),
 
 ## Security (Kurzfassung)
 
-- **Auth:** `requireAuth()` fuer User-Routes, `requireAdmin()` fuer Admin-Routes, `requireSuperAdmin()` fuer User-Management
+- **Auth:** `requireAuth()` für User-Routes, `requireAdmin()` für Admin-Routes, `requireSuperAdmin()` für User-Management
 - **Public Routes:** `/`, `/api/auth/*`, `/share/*`, `/api/share/*` (in `proxy.ts`)
 - **Rate-Limiting:** In-Memory Token Bucket (chat: 20/min, api: 60/min, upload: 10/min)
 - **Input-Validierung:** chatId max 20 Zeichen `[a-zA-Z0-9_-]`, Messages max 2000 Zeichen, Body max 5MB
 - **CSP:** `script-src 'self' 'unsafe-inline'`, kein `unsafe-eval`. `connect-src` braucht `blob:`.
 - **Artifact-Sandbox:** HTML-Preview in iframe mit `sandbox="allow-scripts"`, CSP Meta-Tag Injection
-- **SSRF:** `isAllowedUrl()` fuer web_fetch und MCP-URLs
+- **SSRF:** `isAllowedUrl()` für web_fetch und MCP-URLs
 - **DB:** userId-Scoping auf allen Mutations (defense-in-depth)
-- **Credits:** Atomare `db.transaction()` fuer Balance + Audit-Log
+- **Credits:** Atomare `db.transaction()` für Balance + Audit-Log
 
 ---
 
 ## Environment
 
-Alle ENV-Variablen in `.env.example`. Minimum fuer funktionierende Instanz:
+Alle ENV-Variablen in `.env.example`. Minimum für funktionierende Instanz:
 
 ```bash
 LOGTO_APP_ID, LOGTO_APP_SECRET, LOGTO_ENDPOINT, LOGTO_BASE_URL, LOGTO_COOKIE_SECRET
@@ -318,16 +318,16 @@ Details: `docs/system/deployment-guide.md` und `docs/system/feature-flags-konfig
 | `docs/system/technical-architecture.md` | Technische Architektur (Tools, Skills, Experts, Memory, MCP, DB, onFinish-Flow) |
 | `docs/system/system-prompt-architektur.md` | System-Prompt-Aufbau (7 Layer, Stellschrauben) |
 | `docs/system/feature-flags-konfiguration.md` | Feature-Flags, ENV-Referenz, Tier-Baukasten |
-| `docs/system/platform-capabilities.md` | Nutzer-Perspektive (Marketing, Feature-Uebersicht) |
+| `docs/system/platform-capabilities.md` | Nutzer-Perspektive (Marketing, Feature-Übersicht) |
 | `docs/system/deployment-guide.md` | Deployment (Cloud + Self-Hosted + Multi-Instanz) |
 | `docs/system/admin-handbuch.md` | Admin-Handbuch (Skills, Experts, Models, MCP, Credits) |
 | `docs/system/collaboration-sharing.md` | Chat-Sharing und Collaboration |
 | `docs/system/credit-pricing-varianten.md` | Credit-System Preisgestaltung und Szenarien |
 | `docs/system/landing-kommunikation.md` | Landing-Page Kommunikation und Messaging |
-| `docs/system/tom-datenschutz.md` | Technische und Organisatorische Massnahmen (Art. 32 DSGVO) |
-| `docs/system/datenschutz-uebersicht.md` | Verarbeitungsverzeichnis, Rechtsgrundlagen, Auftragsverarbeiter |
-| `docs/system/data-retention-policy.md` | Loeschfristen und Aufbewahrungsregeln |
-| `docs/platform-overview.md` | Plattform-Uebersicht (High-Level) |
+| `docs/system/tom-datenschutz.md` | Technische und Organisatorische Maßnahmen (Art. 32 DSGVO) |
+| `docs/system/datenschutz-übersicht.md` | Verarbeitungsverzeichnis, Rechtsgrundlagen, Auftragsverarbeiter |
+| `docs/system/data-retention-policy.md` | Löschfristen und Aufbewahrungsregeln |
+| `docs/platform-overview.md` | Plattform-Übersicht (High-Level) |
 
 ### Weitere Ordner
 
