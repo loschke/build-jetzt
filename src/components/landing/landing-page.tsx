@@ -228,6 +228,10 @@ export function LandingPage() {
               Galerie-Ansicht mit allen Versionen. Zwei Bilder kombinieren
               geht auch
             </Bullet>
+            <Bullet>
+              Oder starte in der Design Library: 68 erprobte Prompt-Formeln
+              mit Beispielbildern. Stil wählen, Motiv beschreiben, fertig
+            </Bullet>
           </UseCase>
 
           <UseCase question="Schau dir mal die Website meines Kunden an und sag mir was auffällt">
@@ -295,8 +299,9 @@ export function LandingPage() {
             <p>
               Ich wollte einen Ort an dem ich recherchieren, gestalten,
               schreiben und analysieren kann, ohne zwischen Tools zu wechseln.
-              Bildgenerierung mit iterativer Galerie, YouTube-Suche mit
-              Video-Analyse, Google Search Grounding mit Inline-Quellen,
+              Bildgenerierung mit iterativer Galerie und Design Library
+              mit 68 Prompt-Formeln, YouTube-Suche mit Video-Analyse,
+              Google Search Grounding mit Inline-Quellen,
               UI-Design-Generierung auf Production-Niveau. 21 Werkzeuge, die
               die KI autonom einsetzt wenn die Aufgabe es erfordert.
             </p>
@@ -312,8 +317,9 @@ export function LandingPage() {
               Ein Code-Assistent der präzise und strukturiert denkt. Ein
               Content Writer der nie in KI-Sprech verfällt. Ein Researcher der
               gründlich ist statt schnell. Jeder mit eigener Temperatur,
-              eigenen Skills und eigenem Tool-Zugang. Plus die Möglichkeit
-              eigene zu erstellen.
+              eigenen Skills und eigenem Tool-Zugang. Und wer eigene braucht,
+              beschreibt einfach was der Expert können soll. Ein KI-Wizard
+              generiert den Rest.
             </p>
           </FeatureCard>
 
@@ -327,7 +333,8 @@ export function LandingPage() {
               ausfüllen, absenden, qualitätsgesichertes Ergebnis. Hinter jedem
               Quicktask steckt ein optimierter Prompt mit eigenem Modell und
               eigener Temperatur. Wiederholbar, konsistent, und jeder im Team
-              kann sie nutzen.
+              kann sie nutzen. Eigene Quicktasks lassen sich per KI-Wizard
+              in Minuten erstellen.
             </p>
           </FeatureCard>
 
@@ -565,7 +572,7 @@ export function LandingPage() {
               <Check>Deep Research mit Quellen</Check>
               <Check>Google Search Grounding</Check>
               <Check>Websuche (5 Provider)</Check>
-              <Check>Bildgenerierung + Iteration</Check>
+              <Check>Bildgenerierung + Design Library</Check>
               <Check>UI-Design-Generierung</Check>
               <Check>YouTube-Suche und Analyse</Check>
               <Check>Text-to-Speech (8 Stimmen)</Check>
@@ -577,7 +584,7 @@ export function LandingPage() {
             <h3 className="mb-4 font-bold">Plattform</h3>
             <ul className="space-y-2.5 text-sm text-muted-foreground">
               <Check>Collaboration und Chat-Sharing</Check>
-              <Check>User Workspace</Check>
+              <Check>User Workspace mit KI-Wizard</Check>
               <Check>Credit-System mit Audit-Log</Check>
               <Check>PII-Erkennung + Maskierung</Check>
               <Check>EU- und Self-Hosted Deployment</Check>
