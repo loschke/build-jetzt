@@ -9,6 +9,7 @@
 import { tool } from "ai"
 import { z } from "zod"
 import { startDeepResearch, registerInteractionOwner } from "@/lib/ai/deep-research"
+import { calculateDeepResearchCredits, formatCredits } from "@/lib/credits"
 import { getErrorMessage } from "@/lib/errors"
 import type { ToolRegistration } from "./registry"
 
@@ -16,13 +17,15 @@ import type { ToolRegistration } from "./registry"
  * Factory: creates a deep_research tool scoped to a chat + user.
  */
 export function deepResearchTool(chatId: string, userId: string) {
+  const creditCost = formatCredits(calculateDeepResearchCredits())
+
   return tool({
     description:
       "Start a comprehensive deep research task for complex, multi-faceted questions. " +
       "Use this when the user needs a detailed analysis, comparison study, market research, " +
       "or literature review that requires synthesizing many sources. " +
       "NOT for simple factual lookups (use web_search instead). " +
-      "Deep Research takes 5-12 minutes and costs ~50,000 credits. " +
+      `Deep Research takes 5-12 minutes and costs ~${creditCost} credits. ` +
       "CRITICAL: You MUST use ask_user to get explicit confirmation from the user BEFORE calling this tool.",
     inputSchema: z.object({
       query: z.string().min(10).max(2000).describe(
@@ -66,7 +69,7 @@ export function deepResearchTool(chatId: string, userId: string) {
       }
 
       // 3. Deduct credits after successful start (Google charges regardless from here)
-      const { deductToolCredits, calculateDeepResearchCredits } = await import("@/lib/credits")
+      const { deductToolCredits } = await import("@/lib/credits")
       const creditError = await deductToolCredits(userId, calculateDeepResearchCredits(), {
         chatId, description: "Deep Research", toolName: "deep_research",
       })
