@@ -113,6 +113,8 @@ interface GetArtifactsByUserIdOptions {
   type?: string
   /** Filter by metadata key presence (e.g. "deepResearch" for research reports) */
   metadataTag?: string
+  /** Filter artifacts by a specific chat */
+  chatId?: string
 }
 
 export async function getArtifactsByUserId(
@@ -120,9 +122,12 @@ export async function getArtifactsByUserId(
   options: GetArtifactsByUserIdOptions = {}
 ) {
   const db = getDb()
-  const { limit = 24, offset = 0, type, metadataTag } = options
+  const { limit = 24, offset = 0, type, metadataTag, chatId } = options
 
   const conditions = [eq(chats.userId, userId)]
+  if (chatId) {
+    conditions.push(eq(artifacts.chatId, chatId))
+  }
   if (type) {
     conditions.push(eq(artifacts.type, type))
   }
@@ -153,6 +158,65 @@ export async function getArtifactsByUserId(
   const hasMore = rows.length > limit
   return {
     artifacts: hasMore ? rows.slice(0, limit) : rows,
+    hasMore,
+  }
+}
+
+export interface ArtifactGroup {
+  chatId: string
+  chatTitle: string | null
+  artifactCount: number
+  lastArtifactAt: Date
+  types: string[]
+  previewFileUrl: string | null
+}
+
+interface GetArtifactGroupedByChatOptions {
+  limit?: number
+  offset?: number
+  type?: string
+  metadataTag?: string
+}
+
+export async function getArtifactGroupedByChat(
+  userId: string,
+  options: GetArtifactGroupedByChatOptions = {}
+) {
+  const db = getDb()
+  const { limit = 24, offset = 0, type, metadataTag } = options
+
+  const conditions = [eq(chats.userId, userId)]
+  if (type) {
+    conditions.push(eq(artifacts.type, type))
+  }
+  if (metadataTag) {
+    conditions.push(sql`${artifacts.metadata}->>${metadataTag} IS NOT NULL`)
+  }
+
+  const rows = await db
+    .select({
+      chatId: artifacts.chatId,
+      chatTitle: chats.title,
+      artifactCount: sql<number>`count(*)::int`.as("artifactCount"),
+      lastArtifactAt: sql<Date>`max(${artifacts.createdAt})`.as("lastArtifactAt"),
+      types: sql<string[]>`array_agg(distinct ${artifacts.type})`.as("types"),
+      previewFileUrl: sql<string | null>`(
+        SELECT a2."fileUrl" FROM artifacts a2
+        WHERE a2."chatId" = ${artifacts.chatId} AND a2."type" = 'image' AND a2."fileUrl" IS NOT NULL
+        ORDER BY a2."createdAt" DESC LIMIT 1
+      )`.as("previewFileUrl"),
+    })
+    .from(artifacts)
+    .innerJoin(chats, eq(artifacts.chatId, chats.id))
+    .where(and(...conditions))
+    .groupBy(artifacts.chatId, chats.title)
+    .orderBy(sql`max(${artifacts.createdAt}) desc`)
+    .limit(limit + 1)
+    .offset(offset)
+
+  const hasMore = rows.length > limit
+  return {
+    groups: hasMore ? rows.slice(0, limit) : rows,
     hasMore,
   }
 }

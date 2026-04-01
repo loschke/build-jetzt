@@ -1,6 +1,6 @@
 import { describe, it } from "node:test";
 import assert from "node:assert";
-import { validateMagicBytes } from "./validation.ts";
+import { validateMagicBytes } from "./validation";
 
 describe("validateMagicBytes", () => {
   it("should return true for valid PNG magic bytes", () => {

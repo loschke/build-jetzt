@@ -1,10 +1,11 @@
 import { requireAuth } from "@/lib/api-guards"
-import { getArtifactsByUserId } from "@/lib/db/queries/artifacts"
+import { getArtifactsByUserId, getArtifactGroupedByChat } from "@/lib/db/queries/artifacts"
 import { checkRateLimit, RATE_LIMITS, rateLimitResponse } from "@/lib/rate-limit"
 import { DEEP_RESEARCH_TAG } from "@/lib/ai/deep-research"
 
 const ALLOWED_TYPES = new Set(["markdown", "html", "code", "quiz", "review", "image"])
 const ALLOWED_TAGS = new Set([DEEP_RESEARCH_TAG])
+const CHAT_ID_PATTERN = /^[a-zA-Z0-9_-]{1,20}$/
 
 export async function GET(request: Request) {
   const auth = await requireAuth()
@@ -20,6 +21,8 @@ export async function GET(request: Request) {
   const offset = Math.max(parseInt(searchParams.get("offset") ?? "0", 10) || 0, 0)
   const type = searchParams.get("type") ?? undefined
   const metadataTag = searchParams.get("tag") ?? undefined
+  const groupBy = searchParams.get("groupBy") ?? undefined
+  const chatId = searchParams.get("chatId") ?? undefined
 
   if (type && !ALLOWED_TYPES.has(type)) {
     return Response.json({ error: "Invalid type filter" }, { status: 400 })
@@ -29,7 +32,18 @@ export async function GET(request: Request) {
     return Response.json({ error: "Invalid tag filter" }, { status: 400 })
   }
 
-  const result = await getArtifactsByUserId(auth.user.id, { limit, offset, type, metadataTag })
+  if (chatId && !CHAT_ID_PATTERN.test(chatId)) {
+    return Response.json({ error: "Invalid chatId" }, { status: 400 })
+  }
+
+  if (groupBy === "chat") {
+    const result = await getArtifactGroupedByChat(auth.user.id, { limit, offset, type, metadataTag })
+    return Response.json(result, {
+      headers: { "Cache-Control": "private, max-age=10" },
+    })
+  }
+
+  const result = await getArtifactsByUserId(auth.user.id, { limit, offset, type, metadataTag, chatId })
   return Response.json(result, {
     headers: { "Cache-Control": "private, max-age=10" },
   })

@@ -14,6 +14,9 @@ import {
   Loader2,
   Info,
   FlaskConical,
+  LayoutGrid,
+  FolderOpen,
+  ArrowLeft,
   type LucideIcon,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -30,6 +33,15 @@ interface ArtifactItem {
   fileUrl: string | null
   createdAt: string
   updatedAt: string
+}
+
+interface ArtifactGroup {
+  chatId: string
+  chatTitle: string | null
+  artifactCount: number
+  lastArtifactAt: string
+  types: string[]
+  previewFileUrl: string | null
 }
 
 const TYPE_ICON_MAP: Record<string, LucideIcon> = {
@@ -101,13 +113,22 @@ function formatRelativeDate(dateStr: string): string {
 
 export function ArtifactsOverview() {
   const router = useRouter()
+  const [viewMode, setViewMode] = useState<"flat" | "grouped">("flat")
   const [artifacts, setArtifacts] = useState<ArtifactItem[]>([])
+  const [groups, setGroups] = useState<ArtifactGroup[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isLoadingMore, setIsLoadingMore] = useState(false)
   const [hasMore, setHasMore] = useState(false)
   const [typeFilter, setTypeFilter] = useState<string | null>(null)
   const [offset, setOffset] = useState(0)
+  // Detail view: when a group is selected
+  const [selectedGroup, setSelectedGroup] = useState<ArtifactGroup | null>(null)
+  const [detailArtifacts, setDetailArtifacts] = useState<ArtifactItem[]>([])
+  const [detailLoading, setDetailLoading] = useState(false)
+  const [detailHasMore, setDetailHasMore] = useState(false)
+  const [detailOffset, setDetailOffset] = useState(0)
 
+  // Flat view fetch
   const fetchArtifacts = useCallback(async (filter: string | null, newOffset: number, append: boolean) => {
     const params = new URLSearchParams({ limit: "24", offset: String(newOffset) })
     if (filter === "research") {
@@ -128,28 +149,124 @@ export function ArtifactsOverview() {
     }
   }, [])
 
+  // Grouped view fetch
+  const fetchGroups = useCallback(async (filter: string | null, newOffset: number, append: boolean) => {
+    const params = new URLSearchParams({ limit: "24", offset: String(newOffset), groupBy: "chat" })
+    if (filter === "research") {
+      params.set("tag", DEEP_RESEARCH_TAG)
+    } else if (filter) {
+      params.set("type", filter)
+    }
+
+    try {
+      const res = await fetch(`/api/artifacts?${params}`)
+      if (res.ok) {
+        const data = await res.json()
+        setGroups((prev) => append ? [...prev, ...data.groups] : data.groups)
+        setHasMore(data.hasMore)
+      }
+    } catch {
+      // Silently fail
+    }
+  }, [])
+
+  // Detail view fetch (artifacts for a specific chat)
+  const fetchDetailArtifacts = useCallback(async (chatId: string, filter: string | null, newOffset: number, append: boolean) => {
+    const params = new URLSearchParams({ limit: "24", offset: String(newOffset), chatId })
+    if (filter === "research") {
+      params.set("tag", DEEP_RESEARCH_TAG)
+    } else if (filter) {
+      params.set("type", filter)
+    }
+
+    try {
+      const res = await fetch(`/api/artifacts?${params}`)
+      if (res.ok) {
+        const data = await res.json()
+        setDetailArtifacts((prev) => append ? [...prev, ...data.artifacts] : data.artifacts)
+        setDetailHasMore(data.hasMore)
+      }
+    } catch {
+      // Silently fail
+    }
+  }, [])
+
+  // Main data load on filter or viewMode change
   useEffect(() => {
+    if (selectedGroup) return // Don't refetch when in detail view
     setIsLoading(true)
     setOffset(0)
-    fetchArtifacts(typeFilter, 0, false).finally(() => setIsLoading(false))
-  }, [typeFilter, fetchArtifacts])
+    if (viewMode === "grouped") {
+      fetchGroups(typeFilter, 0, false).finally(() => setIsLoading(false))
+    } else {
+      fetchArtifacts(typeFilter, 0, false).finally(() => setIsLoading(false))
+    }
+  }, [typeFilter, viewMode, selectedGroup, fetchArtifacts, fetchGroups])
 
   const loadMore = useCallback(async () => {
     const newOffset = offset + 24
     setIsLoadingMore(true)
     setOffset(newOffset)
-    await fetchArtifacts(typeFilter, newOffset, true)
+    if (viewMode === "grouped") {
+      await fetchGroups(typeFilter, newOffset, true)
+    } else {
+      await fetchArtifacts(typeFilter, newOffset, true)
+    }
     setIsLoadingMore(false)
-  }, [offset, typeFilter, fetchArtifacts])
+  }, [offset, typeFilter, viewMode, fetchArtifacts, fetchGroups])
+
+  const loadMoreDetail = useCallback(async () => {
+    if (!selectedGroup) return
+    const newOffset = detailOffset + 24
+    setIsLoadingMore(true)
+    setDetailOffset(newOffset)
+    await fetchDetailArtifacts(selectedGroup.chatId, typeFilter, newOffset, true)
+    setIsLoadingMore(false)
+  }, [detailOffset, selectedGroup, typeFilter, fetchDetailArtifacts])
 
   const handleCardClick = useCallback((artifact: ArtifactItem) => {
     if (artifact.type === "audio") {
-      // Audio has no panel view — navigate to the chat where the inline player is visible
       router.push(`/c/${artifact.chatId}`)
     } else {
       router.push(`/c/${artifact.chatId}?artifact=${artifact.id}`)
     }
   }, [router])
+
+  const handleGroupClick = useCallback((group: ArtifactGroup) => {
+    setSelectedGroup(group)
+    setDetailArtifacts([])
+    setDetailOffset(0)
+    setDetailLoading(true)
+    fetchDetailArtifacts(group.chatId, typeFilter, 0, false).finally(() => setDetailLoading(false))
+  }, [typeFilter, fetchDetailArtifacts])
+
+  const handleBackToGroups = useCallback(() => {
+    setSelectedGroup(null)
+    setDetailArtifacts([])
+    setDetailOffset(0)
+    setDetailHasMore(false)
+  }, [])
+
+  const handleFilterChange = useCallback((filter: string | null) => {
+    setTypeFilter(filter)
+    // Reset detail view when filter changes
+    if (selectedGroup) {
+      setSelectedGroup(null)
+      setDetailArtifacts([])
+    }
+  }, [selectedGroup])
+
+  const handleViewModeChange = useCallback((mode: "flat" | "grouped") => {
+    setViewMode(mode)
+    setSelectedGroup(null)
+    setDetailArtifacts([])
+  }, [])
+
+  // Determine which empty/loading/content state to show
+  const isDetailView = viewMode === "grouped" && selectedGroup !== null
+  const currentLoading = isDetailView ? detailLoading : isLoading
+  const currentItems = isDetailView ? detailArtifacts : artifacts
+  const currentHasMore = isDetailView ? detailHasMore : hasMore
 
   return (
     <div className="flex h-full flex-col">
@@ -167,27 +284,61 @@ export function ArtifactsOverview() {
 
       {/* Content */}
       <div className="flex-1 overflow-y-auto p-6">
-        {/* Type Filter */}
-        <div className="mb-6 flex flex-wrap gap-2">
-          {FILTER_TYPES.map((ft) => {
-            const FilterIcon = ft.icon
-            return (
-              <Button
-                key={ft.value ?? "all"}
-                variant={typeFilter === ft.value ? "default" : "outline"}
-                size="sm"
-                onClick={() => setTypeFilter(ft.value)}
-                className="h-8"
-              >
-                {FilterIcon && <FilterIcon className="mr-1 size-3.5" />}
-                {ft.label}
-              </Button>
-            )
-          })}
+        {/* Filter Row + View Toggle */}
+        <div className="mb-6 flex items-center gap-4">
+          <div className="flex flex-1 flex-wrap gap-2">
+            {FILTER_TYPES.map((ft) => {
+              const FilterIcon = ft.icon
+              return (
+                <Button
+                  key={ft.value ?? "all"}
+                  variant={typeFilter === ft.value ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => handleFilterChange(ft.value)}
+                  className="h-8"
+                >
+                  {FilterIcon && <FilterIcon className="mr-1 size-3.5" />}
+                  {ft.label}
+                </Button>
+              )
+            })}
+          </div>
+          {/* View Mode Toggle */}
+          <div className="flex shrink-0 items-center rounded-md border">
+            <button
+              type="button"
+              onClick={() => handleViewModeChange("flat")}
+              className={`rounded-l-md p-1.5 transition-colors ${viewMode === "flat" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+              title="Einzelansicht"
+            >
+              <LayoutGrid className="size-4" />
+            </button>
+            <button
+              type="button"
+              onClick={() => handleViewModeChange("grouped")}
+              className={`rounded-r-md p-1.5 transition-colors ${viewMode === "grouped" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"}`}
+              title="Nach Chat gruppiert"
+            >
+              <FolderOpen className="size-4" />
+            </button>
+          </div>
         </div>
 
+        {/* Detail View Breadcrumb */}
+        {isDetailView && (
+          <div className="mb-4 flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={handleBackToGroups} className="h-7 gap-1 px-2">
+              <ArrowLeft className="size-3.5" />
+              Zurück
+            </Button>
+            <span className="text-sm text-muted-foreground">/</span>
+            <span className="text-sm font-medium line-clamp-1">{selectedGroup.chatTitle ?? "Unbenannter Chat"}</span>
+            <span className="text-xs text-muted-foreground">({selectedGroup.artifactCount} Dateien)</span>
+          </div>
+        )}
+
         {/* Loading */}
-        {isLoading && (
+        {currentLoading && (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
             {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
               <div key={i} className="animate-pulse rounded-lg border bg-muted">
@@ -201,86 +352,173 @@ export function ArtifactsOverview() {
           </div>
         )}
 
-        {/* Empty State */}
-        {!isLoading && artifacts.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <Layers className="mb-3 size-10 text-muted-foreground/40" />
-            <p className="text-sm text-muted-foreground">
-              {typeFilter === "research"
-                ? "Noch keine Deep Research Reports vorhanden."
-                : typeFilter
-                  ? `Keine ${TYPE_LABELS[typeFilter] ?? typeFilter}-Artifacts vorhanden.`
-                  : "Noch keine Artifacts erstellt."}
-            </p>
-          </div>
+        {/* Grouped View (Master) */}
+        {!currentLoading && viewMode === "grouped" && !selectedGroup && (
+          <>
+            {groups.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <FolderOpen className="mb-3 size-10 text-muted-foreground/40" />
+                <p className="text-sm text-muted-foreground">
+                  {typeFilter ? "Keine Chats mit diesem Dateityp gefunden." : "Noch keine Artifacts erstellt."}
+                </p>
+              </div>
+            )}
+            {groups.length > 0 && (
+              <>
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {groups.map((group) => (
+                    <button
+                      key={group.chatId}
+                      type="button"
+                      onClick={() => handleGroupClick(group)}
+                      className="card-interactive flex flex-col overflow-hidden rounded-lg border text-left transition-colors hover:bg-muted/50"
+                    >
+                      {/* Preview area */}
+                      <div className="relative aspect-[3/1] w-full overflow-hidden bg-muted">
+                        {group.previewFileUrl ? (
+                          <img
+                            src={group.previewFileUrl}
+                            alt=""
+                            className="size-full object-cover opacity-60"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="flex size-full items-center justify-center gap-1.5">
+                            {group.types.slice(0, 4).map((t, i) => {
+                              const Icon = TYPE_ICON_MAP[t] ?? FileText
+                              return <Icon key={i} className="size-5 opacity-20" />
+                            })}
+                          </div>
+                        )}
+                        {/* Count badge */}
+                        <span className="absolute right-2 top-2 inline-flex items-center rounded-full bg-background/80 px-2 py-0.5 text-xs font-medium backdrop-blur-sm">
+                          {group.artifactCount} {group.artifactCount === 1 ? "Datei" : "Dateien"}
+                        </span>
+                      </div>
+                      {/* Info */}
+                      <div className="flex flex-col gap-1 p-3">
+                        <span className="line-clamp-1 text-sm font-medium">
+                          {group.chatTitle ?? "Unbenannter Chat"}
+                        </span>
+                        <div className="flex items-center justify-between">
+                          <div className="flex flex-wrap gap-1">
+                            {group.types.map((t) => (
+                              <span
+                                key={t}
+                                className={`inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium ${TYPE_COLORS[t] ?? "bg-muted text-muted-foreground"}`}
+                              >
+                                {TYPE_LABELS[t] ?? t}
+                              </span>
+                            ))}
+                          </div>
+                          <span className="shrink-0 text-[11px] text-muted-foreground/60">
+                            {formatRelativeDate(group.lastArtifactAt)}
+                          </span>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+
+                {currentHasMore && (
+                  <div className="mt-6 flex justify-center">
+                    <Button variant="outline" size="sm" onClick={loadMore} disabled={isLoadingMore}>
+                      {isLoadingMore ? (
+                        <><Loader2 className="mr-2 size-4 animate-spin" /> Laden...</>
+                      ) : (
+                        "Mehr laden"
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </>
+            )}
+          </>
         )}
 
-        {/* Grid */}
-        {!isLoading && artifacts.length > 0 && (
+        {/* Flat View OR Detail View (same card grid) */}
+        {!currentLoading && (viewMode === "flat" || isDetailView) && (
           <>
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-              {artifacts.map((artifact) => {
-                const Icon = TYPE_ICON_MAP[artifact.type] ?? FileText
-                const isImage = artifact.type === "image" && artifact.fileUrl
-                return (
-                  <button
-                    key={artifact.id}
-                    type="button"
-                    onClick={() => handleCardClick(artifact)}
-                    className="card-interactive flex flex-col overflow-hidden rounded-lg border text-left transition-colors hover:bg-muted/50"
-                  >
-                    {/* Preview area — uniform height for all types */}
-                    <div className={`relative aspect-[4/3] w-full overflow-hidden ${isImage ? "bg-muted" : TYPE_PREVIEW_BG[artifact.type] ?? "bg-muted"}`}>
-                      {isImage ? (
-                        <img
-                          src={artifact.fileUrl!}
-                          alt={artifact.title}
-                          className="size-full object-cover"
-                          loading="lazy"
-                        />
-                      ) : (
-                        <div className="flex size-full items-center justify-center">
-                          <Icon className="size-8 opacity-30" />
-                        </div>
-                      )}
-                      {/* Type badge overlay */}
-                      <span className={`absolute bottom-1.5 left-1.5 inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium backdrop-blur-sm ${TYPE_COLORS[artifact.type] ?? "bg-muted text-muted-foreground"}`}>
-                        {TYPE_LABELS[artifact.type] ?? artifact.type}
-                      </span>
-                    </div>
-                    {/* Info */}
-                    <div className="flex flex-col gap-0.5 p-2.5">
-                      <span className="line-clamp-1 text-xs font-medium">{artifact.title}</span>
-                      <div className="flex items-center justify-between">
-                        {artifact.chatTitle ? (
-                          <span className="line-clamp-1 text-[11px] text-muted-foreground">{artifact.chatTitle}</span>
-                        ) : (
-                          <span />
-                        )}
-                        <span className="shrink-0 text-[11px] text-muted-foreground/60">{formatRelativeDate(artifact.createdAt)}</span>
-                      </div>
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
-
-            {/* Load More */}
-            {hasMore && (
-              <div className="mt-6 flex justify-center">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={loadMore}
-                  disabled={isLoadingMore}
-                >
-                  {isLoadingMore ? (
-                    <><Loader2 className="mr-2 size-4 animate-spin" /> Laden...</>
-                  ) : (
-                    "Mehr laden"
-                  )}
-                </Button>
+            {currentItems.length === 0 && (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <Layers className="mb-3 size-10 text-muted-foreground/40" />
+                <p className="text-sm text-muted-foreground">
+                  {isDetailView
+                    ? "Keine Dateien in diesem Chat."
+                    : typeFilter === "research"
+                      ? "Noch keine Deep Research Reports vorhanden."
+                      : typeFilter
+                        ? `Keine ${TYPE_LABELS[typeFilter] ?? typeFilter}-Artifacts vorhanden.`
+                        : "Noch keine Artifacts erstellt."}
+                </p>
               </div>
+            )}
+
+            {currentItems.length > 0 && (
+              <>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
+                  {currentItems.map((artifact) => {
+                    const Icon = TYPE_ICON_MAP[artifact.type] ?? FileText
+                    const isImage = artifact.type === "image" && artifact.fileUrl
+                    return (
+                      <button
+                        key={artifact.id}
+                        type="button"
+                        onClick={() => handleCardClick(artifact)}
+                        className="card-interactive flex flex-col overflow-hidden rounded-lg border text-left transition-colors hover:bg-muted/50"
+                      >
+                        {/* Preview area */}
+                        <div className={`relative aspect-[4/3] w-full overflow-hidden ${isImage ? "bg-muted" : TYPE_PREVIEW_BG[artifact.type] ?? "bg-muted"}`}>
+                          {isImage ? (
+                            <img
+                              src={artifact.fileUrl!}
+                              alt={artifact.title}
+                              className="size-full object-cover"
+                              loading="lazy"
+                            />
+                          ) : (
+                            <div className="flex size-full items-center justify-center">
+                              <Icon className="size-8 opacity-30" />
+                            </div>
+                          )}
+                          <span className={`absolute bottom-1.5 left-1.5 inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-medium backdrop-blur-sm ${TYPE_COLORS[artifact.type] ?? "bg-muted text-muted-foreground"}`}>
+                            {TYPE_LABELS[artifact.type] ?? artifact.type}
+                          </span>
+                        </div>
+                        {/* Info */}
+                        <div className="flex flex-col gap-0.5 p-2.5">
+                          <span className="line-clamp-1 text-xs font-medium">{artifact.title}</span>
+                          <div className="flex items-center justify-between">
+                            {!isDetailView && artifact.chatTitle ? (
+                              <span className="line-clamp-1 text-[11px] text-muted-foreground">{artifact.chatTitle}</span>
+                            ) : (
+                              <span />
+                            )}
+                            <span className="shrink-0 text-[11px] text-muted-foreground/60">{formatRelativeDate(artifact.createdAt)}</span>
+                          </div>
+                        </div>
+                      </button>
+                    )
+                  })}
+                </div>
+
+                {currentHasMore && (
+                  <div className="mt-6 flex justify-center">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={isDetailView ? loadMoreDetail : loadMore}
+                      disabled={isLoadingMore}
+                    >
+                      {isLoadingMore ? (
+                        <><Loader2 className="mr-2 size-4 animate-spin" /> Laden...</>
+                      ) : (
+                        "Mehr laden"
+                      )}
+                    </Button>
+                  </div>
+                )}
+              </>
             )}
           </>
         )}
