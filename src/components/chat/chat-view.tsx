@@ -88,9 +88,10 @@ interface ChatViewProps {
   ttsEnabled?: boolean
   memoryEnabled?: boolean
   voiceChatEnabled?: boolean
+  designLibraryEnabled?: boolean
 }
 
-export function ChatView({ chatId, initialModelId, initialProjectId, initialArtifactId, formulaContext, promptOnlyMode, referenceImageContext, userName, ttsEnabled, memoryEnabled, voiceChatEnabled }: ChatViewProps) {
+export function ChatView({ chatId, initialModelId, initialProjectId, initialArtifactId, formulaContext, promptOnlyMode, referenceImageContext, userName, ttsEnabled, memoryEnabled, voiceChatEnabled, designLibraryEnabled }: ChatViewProps) {
   const [input, setInput] = useState("")
   const [initialMessagesLoaded, setInitialMessagesLoaded] = useState(!chatId)
   const [modelId, setModelId] = useState(initialModelId ?? "")
@@ -692,6 +693,7 @@ export function ChatView({ chatId, initialModelId, initialProjectId, initialArti
                 activeProjectId={projectIdRef.current}
                 voiceChatEnabled={voiceChatEnabled}
                 onStartVoiceChat={() => voiceChat.connect({ chatId, projectId: projectIdRef.current ?? undefined })}
+                designLibraryEnabled={designLibraryEnabled}
               />
             ) : (
               <>

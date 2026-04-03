@@ -66,6 +66,7 @@ export default async function HomePage({
           ttsEnabled={features.tts.enabled}
           memoryEnabled={features.memory.enabled}
           voiceChatEnabled={features.voiceChat.enabled}
+          designLibraryEnabled={features.designLibrary.enabled}
         />
       </ChatShell>
     )

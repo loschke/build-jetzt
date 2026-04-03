@@ -1,13 +1,13 @@
 "use client"
 
 import { useState } from "react"
-import { MessageCircle, Lightbulb, BrainCircuit, MessageSquareQuote, ListChecks, Users, Zap, Folder, Mic } from "lucide-react"
+import { MessageCircle, Lightbulb, BrainCircuit, MessageSquareQuote, ListChecks, Users, Zap, Folder, Mic, Palette } from "lucide-react"
 import { useProject } from "./project-context"
-import { brand } from "@/config/brand"
 import { ExpertSelector } from "./expert-selector"
 import { QuicktaskSelector, type QuicktaskPublic } from "./quicktask-selector"
 import { QuicktaskForm } from "./quicktask-form"
 import { VoiceChatTab } from "./voice-chat-tab"
+import { DesignLibraryTab } from "./design-library-tab"
 
 interface ChatEmptyStateProps {
   onSuggestionSelect: (text: string) => void
@@ -20,9 +20,10 @@ interface ChatEmptyStateProps {
   voiceChatEnabled?: boolean
   onStartVoiceChat?: () => void
   creditsAvailable?: boolean
+  designLibraryEnabled?: boolean
 }
 
-type Tab = "chat" | "experts" | "quicktasks" | "voice"
+type Tab = "chat" | "experts" | "quicktasks" | "voice" | "design"
 
 const suggestions = [
   {
@@ -54,6 +55,7 @@ const baseTabs = [
 ]
 
 const voiceTab = { id: "voice" as const, label: "Voice", icon: Mic }
+const designTab = { id: "design" as const, label: "Design", icon: Palette }
 
 function getGreeting(): string {
   const hour = new Date().getHours()
@@ -73,6 +75,7 @@ export function ChatEmptyState({
   voiceChatEnabled,
   onStartVoiceChat,
   creditsAvailable = true,
+  designLibraryEnabled,
 }: ChatEmptyStateProps) {
   const [activeTab, setActiveTab] = useState<Tab>("chat")
   const [selectedQuicktask, setSelectedQuicktask] = useState<QuicktaskPublic | null>(null)
@@ -107,9 +110,6 @@ export function ChatEmptyState({
 
       {/* Greeting */}
       <div className="text-center">
-        <p className="mb-1 text-xs font-medium uppercase tracking-widest text-muted-foreground">
-          {brand.name}
-        </p>
         <h2 className="mb-1 text-2xl font-bold tracking-tight">
           {firstName ? `${greeting}, ${firstName}` : greeting}
         </h2>
@@ -120,7 +120,7 @@ export function ChatEmptyState({
 
       {/* Tabs */}
       <div className="flex gap-1 rounded-full bg-muted p-1" role="tablist">
-        {[...baseTabs, ...(voiceChatEnabled ? [voiceTab] : [])].map((tab) => (
+        {[...baseTabs, ...(designLibraryEnabled ? [designTab] : []), ...(voiceChatEnabled ? [voiceTab] : [])].map((tab) => (
           <button
             key={tab.id}
             type="button"
@@ -134,7 +134,7 @@ export function ChatEmptyState({
             }`}
           >
             <tab.icon className="size-3.5" />
-            {tab.label}
+            <span className="hidden sm:inline">{tab.label}</span>
           </button>
         ))}
       </div>
@@ -174,6 +174,10 @@ export function ChatEmptyState({
         <QuicktaskSelector
           onQuicktaskSelect={setSelectedQuicktask}
         />
+      )}
+
+      {activeTab === "design" && (
+        <DesignLibraryTab />
       )}
 
       {activeTab === "voice" && onStartVoiceChat && (
