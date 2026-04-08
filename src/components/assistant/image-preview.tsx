@@ -89,6 +89,7 @@ export function ImagePreview({ content, title, isStreaming }: ImagePreviewProps)
                 <button
                   key={i}
                   type="button"
+                  aria-label={`Version ${i + 1} auswählen`}
                   onClick={() => setActiveIndex(i)}
                   className={`relative size-12 shrink-0 overflow-hidden rounded-md border-2 transition-colors ${
                     isActive

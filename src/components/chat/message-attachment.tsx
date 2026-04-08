@@ -82,6 +82,7 @@ function ImageAttachment({ url, filename, count }: { url?: string; filename?: st
     <>
       <button
         type="button"
+        aria-label="Bild vergrößern"
         className={`overflow-hidden rounded-xl border card-elevated cursor-zoom-in ${sizeClass}`}
         onClick={() => setLightbox(true)}
       >
@@ -98,6 +99,7 @@ function ImageAttachment({ url, filename, count }: { url?: string; filename?: st
         >
           <button
             type="button"
+            aria-label="Schließen"
             className="absolute top-4 right-4 rounded-full bg-white/10 p-2 text-white hover:bg-white/20 transition-colors"
             onClick={close}
           >
