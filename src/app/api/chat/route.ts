@@ -21,7 +21,7 @@ import { resolveModel } from "@/lib/ai/model-resolver"
 import { businessModeConfig } from "@/config/business-mode"
 import { logConsent } from "@/lib/db/queries/consent"
 
-export const maxDuration = 240
+export const maxDuration = 800
 
 const ALLOWED_MIME_TYPES = new Set(
   chatConfig.upload.accept.split(",").map((t) => t.trim())
@@ -245,7 +245,7 @@ export async function POST(req: Request) {
         anthropic: {
           ...(supportsThinking && {
             thinking: { type: "adaptive" },
-            effort: "medium",
+            effort: "low",
           }),
           ...(useDirectAnthropicProvider && {
             container: { skills: skillsConfig },
