@@ -11,7 +11,8 @@
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
-    "db:seed": "npx tsx --env-file=.env src/lib/db/seed/seed-experts.ts"
+    "db:seed": "npx tsx --env-file=.env src/lib/db/seed/seed-experts.ts",
+    "db:bootstrap-migrations": "node --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/bootstrap-drizzle-migrations.mjs"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.49",
