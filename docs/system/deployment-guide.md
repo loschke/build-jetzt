@@ -16,10 +16,10 @@ Die App besteht aus einer Next.js-Anwendung und mehreren externen Services:
 │  └── Proxy (Auth Guard, statt Middleware)        │
 └──────────┬──────────┬──────────┬────────────────┘
            │          │          │
-    ┌──────┴──┐  ┌────┴────┐  ┌─┴──────────┐
-    │ Postgres │  │  Logto  │  │ AI Gateway │
-    │   (DB)   │  │ (Auth)  │  │  (LLMs)    │
-    └─────────┘  └─────────┘  └────────────┘
+    ┌──────┴──┐  ┌────┴────────┐  ┌─┴──────────┐
+    │ Postgres │  │ loschke-auth │  │ AI Gateway │
+    │   (DB)   │  │   (OIDC)     │  │  (LLMs)    │
+    └─────────┘  └──────────────┘  └────────────┘
            │
     ┌──────┴──────────────────────────────┐
     │  Optionale Services                  │
@@ -41,7 +41,7 @@ Die App besteht aus einer Next.js-Anwendung und mehreren externen Services:
 - Node.js 20+
 - pnpm (Package Manager)
 - Git Repository mit dem Quellcode
-- Accounts bei: Vercel, Neon (Postgres), Logto Cloud
+- Accounts bei: Vercel, Neon (Postgres). Auth laeuft gegen `loschke-auth` (`auth.loschke.ai`, eigener Betrieb).
 
 ### Schritt 1: Repository klonen und Dependencies installieren
 
@@ -57,28 +57,37 @@ pnpm install
 2. Connection String kopieren (Format: `postgresql://user:pass@host/db?sslmode=require`)
 3. Notieren als `DATABASE_URL`
 
-### Schritt 3: Logto-App konfigurieren
+### Schritt 3: loschke-auth-Client konfigurieren
 
-1. Logto Dashboard oeffnen → neue Application erstellen (Type: "Traditional Web")
-2. Redirect URI setzen: `https://deine-domain.com/api/auth/callback`
-3. Post Sign-Out URI setzen: `https://deine-domain.com`
-4. Notieren: `LOGTO_APP_ID`, `LOGTO_APP_SECRET`, `LOGTO_ENDPOINT`
-5. Sign-In Experience konfigurieren (Email OTP empfohlen)
+In `loschke-auth` (Admin-UI von `auth.loschke.ai`):
+
+1. **Organization** anlegen mit Slug = geplanter `OIDC_CLIENT_ID` (Konvention: 1 Org pro App).
+2. **OAuth-Client** anlegen:
+   - `client_id` = derselbe Slug (z.B. `build-jetzt`, `build-jetzt-acme`)
+   - `owner_organization_id` = die gerade angelegte Org
+   - `redirect_uris` = `["https://<domain>/api/auth/callback", "http://localhost:3000/api/auth/callback"]`
+   - `post_logout_redirect_uris` = `["https://<domain>/", "http://localhost:3000/"]`
+   - `scopes` = `["openid", "profile", "email", "organization"]`
+   - `signup_mode` = `public` fuer Ecosystem-Instanzen, `approval_required` fuer Beta, `invite_only` fuer Kunden
+3. **Client-Secret** notieren — wird gleich als ENV gesetzt.
+4. **Eigenes Membership** in der Org als `owner` mit `status=approved` anlegen, damit der Login durchkommt.
 
 ### Schritt 4: Environment Variables setzen
 
 Minimale `.env.local` fuer eine funktionierende Instanz:
 
 ```bash
-# Brand
-NEXT_PUBLIC_BRAND=lernen
-
-# Auth (Pflicht)
-LOGTO_APP_ID=deine-app-id
-LOGTO_APP_SECRET=dein-app-secret
-LOGTO_ENDPOINT=https://dein-logto.logto.app
-LOGTO_BASE_URL=http://localhost:3000
-LOGTO_COOKIE_SECRET=mindestens-32-zeichen-langer-geheimer-schluessel
+# Auth (Pflicht — gegen loschke-auth)
+OIDC_CLIENT_ID=build-jetzt
+OIDC_CLIENT_SECRET=<aus loschke-auth Admin>
+OIDC_ISSUER=https://auth.loschke.ai/api/auth
+OIDC_AUTHORIZE_URL=https://auth.loschke.ai/api/auth/oauth2/authorize
+OIDC_TOKEN_URL=https://auth.loschke.ai/api/auth/oauth2/token
+OIDC_JWKS_URL=https://auth.loschke.ai/api/auth/jwks
+OIDC_END_SESSION_URL=https://auth.loschke.ai/api/auth/oauth2/end-session
+OIDC_REDIRECT_URI=http://localhost:3000/api/auth/callback   # in Prod: https://<domain>/api/auth/callback
+APP_BASE_URL=http://localhost:3000                          # in Prod: https://<domain>
+# AUTH_REQUIRED_ORG_SLUG=                                   # optional, defaulted auf OIDC_CLIENT_ID
 
 # Datenbank (Pflicht)
 DATABASE_URL=postgresql://user:pass@host/db?sslmode=require
@@ -121,8 +130,8 @@ pnpm dev
 
 1. Vercel Dashboard → neues Projekt aus Git-Repository
 2. Environment Variables aus `.env.local` uebertragen
-3. `LOGTO_BASE_URL` auf die Produktions-Domain aendern
-4. Logto Redirect URI auf Produktions-Domain aktualisieren
+3. `APP_BASE_URL` und `OIDC_REDIRECT_URI` auf die Produktions-Domain aendern
+4. In `loschke-auth` die Production-`redirect_uri` zur Liste des OAuth-Clients hinzufuegen
 5. Erster Build deployt automatisch
 6. Nach dem Deployment: `pnpm db:seed` lokal ausfuehren (mit Produktions-`DATABASE_URL`)
 
@@ -159,7 +168,7 @@ Alle externen Services der Plattform basieren auf Open-Source-Projekten und koen
 | ------------------- | ----------------- | ---------------------------------------- | ------------------- |
 | **App-Hosting**     | Vercel            | Node.js Server, Docker, Coolify, Dokploy | —                   |
 | **Datenbank**       | Neon              | PostgreSQL (Standard-Installation)       | PostgreSQL License  |
-| **Auth**            | Logto Cloud       | Logto OSS (Docker)                       | MPL-2.0             |
+| **Auth**            | loschke-auth (eigener Betrieb auf Vercel) | Standalone-Deploy von `loschke-auth` (Next.js + Postgres + Better-Auth) | MIT |
 | **Storage**         | Cloudflare R2     | MinIO (S3-kompatibel)                    | AGPL-3.0            |
 | **Memory**          | Mem0 Cloud        | Mem0 OSS (Docker)                        | Apache-2.0          |
 | **Web-Suche**       | Firecrawl Cloud   | Firecrawl OSS (Docker)                   | AGPL-3.0            |
@@ -226,27 +235,21 @@ Die App nutzt den Standard-PostgreSQL-Treiber (`@neondatabase/serverless`). Fuer
 
 Der Neon-Treiber ist mit Standard-PostgreSQL kompatibel. Bei Performance-Problemen kann auf `postgres` (node-postgres) gewechselt werden — erfordert Anpassung in `src/lib/db/index.ts`.
 
-### Logto Self-Hosted
+### loschke-auth Self-Hosted
 
-Logto bietet ein offizielles Docker-Image:
+`loschke-auth` ist ein eigenes Next.js-Projekt (im `loschke-hub`-Repo unter `loschke-auth/`). Standard-Deploy ist Vercel + Neon. Fuer Self-Hosted gilt:
 
-```bash
-docker run -d \
-  --name logto \
-  -p 3001:3001 \
-  -p 3002:3002 \
-  -e DB_URL=postgresql://user:pass@host/logto \
-  ghcr.io/logto-io/logto:latest
-```
+1. Next.js-Projekt builden und auf eigenem Node-Server starten (Port 3000+).
+2. Eigene Postgres-Instanz fuer die Auth-DB (User, Sessions, Orgs, OAuth-Clients).
+3. JWKS-Endpoint unter `/api/auth/jwks` muss von der App-Instanz erreichbar sein.
+4. Mail-Versand via Scaleway TEM (oder anderer SMTP-Provider) fuer OTP-Emails.
 
-- Port 3001: Admin Console
-- Port 3002: Auth Endpoint (fuer `LOGTO_ENDPOINT`)
-- Benoetigt eigene PostgreSQL-Datenbank
-
-Dann in der App:
+In der App ENV setzen:
 
 ```bash
-LOGTO_ENDPOINT=http://localhost:3002  # oder interne Docker-Netzwerk-URL
+OIDC_ISSUER=https://<auth-domain>/api/auth
+OIDC_AUTHORIZE_URL=https://<auth-domain>/api/auth/oauth2/authorize
+# ... usw. analog Cloud-Setup
 ```
 
 ### MinIO statt Cloudflare R2
@@ -319,22 +322,22 @@ Jede Instanz ist ein separates Deployment (Vercel-Projekt oder Docker-Container)
 ```
 Repository (eine Codebase)
     │
-    ├── Instanz A: lernen.diy
-    │   ├── NEXT_PUBLIC_BRAND=lernen
+    ├── Instanz A: build.jetzt
     │   ├── DATABASE_URL=neon-db-a
-    │   ├── LOGTO_*=logto-app-a
+    │   ├── OIDC_CLIENT_ID=build-jetzt
+    │   ├── loschke-auth-Org Slug "build-jetzt" (signup_mode=approval_required)
     │   └── Features: Credits ON, Memory ON, Web ON
     │
-    ├── Instanz B: aok.lernen.diy (Kunden-Instanz)
-    │   ├── NEXT_PUBLIC_BRAND=aok
+    ├── Instanz B: acme.build.jetzt (Kunden-Instanz)
     │   ├── DATABASE_URL=neon-db-b
-    │   ├── LOGTO_*=logto-app-b
+    │   ├── OIDC_CLIENT_ID=build-jetzt-acme
+    │   ├── loschke-auth-Org Slug "build-jetzt-acme" (signup_mode=invite_only)
     │   └── Features: BusinessMode ON, Credits OFF
     │
     └── Instanz C: unlearn.how
-        ├── NEXT_PUBLIC_BRAND=unlearn
         ├── DATABASE_URL=neon-db-c
-        ├── LOGTO_*=logto-app-c
+        ├── OIDC_CLIENT_ID=unlearn-how
+        ├── loschke-auth-Org Slug "unlearn-how"
         └── Features: MCP ON, Memory ON
 ```
 
@@ -343,7 +346,7 @@ Repository (eine Codebase)
 | Aspekt                | Getrennt? | Beschreibung                                |
 | --------------------- | --------- | ------------------------------------------- |
 | Datenbank             | Ja        | Eigene Neon-DB oder PostgreSQL-Instanz      |
-| Auth                  | Ja        | Eigene Logto-App (eigene User-Basis)        |
+| Auth                  | Ja        | Eigener `oauth_client` + Org in `loschke-auth` (Slug = `OIDC_CLIENT_ID`) |
 | Storage               | Optional  | Eigener R2-Bucket oder gemeinsam mit Prefix |
 | Features              | Ja        | Eigene ENV-Variablen pro Instanz            |
 | Admin                 | Ja        | `ADMIN_EMAILS` pro Instanz                  |
@@ -355,8 +358,8 @@ Repository (eine Codebase)
 | -------------- | -------- | ------------------------------------------------------------------------ |
 | Codebase       | Ja       | Ein Git-Repository fuer alle Instanzen                                   |
 | AI Gateway Key | Ja       | Ein Key fuer alle Instanzen moeglich                                     |
-| Mem0 Account   | Nein     | User-IDs sind Logto-spezifisch, Separation noetig                        |
-| Logto-Instanz  | Moeglich | Mehrere Apps in einer Logto-Instanz, aber getrennte User-Pools empfohlen |
+| Mem0 Account   | Nein     | User-IDs sind OIDC-spezifisch, Separation pro Instanz empfohlen          |
+| loschke-auth   | Ja       | Eine Instanz fuer alle Apps — pro App eigene Org, eigener `oauth_client` |
 
 ---
 
@@ -424,34 +427,37 @@ proxy.ts prueft Session-Cookie
     │
     ├── Cookie vorhanden + gueltig → App laden
     │
-    └── Kein Cookie → Redirect zu Logto
+    └── Kein Cookie → Redirect zu /api/auth/sign-in
         │
         ▼
-    Logto Hosted UI (Email OTP / Social Login)
-        │ Login erfolgreich
-        ▼
-    Redirect zu /api/auth/callback
+    PKCE (state, code_verifier) → Redirect zu loschke-auth /oauth2/authorize
         │
         ▼
-    handleSignIn() tauscht Code gegen Token
+    loschke-auth (E-Mail-OTP-Flow, Consent, Authorize-Gate)
+        │ Login + Approval erfolgreich
+        ▼
+    Redirect zu /api/auth/callback?code=…&state=…
         │
         ▼
-    Session-Cookie gesetzt → Redirect zu /(app)/
+    Code-Tausch → ID-Token-Verify (JWKS) → Org-Membership-Check
+        │
+        ▼
+    Session-Cookie (bj_id_token, bj_refresh) gesetzt → Redirect zu /
 ```
 
 ### Dev-Bypass
 
-Wenn `LOGTO_APP_ID` nicht gesetzt ist, laesst der Proxy alle Requests durch. Erlaubt lokale Entwicklung ohne Auth-Setup.
+Wenn `OIDC_CLIENT_ID` nicht gesetzt ist und `NODE_ENV=development`, laesst der Proxy alle Requests durch. Erlaubt lokale Entwicklung ohne Auth-Setup. In Production fuehrt das zu 503.
 
-### LOGTO_BASE_URL pro Umgebung
+### App-URL pro Umgebung
 
-| Umgebung   | LOGTO_BASE_URL               | Logto Redirect URI                             |
+| Umgebung   | APP_BASE_URL                 | OIDC_REDIRECT_URI                              |
 | ---------- | ---------------------------- | ---------------------------------------------- |
 | Lokal      | `http://localhost:3000`      | `http://localhost:3000/api/auth/callback`      |
 | Staging    | `https://staging.domain.com` | `https://staging.domain.com/api/auth/callback` |
 | Produktion | `https://domain.com`         | `https://domain.com/api/auth/callback`         |
 
-Redirect URI muss in der Logto-App-Konfiguration eingetragen sein, sonst schlaegt der Callback fehl.
+Beide Callback-URLs muessen in der `redirect_uris`-Liste des OAuth-Clients in `loschke-auth` registriert sein, sonst schlaegt der Callback fehl (`redirect_uri_mismatch`).
 
 ---
 
@@ -461,7 +467,7 @@ Redirect URI muss in der Logto-App-Konfiguration eingetragen sein, sonst schlaeg
 
 - [ ] Repository klonen, `pnpm install`
 - [ ] Neon-DB anlegen (oder PostgreSQL bereitstellen)
-- [ ] Logto-App anlegen (oder Logto Self-Hosted aufsetzen)
+- [ ] In `loschke-auth`: Org + OAuth-Client mit gleichem Slug anlegen, eigene Membership als approved owner
 - [ ] AI Gateway Key beschaffen (oder LiteLLM aufsetzen)
 - [ ] `.env.local` mit Pflicht-Variablen erstellen
 - [ ] `pnpm db:push` (Schema)
@@ -494,7 +500,7 @@ Redirect URI muss in der Logto-App-Konfiguration eingetragen sein, sonst schlaeg
 
 | Problem                      | Ursache                                              | Loesung                                                   |
 | ---------------------------- | ---------------------------------------------------- | --------------------------------------------------------- |
-| Auth-Callback schlaegt fehl  | Redirect URI nicht in Logto konfiguriert             | URI in Logto-App-Settings eintragen                       |
+| Auth-Callback schlaegt fehl  | Redirect URI nicht im OAuth-Client konfiguriert      | URI in `loschke-auth` Admin → OAuth-Client eintragen      |
 | "Chat ist deaktiviert" (404) | `NEXT_PUBLIC_CHAT_ENABLED=false`                     | ENV-Variable entfernen oder auf `true` setzen             |
 | Kein Admin-Link sichtbar     | `ADMIN_EMAILS` nicht gesetzt oder Email stimmt nicht | ENV pruefen, Gross-/Kleinschreibung egal                  |
 | CSS-Fehler nach Update       | Turbopack-Cache stale                                | `.next/` Ordner loeschen, `pnpm dev` neu starten          |
@@ -522,7 +528,7 @@ Die Plattform unterstuetzt vollstaendig EU/lokalen Betrieb ohne US-Cloud-Abhaeng
 │   ├── Search: SearXNG                │
 │   ├── Memory: Mem0 (self-hosted)     │
 │   ├── DB: PostgreSQL                 │
-│   └── Auth: Logto (self-hosted)      │
+│   └── Auth: loschke-auth (self-hosted) │
 └──────────────────────────────────────┘
 ```
 

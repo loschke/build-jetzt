@@ -5,7 +5,7 @@ Guidance für `src/lib/db/` — Schema, Queries, Migrations und Seeding.
 ## Schema-Konventionen
 
 - **PKs:** nanoid text (nicht UUID, nicht auto-increment)
-- **User-ID:** Logto `sub` claim als text. Kein FK zu users-Tabelle nötig.
+- **User-ID:** OIDC `sub`-Claim aus loschke-auth als text (Spalte `users.auth_sub`). Kein FK zu users-Tabelle nötig.
 - **Arrays:** `jsonb` für Listen (skillSlugs, allowedTools, mcpServerIds, categories)
 - **Timestamps:** `createdAt` (default now), `updatedAt` (manuell setzen bei Mutations)
 - **Soft Delete:** Nicht verwendet. Löschen ist endgültig.

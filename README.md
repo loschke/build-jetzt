@@ -7,7 +7,7 @@ Wiederverwendbare App-Shell unter der sevenX Dachmarke. Wird fuer jede neue App 
 - **Next.js 16** (App Router, Turbopack)
 - **TypeScript** (Strict Mode)
 - **Tailwind CSS v4** + **shadcn/ui** (Light Mode only)
-- **Logto** (`@logto/next`) — OIDC Auth via `auth.lernen.diy`
+- **loschke-auth** (`arctic` + `jose`) — OIDC + PKCE gegen `auth.loschke.ai`
 - **Neon** (Serverless Postgres) + **Drizzle ORM**
 - **Vercel AI SDK** — Chat/Streaming Features
 - **Vercel** — Deployment
@@ -24,7 +24,7 @@ pnpm install
 
 # 3. Environment konfigurieren
 cp .env.example .env.local
-# Werte in .env.local eintragen (Logto, Neon, etc.)
+# Werte in .env.local eintragen (OIDC, Neon, etc.)
 
 # 4. Dev-Server starten
 pnpm dev
@@ -36,7 +36,7 @@ pnpm dev
 2. `src/config/navigation.ts` — Navigation austauschen
 3. `src/config/apps.ts` — Aktive App markieren
 4. `src/app/(app)/` — Route-Segmente fuer neue Module erstellen
-5. `.env.local` — Neue Logto App-ID, Neon DB, etc. eintragen
+5. `.env.local` — Neue OIDC Client-ID, Neon DB, etc. eintragen
 6. `package.json` — Name anpassen
 7. Vercel — Neues Projekt, Subdomain zuweisen
 

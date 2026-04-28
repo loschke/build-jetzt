@@ -11,10 +11,11 @@
 
 | Massnahme | Umsetzung |
 |-----------|-----------|
-| Authentifizierung | Logto OIDC (OpenID Connect) mit Session-Cookies |
-| Passwort-Speicherung | Keine — Credentials werden ausschliesslich bei Logto verwaltet |
-| Session-Management | Signiertes Cookie (`logto_{appId}`), Cookie-Secret min. 32 Zeichen |
-| Dev-Bypass | Nur bei fehlendem `LOGTO_APP_ID` UND `NODE_ENV=development`. In Production: 503-Fehler |
+| Authentifizierung | OIDC (OpenID Connect) gegen `loschke-auth` (auth.loschke.ai) — eigener selbst betriebener Identity Provider |
+| Passwort-Speicherung | Keine Passwoerter — `loschke-auth` setzt auf E-Mail-OTP (kein Passwortspeicher in der App) |
+| Session-Management | HttpOnly + Secure + SameSite=Lax Cookies (`bj_id_token`, `bj_refresh`). ID-Token-TTL 1h, Refresh-Token-TTL 7d. RP-initiated Logout via end-session. |
+| Multi-Instanz-Gate | Login pruefe approved Org-Membership in `loschke-auth` (Slug = OAuth Client-ID) — verhindert Cross-Instanz-Zugriffe |
+| Dev-Bypass | Nur bei fehlendem `OIDC_CLIENT_ID` UND `NODE_ENV=development`. In Production: 503-Fehler |
 | CSRF-Schutz | Origin-Check fuer alle mutierenden Requests in `src/proxy.ts` |
 
 ### 1.2 Berechtigungskontrolle (Autorisierung)
@@ -155,7 +156,7 @@ Implementierung: In-Memory Token Bucket mit automatischer Bereinigung alle 5 Min
 
 ### 5.3 Datensparsamkeit
 
-- Keine Passwort-Speicherung (extern bei Logto)
+- Keine Passwort-Speicherung (`loschke-auth` setzt auf E-Mail-OTP)
 - PII-Redaktion vor Verarbeitung moeglich (Business Mode)
 - Chat Retention: Automatische Loeschung nach konfigurierbarer Frist
 - Memory-System: Explizite Loesch-Funktion (`deleteAllMemories`)
@@ -168,7 +169,7 @@ Implementierung: In-Memory Token Bucket mit automatischer Bereinigung alle 5 Min
 |---------------|----------|------------|----------|------------------|
 | **Neon** | Datenbank-Hosting | Alle DB-Daten | US/EU (waehlbar) | AES-256 at rest, TLS in transit |
 | **Vercel** | App-Hosting, Edge Network | Request-Daten, Logs | Global (Edge) | TLS in transit |
-| **Logto** | Authentifizierung | Credentials, Session | Abhaengig von Logto-Setup | Provider-Standard |
+| **loschke-auth** | Authentifizierung (eigener Betrieb) | E-Mail, OTP-Codes, Sessions | EU (Vercel + Neon) | TLS in transit, Postgres at rest |
 | **Mem0** (optional) | Memory-Service | User-Memories als Embeddings | Cloud oder Self-Hosted | Provider-Standard |
 | **AI-Provider** (variabel) | LLM-Inference | Chat-Inhalte (transient) | Abhaengig vom Provider | TLS in transit |
 | **Cloudflare R2** (optional) | Object Storage | Uploads, Artifacts | Global | Serverseitig |

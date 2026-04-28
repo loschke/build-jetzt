@@ -8,7 +8,7 @@
 
 **Repository:** `build-jetzt`
 **Zweck:** KI-Chat-Plattform mit Expert-System, Artifact-Erstellung, Memory, Bildgenerierung, YouTube-Suche/Analyse, Text-to-Speech, Deep Research, Websuche und MCP-Integration.
-**Stack:** Next.js 16 + TypeScript + Tailwind v4 + Vercel AI SDK + Neon Postgres + Logto Auth
+**Stack:** Next.js 16 + TypeScript + Tailwind v4 + Vercel AI SDK + Neon Postgres + loschke-auth (OIDC)
 
 ### Routing
 
@@ -67,7 +67,7 @@
 | Framework     | **Next.js 16** (App Router)         | Immer App Router, kein Pages Router              |
 | Sprache       | **TypeScript**                      | Strict mode, keine `any` Types                   |
 | Styling       | **Tailwind CSS v4** + **shadcn/ui** | Light + Dark Mode via next-themes                |
-| Auth          | **Logto** (`@logto/next`)           | OIDC, Server Actions Pattern                     |
+| Auth          | **loschke-auth** (`arctic` + `jose`) | OIDC + PKCE gegen `auth.loschke.ai`              |
 | Datenbank     | **Neon** (Serverless Postgres)      | Via **Drizzle ORM**                              |
 | Storage       | **Cloudflare R2**                   | S3-kompatible API, `@aws-sdk/client-s3`          |
 | Web           | **Firecrawl**                       | Search, Scrape, Crawl, Extract via SDK           |
@@ -86,7 +86,7 @@
 | Streamdown    | `https://streamdown.ai/`                                           |
 | MCP in AI SDK | `https://ai-sdk.dev/docs/ai-sdk-core/mcp-tools`                   |
 | Neon Postgres | `https://neon.com/docs/ai/ai-rules.md`                            |
-| Logto Next.js | `https://docs.logto.io/quick-starts/next-app-router`              |
+| loschke-auth  | `loschke-hub/loschke-auth/` (Repo) — Multi-Tenant OIDC Provider   |
 | R2 Docs       | `https://developers.cloudflare.com/r2/`                            |
 
 ---
@@ -146,14 +146,15 @@
 
 ---
 
-## Auth (Logto)
+## Auth (loschke-auth / OIDC)
 
-- **Pattern:** `@logto/next` Server Actions Pattern (App Router, NICHT Pages Router)
-- **Proxy:** `src/proxy.ts` statt `middleware.ts` (Next.js 16). Export: `proxy()`, Node.js Runtime.
-- **Dev-Bypass:** Wenn `LOGTO_APP_ID` nicht gesetzt → alles frei zugänglich.
-- **User-Helper:** `getUser()` (nur Claims, kein HTTP-Call) vs. `getUserFull()` (mit fetchUserInfo).
-- **User-ID:** Logto `sub` claim als Foreign Key. Nie eigene ID generieren.
-- **Redirect-Throw:** `signIn()`/`signOut()` werfen intern `redirect()`. In try/catch: Error mit `"digest"` Property re-thrown.
+- **Pattern:** OIDC + PKCE via `arctic` (Authorization Code Flow), ID-Token-Verify via `jose` gegen JWKS. Saubere Modul-Boundary unter `src/lib/auth/` (oidc, session, claims, bridge).
+- **Proxy:** `src/proxy.ts` (Next.js 16). Public Routes: `/`, `/api/auth/*`, `/share/*`, `/api/share/*`, `/impressum`, `/datenschutz`. Geschützte Routen redirecten zu `/api/auth/sign-in` ohne Cookie.
+- **Cookie:** `bj_id_token` (1h) + `bj_refresh` (7d), HttpOnly + Secure (in Prod) + SameSite=Lax. Refresh erfolgt lazy bei abgelaufenem ID-Token.
+- **Dev-Bypass:** Wenn `OIDC_CLIENT_ID` nicht gesetzt und `NODE_ENV=development` → Proxy lässt alles durch. In Prod ohne `OIDC_CLIENT_ID` 503.
+- **User-Helper:** `getUser()` liefert `AppUser` aus den ID-Token-Claims. Interface unverändert seit Logto-Zeit, ~70 API-Routen brauchten daher keine Änderung.
+- **User-ID:** OIDC `sub`-Claim als Foreign Key in der DB-Spalte `users.auth_sub`. Nie eigene ID generieren.
+- **Multi-Instanz-Gate:** Login schlägt fehl, wenn der User in `loschke-auth` keine approved Membership in der zur App gehörenden Organization hat. Org-Slug defaulted auf `OIDC_CLIENT_ID` (Konvention: 1 Org pro App, Slug = Client-ID). Override via `AUTH_REQUIRED_ORG_SLUG`.
 
 ---
 
@@ -162,7 +163,7 @@
 ### Konventionen
 
 - Schema in `src/lib/db/schema/`, Queries in `src/lib/db/queries/`
-- Alle PKs: nanoid text. User-ID: Logto `sub` claim.
+- Alle PKs: nanoid text. User-ID: OIDC `sub`-Claim aus loschke-auth (Spalte `users.auth_sub`).
 - Migrations: `pnpm db:generate` + `pnpm db:migrate` (Prod), `pnpm db:push` (Dev)
 - Details: `src/lib/db/CLAUDE.md`
 
@@ -299,7 +300,8 @@ Die Plattform unterstützt drei Deployment-Profile: SaaS (Gateway), EU (Direct),
 Alle ENV-Variablen in `.env.example`. Minimum für funktionierende Instanz:
 
 ```bash
-LOGTO_APP_ID, LOGTO_APP_SECRET, LOGTO_ENDPOINT, LOGTO_BASE_URL, LOGTO_COOKIE_SECRET
+OIDC_CLIENT_ID, OIDC_CLIENT_SECRET, OIDC_ISSUER, OIDC_AUTHORIZE_URL, OIDC_TOKEN_URL, OIDC_JWKS_URL, OIDC_END_SESSION_URL, OIDC_REDIRECT_URI
+APP_BASE_URL
 DATABASE_URL
 AI_GATEWAY_API_KEY
 ```

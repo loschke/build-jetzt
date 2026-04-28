@@ -30,7 +30,7 @@
 | **Datenkategorien** | E-Mail, Name, Avatar-URL, Rolle, Status, Freischaltungszeitpunkt |
 | **Speicherort** | `users` Tabelle (Neon Postgres) |
 | **Speicherfrist** | Bis zur Kontolöschung durch User oder Admin |
-| **Empfaenger** | Logto (Auth-Provider), Neon (DB-Hosting) |
+| **Empfaenger** | loschke-auth (eigener OIDC-Provider), Neon (DB-Hosting) |
 
 ### 2.2 Chat-Kommunikation
 
@@ -126,7 +126,7 @@
 | Datenkategorie | Tabelle(n) | Personenbezug | Sensibilitaet |
 |----------------|-----------|---------------|---------------|
 | Identitaet (E-Mail, Name) | `users` | Direkt | Mittel |
-| Auth-Credentials | Extern (Logto) | Direkt | Hoch |
+| Auth-Credentials | Extern (loschke-auth, eigener OIDC-Provider) | Direkt | Hoch |
 | Chat-Inhalte | `messages` | Indirekt (userabhaengig) | Variabel |
 | Dokument-Inhalte | `project_documents` | Indirekt (userabhaengig) | Variabel |
 | Generierte Artifacts | `artifacts` | Gering | Niedrig |
@@ -146,7 +146,7 @@
 |---------------|-------|------------|--------|------------|
 | **Neon Inc.** | Datenbank-Hosting | Alle DB-Daten | US/EU (waehlbar) | [ ] Abzuschliessen |
 | **Vercel Inc.** | App-Hosting | Request/Response-Daten | Global | [ ] Abzuschliessen |
-| **Logto** | Authentifizierung | Credentials, Sessions | Abhaengig vom Setup | [ ] Abzuschliessen |
+| **loschke-auth** (eigener Betrieb) | Authentifizierung (E-Mail-OTP, OIDC) | E-Mail, OTP-Codes, Sessions | EU (Vercel + Neon) | Eigenbetrieb — kein AVV erforderlich |
 | **Mem0** (optional) | Memory-Service | User-Memories | Cloud/Self-Hosted | [ ] Abzuschliessen |
 | **Cloudflare** (optional) | Object Storage (R2) | Datei-Uploads | Global | [ ] Abzuschliessen |
 | **Firecrawl** (optional) | Web Search/Scrape | Suchanfragen | US | [ ] Abzuschliessen |

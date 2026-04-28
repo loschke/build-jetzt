@@ -57,13 +57,18 @@ Aktivierung: ENV auf `"true"` setzen. Aenderung erfordert Re-Build (Build-Zeit-I
 
 | Variable              | Typ            | Beschreibung                                                 |
 | --------------------- | -------------- | ------------------------------------------------------------ |
-| `LOGTO_APP_ID`        | String         | Logto OIDC Application ID                                    |
-| `LOGTO_APP_SECRET`    | String         | Logto Application Secret                                     |
-| `LOGTO_ENDPOINT`      | URL            | Logto Auth-Endpoint (z.B. `https://auth.lernen.diy`)         |
-| `LOGTO_BASE_URL`      | URL            | App-Base-URL fuer Redirects (`http://localhost:3000` in Dev) |
-| `LOGTO_COOKIE_SECRET` | String         | Session-Verschluesselung (min. 32 Zeichen)                   |
-| `DATABASE_URL`        | PostgreSQL URI | Neon-Datenbankverbindung mit `?sslmode=require`              |
-| `AI_GATEWAY_API_KEY`  | String         | Vercel AI Gateway API Key                                    |
+| `OIDC_CLIENT_ID`        | String         | OAuth-Client-ID in `loschke-auth` (zugleich Org-Slug fuer den Multi-Instanz-Gate) |
+| `OIDC_CLIENT_SECRET`    | String         | OAuth-Client-Secret aus `loschke-auth` Admin                                       |
+| `OIDC_ISSUER`           | URL            | Issuer-URL, i.d.R. `https://auth.loschke.ai/api/auth`                              |
+| `OIDC_AUTHORIZE_URL`    | URL            | Authorize-Endpoint von `loschke-auth`                                              |
+| `OIDC_TOKEN_URL`        | URL            | Token-Endpoint von `loschke-auth`                                                  |
+| `OIDC_JWKS_URL`         | URL            | JWKS-Endpoint fuer ID-Token-Verifikation                                            |
+| `OIDC_END_SESSION_URL`  | URL            | RP-initiated Logout-Endpoint                                                        |
+| `OIDC_REDIRECT_URI`     | URL            | Vollstaendige Callback-URL der App (`https://<domain>/api/auth/callback`)          |
+| `APP_BASE_URL`          | URL            | App-Base-URL fuer CSRF-Origin-Check und post-logout-Redirect                       |
+| `AUTH_REQUIRED_ORG_SLUG`| String         | Optional. Default = `OIDC_CLIENT_ID`. Nur setzen wenn Org-Slug abweicht.            |
+| `DATABASE_URL`          | PostgreSQL URI | Neon-Datenbankverbindung mit `?sslmode=require`                                    |
+| `AI_GATEWAY_API_KEY`    | String         | Vercel AI Gateway API Key                                                           |
 
 ### Branding
 
@@ -244,7 +249,7 @@ Die App unterstuetzt 5 Brands ueber `NEXT_PUBLIC_BRAND`:
 | Aspekt                | Steuerung                                   | Scope                                       |
 | --------------------- | ------------------------------------------- | ------------------------------------------- |
 | **Brand/Name/Domain** | `NEXT_PUBLIC_BRAND` ENV                     | Build-Zeit                                  |
-| **Auth-System**       | Eigene Logto-App pro Instanz (`LOGTO_*`)    | Runtime                                     |
+| **Auth-System**       | Eigener `oauth_client` + Org in `loschke-auth` (`OIDC_*`, Slug = `OIDC_CLIENT_ID`) | Runtime |
 | **Datenbank**         | Eigene Neon-DB pro Instanz (`DATABASE_URL`) | Runtime                                     |
 | **Admin-Zugang**      | `ADMIN_EMAILS` pro Instanz                  | Runtime                                     |
 | **Feature-Set**       | Feature-Flags per `.env`                    | Build-Zeit (NEXT_PUBLIC) / Runtime (Server) |
@@ -258,20 +263,20 @@ Die App unterstuetzt 5 Brands ueber `NEXT_PUBLIC_BRAND`:
 ```
 Codebase (ein Repository)
     │
-    ├── Vercel Projekt A (lernen.diy)
-    │   ├── .env: BRAND=lernen, Credits ON, Memory ON, Storage ON
+    ├── Vercel Projekt A (build.jetzt)
+    │   ├── .env: OIDC_CLIENT_ID=build-jetzt, Credits ON, Memory ON, Storage ON
     │   ├── DB: Neon DB A
-    │   └── Auth: Logto App A
+    │   └── Auth: loschke-auth Org "build-jetzt"
     │
-    ├── Vercel Projekt B (aok.lernen.diy)
-    │   ├── .env: BRAND=aok, Credits OFF, Memory OFF, BusinessMode ON
+    ├── Vercel Projekt B (acme.build.jetzt)
+    │   ├── .env: OIDC_CLIENT_ID=build-jetzt-acme, Credits OFF, BusinessMode ON
     │   ├── DB: Neon DB B
-    │   └── Auth: Logto App B
+    │   └── Auth: loschke-auth Org "build-jetzt-acme" (signup_mode=invite_only)
     │
     └── Vercel Projekt C (unlearn.how)
-        ├── .env: BRAND=unlearn, Credits ON, Memory ON, MCP ON
+        ├── .env: OIDC_CLIENT_ID=unlearn-how, Credits ON, Memory ON, MCP ON
         ├── DB: Neon DB C
-        └── Auth: Logto App C
+        └── Auth: loschke-auth Org "unlearn-how"
 ```
 
 ---
