@@ -54,6 +54,7 @@ export function getAllRegistrations(): ToolRegistration[] {
 import { registration as askUser } from "./ask-user"
 import { registration as contentAlternatives } from "./content-alternatives"
 import { registration as createArtifact } from "./create-artifact"
+import { registration as readArtifact } from "./read-artifact"
 import { registration as createQuiz } from "./create-quiz"
 import { registration as createReview } from "./create-review"
 import { registration as webSearch } from "./web-search"
@@ -77,6 +78,7 @@ const builtins: ToolRegistration[] = [
   askUser,
   contentAlternatives,
   createArtifact,
+  readArtifact,
   createQuiz,
   createReview,
   webSearch,

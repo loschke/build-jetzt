@@ -1,5 +1,6 @@
 import { features } from "@/config/features"
 import { createArtifactTool } from "@/lib/ai/tools/create-artifact"
+import { readArtifactTool } from "@/lib/ai/tools/read-artifact"
 import { createQuizTool } from "@/lib/ai/tools/create-quiz"
 import { createReviewTool } from "@/lib/ai/tools/create-review"
 import { askUserTool } from "@/lib/ai/tools/ask-user"
@@ -60,6 +61,7 @@ export async function buildTools(params: BuildToolsParams): Promise<BuildToolsRe
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const tools: Record<string, any> = {
     create_artifact: createArtifactTool(chatId),
+    read_artifact: readArtifactTool(chatId),
     create_quiz: createQuizTool(chatId),
     create_review: createReviewTool(chatId),
     ask_user: askUserTool,
