@@ -360,6 +360,51 @@ Manuell ueber die Admin-UI angelegte Eintraege bleiben unangetastet.
 
 ---
 
+## Instanz-Filter (Multi-Tenant Seeding)
+
+Jede Kunden-Instanz hat eine eigene Neon-DB und eine eigene `OIDC_CLIENT_ID`.
+Damit beim Seed nur die fuer eine Instanz vorgesehenen Files in die DB landen,
+gibt es zwei optionale Frontmatter-Felder:
+
+```yaml
+# Whitelist: Datei wird nur in diesen Instanzen geseedet
+instances:
+  - sava-aok
+  - kunde-pflege-y
+
+# Blacklist: Datei wird in allen Instanzen AUSSER diesen geseedet
+excludeInstances:
+  - prototype
+  - demo
+```
+
+**Konvention:** Instance-Slug == `OIDC_CLIENT_ID` == loschke-auth Org-Slug.
+
+**Default:** Wenn keines der beiden Felder gesetzt ist, wird die Datei in
+allen Instanzen geseedet (= heutiges Verhalten, keine Migration noetig).
+
+**Konflikt:** Wenn beide Felder gesetzt sind, gewinnt `instances`,
+`excludeInstances` wird ignoriert (mit Warning im Log).
+
+### Aufruf
+
+```bash
+# Standard: keine Filterung, seedt alles (Dev/CI)
+pnpm db:seed
+
+# Filterung nach Instanz-Slug
+SEED_INSTANCE=sava-aok pnpm db:seed
+
+# Listing-Modus: zeigt was geseedet wuerde, ohne DB-Writes
+SEED_INSTANCE=sava-aok pnpm db:seed --dry-run
+```
+
+Am Ende eines Laufs erscheint eine Zusammenfassung pro Entitaet
+(`Experts: 5 seeded, 11 skipped`). Bei `0 seeded` mit gesetztem
+`SEED_INSTANCE` warnt das Skript explizit (Tippfehler im Slug?).
+
+---
+
 ## Checkliste neue Seed-Datei
 
 - [ ] Dateiname = slug (kebab-case, `.md`)
@@ -370,3 +415,5 @@ Manuell ueber die Admin-UI angelegte Eintraege bleiben unangetastet.
 - [ ] Bei Quicktasks: `fields` definiert und `{{variablen}}` im Content referenziert
 - [ ] Bei Experten: referenzierte `skillSlugs` existieren als Seed-Dateien
 - [ ] Datei im richtigen Ordner abgelegt
+- [ ] Instanz-Scope geprueft: gehoert die Datei in alle Instanzen oder
+      nur in bestimmte? Bei Bedarf `instances` oder `excludeInstances` setzen.

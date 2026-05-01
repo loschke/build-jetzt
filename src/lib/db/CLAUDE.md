@@ -66,7 +66,9 @@ pnpm db:migrate     # Migration ausfuehren
 ## Seeding
 
 ```bash
-pnpm db:seed
+pnpm db:seed                                       # alle Files (Default)
+SEED_INSTANCE=<slug> pnpm db:seed                  # nur Files mit passendem Filter
+SEED_INSTANCE=<slug> pnpm db:seed --dry-run        # listet ohne DB-Writes
 ```
 
 Reihenfolge: Experts → Skills → Models → MCP-Server.
@@ -78,6 +80,12 @@ Alle Entitäten werden aus Markdown-Dateien in `seeds/` gelesen:
 - Skills: `seeds/skills/*.md` (Frontmatter + Skill-Content als Content)
 - Models: `seeds/models/*.md` (nur Frontmatter)
 - MCP-Server: `seeds/mcp-servers/*.md` (nur Frontmatter)
+
+**Instanz-Filter:** Seed-Files koennen via Frontmatter `instances: [...]`
+(Whitelist) oder `excludeInstances: [...]` (Blacklist) auf bestimmte
+Instanzen beschraenkt werden. Konvention: Slug == `OIDC_CLIENT_ID`.
+Ohne `SEED_INSTANCE` ENV: kein Filter, alle Files werden geseedet.
+Details: `seeds/README.md` Sektion „Instanz-Filter".
 
 ## Connection
 

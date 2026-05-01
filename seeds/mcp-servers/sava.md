@@ -8,4 +8,6 @@ headers:
   Authorization: Bearer ${SAVA_MCP_TOKEN}
 envVar: SAVA_MCP_TOKEN
 sortOrder: 10
+instances:
+  - aok-sava
 ---

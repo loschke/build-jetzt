@@ -322,6 +322,7 @@ Details: `docs/system/deployment-guide.md` und `docs/system/feature-flags-konfig
 | `docs/system/feature-flags-konfiguration.md` | Feature-Flags, ENV-Referenz, Tier-Baukasten |
 | `docs/system/platform-capabilities.md` | Nutzer-Perspektive (Marketing, Feature-Übersicht) |
 | `docs/system/deployment-guide.md` | Deployment (Cloud + Self-Hosted + Multi-Instanz) |
+| `docs/system/neue-instanz-leitfaden.md` | Schritt-für-Schritt Playbook für neue Kunden-Instanzen |
 | `docs/system/admin-handbuch.md` | Admin-Handbuch (Skills, Experts, Models, MCP, Credits) |
 | `docs/system/collaboration-sharing.md` | Chat-Sharing und Collaboration |
 | `docs/system/credit-pricing-varianten.md` | Credit-System Preisgestaltung und Szenarien |

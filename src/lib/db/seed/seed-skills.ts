@@ -4,6 +4,13 @@ import { parseSkillMarkdown } from "@/lib/ai/skills/parser"
 import { upsertSkillBySlug } from "@/lib/db/queries/skills"
 import { upsertResources, deleteResourcesBySkillId } from "@/lib/db/queries/skill-resources"
 import { getErrorMessage } from "@/lib/errors"
+import {
+  extractInstanceFilter,
+  getSeedConfig,
+  shouldSeedForInstance,
+  emptySummary,
+  type SeedSummary,
+} from "./instance-filter"
 
 /** Binary file extensions to skip when collecting resources */
 const BINARY_EXTENSIONS = new Set([
@@ -57,46 +64,66 @@ function collectFiles(dir: string, baseDir: string): string[] {
  * Standalone .md files are parsed directly. Directories containing a SKILL.md
  * also have their resource files seeded.
  * Idempotent via upsertSkillBySlug.
+ * Honors SEED_INSTANCE env var (filter via instances / excludeInstances frontmatter).
  */
-export async function seedSkills() {
+export async function seedSkills(): Promise<SeedSummary> {
+  const summary = emptySummary()
   const dir = path.join(process.cwd(), "seeds", "skills")
 
   if (!fs.existsSync(dir)) {
     console.log("  No seeds/skills/ directory found, skipping.")
-    return
+    return summary
   }
 
-  let count = 0
+  const { instance, dryRun } = getSeedConfig()
 
-  // Phase 1: Process standalone .md files (existing behavior)
+  // Phase 1: Process standalone .md files
   const mdFiles = fs.readdirSync(dir).filter((f) => f.endsWith(".md"))
 
   for (const file of mdFiles) {
     try {
       const raw = fs.readFileSync(path.join(dir, file), "utf-8")
-      const parsed = parseSkillMarkdown(raw)
-      if (!parsed) {
-        console.log(`  - ${file}: Skipped (missing required fields)`)
+
+      const filter = extractInstanceFilter(raw)
+      if (filter.conflict) {
+        console.log(`  ! ${file}: warning — both 'instances' and 'excludeInstances' set; using 'instances'`)
+      }
+      const decision = shouldSeedForInstance(filter, instance)
+      if (!decision.shouldSeed) {
+        console.log(`  - ${file}: skipped (${decision.reason})`)
+        summary.skipped++
         continue
       }
 
-      const result = await upsertSkillBySlug({
-        slug: parsed.slug,
-        name: parsed.name,
-        description: parsed.description,
-        content: parsed.content,
-        mode: parsed.mode,
-        category: parsed.category,
-        icon: parsed.icon,
-        fields: parsed.fields,
-        outputAsArtifact: parsed.outputAsArtifact,
-        temperature: parsed.temperature,
-        modelId: parsed.modelId,
-      })
-      console.log(`  + ${parsed.name} (${parsed.slug}) -> ${result.id}`)
-      count++
+      const parsed = parseSkillMarkdown(raw)
+      if (!parsed) {
+        console.log(`  - ${file}: skipped (missing required fields)`)
+        summary.skipped++
+        continue
+      }
+
+      if (dryRun) {
+        console.log(`  ~ ${parsed.name} (${parsed.slug}) [dry-run, would seed]`)
+      } else {
+        const result = await upsertSkillBySlug({
+          slug: parsed.slug,
+          name: parsed.name,
+          description: parsed.description,
+          content: parsed.content,
+          mode: parsed.mode,
+          category: parsed.category,
+          icon: parsed.icon,
+          fields: parsed.fields,
+          outputAsArtifact: parsed.outputAsArtifact,
+          temperature: parsed.temperature,
+          modelId: parsed.modelId,
+        })
+        console.log(`  + ${parsed.name} (${parsed.slug}) -> ${result.id}`)
+      }
+      summary.seeded++
     } catch (err) {
       console.error(`  x ${file}:`, getErrorMessage(err))
+      summary.errors++
     }
   }
 
@@ -106,45 +133,67 @@ export async function seedSkills() {
 
   for (const skillDir of skillDirs) {
     const skillDirPath = path.join(dir, skillDir.name)
-    const skillMdPath = path.join(skillDirPath, "SKILL.md")
+    let skillMdPath = path.join(skillDirPath, "SKILL.md")
 
     if (!fs.existsSync(skillMdPath)) {
-      // Also check case-insensitive
       const altName = fs.readdirSync(skillDirPath).find(
-        (f) => f.toLowerCase() === "skill.md"
+        (f) => f.toLowerCase() === "skill.md",
       )
       if (!altName) continue
-      // Use the actual filename
-      const altPath = path.join(skillDirPath, altName)
-      await seedSkillDirectory(skillDirPath, altPath, skillDir.name)
-      count++
-      continue
+      skillMdPath = path.join(skillDirPath, altName)
     }
 
     try {
-      await seedSkillDirectory(skillDirPath, skillMdPath, skillDir.name)
-      count++
+      const result = await seedSkillDirectory(skillDirPath, skillMdPath, skillDir.name, instance, dryRun)
+      if (result === "seeded") summary.seeded++
+      else if (result === "skipped") summary.skipped++
     } catch (err) {
       console.error(`  x ${skillDir.name}/:`, getErrorMessage(err))
+      summary.errors++
     }
   }
 
-  console.log(`Seeded ${count} skills.`)
+  console.log(`Skills: ${summary.seeded} seeded, ${summary.skipped} skipped, ${summary.errors} errors.`)
+  return summary
 }
 
 /**
  * Seed a single skill directory: parse SKILL.md, upsert skill, and seed resources.
+ * Returns whether the skill was seeded, skipped, or errored.
  */
 async function seedSkillDirectory(
   skillDirPath: string,
   skillMdPath: string,
-  dirName: string
-) {
+  dirName: string,
+  instance: string | null,
+  dryRun: boolean,
+): Promise<"seeded" | "skipped"> {
   const raw = fs.readFileSync(skillMdPath, "utf-8")
+
+  const filter = extractInstanceFilter(raw)
+  if (filter.conflict) {
+    console.log(`  ! ${dirName}/SKILL.md: warning — both 'instances' and 'excludeInstances' set; using 'instances'`)
+  }
+  const decision = shouldSeedForInstance(filter, instance)
+  if (!decision.shouldSeed) {
+    console.log(`  - ${dirName}/: skipped (${decision.reason})`)
+    return "skipped"
+  }
+
   const parsed = parseSkillMarkdown(raw)
   if (!parsed) {
-    console.log(`  - ${dirName}/: Skipped (missing required fields in SKILL.md)`)
-    return
+    console.log(`  - ${dirName}/: skipped (missing required fields in SKILL.md)`)
+    return "skipped"
+  }
+
+  if (dryRun) {
+    const allFiles = collectFiles(skillDirPath, skillDirPath)
+    const resourceCount = allFiles.filter(
+      (f) => f.toLowerCase() !== "skill.md" && !isBinaryFile(f) && !f.startsWith(".") && !f.includes("/."),
+    ).length
+    const info = resourceCount > 0 ? ` with ${resourceCount} resources` : ""
+    console.log(`  ~ ${parsed.name} (${parsed.slug})${info} [dry-run, would seed]`)
+    return "seeded"
   }
 
   const result = await upsertSkillBySlug({
@@ -167,11 +216,8 @@ async function seedSkillDirectory(
   let sortIndex = 0
 
   for (const relativePath of allFiles) {
-    // Skip SKILL.md itself
     if (relativePath.toLowerCase() === "skill.md") continue
-    // Skip binary files
     if (isBinaryFile(relativePath)) continue
-    // Skip hidden files
     if (relativePath.startsWith(".") || relativePath.includes("/.")) continue
 
     try {
@@ -183,7 +229,6 @@ async function seedSkillDirectory(
         sortOrder: sortIndex++,
       })
     } catch {
-      // Skip files that can't be read as UTF-8
       continue
     }
   }
@@ -195,4 +240,5 @@ async function seedSkillDirectory(
 
   const resourceInfo = resources.length > 0 ? ` with ${resources.length} resources` : ""
   console.log(`  + ${parsed.name} (${parsed.slug}) -> ${result.id}${resourceInfo}`)
+  return "seeded"
 }
