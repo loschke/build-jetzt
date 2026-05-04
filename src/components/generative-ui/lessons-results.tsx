@@ -1,6 +1,6 @@
 "use client"
 
-import { ExternalLink, Clock3, GraduationCap } from "lucide-react"
+import { ExternalLink, GraduationCap } from "lucide-react"
 
 import { DISCIPLINE_LABELS, LEVEL_LABELS, type LessonTeaser } from "@/lib/ai/lessons"
 
@@ -20,7 +20,7 @@ function LessonCard({ lesson }: { lesson: LessonTeaser }) {
       rel="noopener noreferrer"
       className="group grid grid-cols-[140px_1fr] gap-0 rounded-xl overflow-hidden border widget-card hover:brightness-[1.02] dark:hover:brightness-[1.1] transition-all"
     >
-      <div className="relative aspect-video bg-muted flex items-center justify-center overflow-hidden">
+      <div className="relative bg-muted overflow-hidden min-h-[96px]">
         {lesson.cover ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -30,7 +30,9 @@ function LessonCard({ lesson }: { lesson: LessonTeaser }) {
             loading="lazy"
           />
         ) : (
-          <GraduationCap className="size-6 text-muted-foreground/40" />
+          <div className="absolute inset-0 flex items-center justify-center">
+            <GraduationCap className="size-6 text-muted-foreground/40" />
+          </div>
         )}
       </div>
 
@@ -38,21 +40,12 @@ function LessonCard({ lesson }: { lesson: LessonTeaser }) {
         <p className="text-sm font-medium line-clamp-2 leading-snug">
           {lesson.title}
         </p>
-        <p className="text-[11px] text-muted-foreground/90 truncate">
+        <p className="text-[11px] text-muted-foreground truncate">
           lernen.diy · Lesson von Rico Loschke
         </p>
-        <div className="flex items-center flex-wrap gap-1.5 mt-1">
-          <span className="inline-flex items-center rounded-md bg-teal-500/10 px-1.5 py-0.5 text-[10px] font-medium text-teal-700 dark:text-teal-300 ring-1 ring-inset ring-teal-500/20">
-            {disciplineLabel}
-          </span>
-          <span className="inline-flex items-center gap-1 rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
-            <Clock3 className="size-2.5" />
-            {lesson.duration} Min
-          </span>
-          <span className="inline-flex items-center rounded-md bg-muted px-1.5 py-0.5 text-[10px] font-medium text-muted-foreground">
-            {levelLabel}
-          </span>
-        </div>
+        <p className="text-[11px] text-muted-foreground/80 truncate">
+          {disciplineLabel} · {lesson.duration} Min · {levelLabel}
+        </p>
       </div>
     </a>
   )
@@ -93,14 +86,11 @@ export function LessonsResultsSkeleton() {
           key={i}
           className="grid grid-cols-[140px_1fr] gap-0 rounded-xl overflow-hidden bg-muted/40 border border-border/50"
         >
-          <div className="aspect-video bg-muted animate-pulse" />
+          <div className="bg-muted animate-pulse min-h-[96px]" />
           <div className="p-3 space-y-2">
             <div className="h-4 w-3/4 rounded bg-muted animate-pulse" />
             <div className="h-3 w-1/2 rounded bg-muted animate-pulse" />
-            <div className="flex gap-1.5 mt-1">
-              <div className="h-4 w-16 rounded-md bg-muted animate-pulse" />
-              <div className="h-4 w-12 rounded-md bg-muted animate-pulse" />
-            </div>
+            <div className="h-3 w-2/3 rounded bg-muted animate-pulse" />
           </div>
         </div>
       ))}
