@@ -1,0 +1,22 @@
+[
+  {
+    "modelId": "mistral/mistral-small-latest",
+    "name": "Mistral 4 Small",
+    "provider": "Mistral",
+    "categories": ["fast"],
+    "region": "eu",
+    "contextWindow": 256000,
+    "maxOutputTokens": 8000,
+    "isDefault": false,
+    "capabilities": {
+      "vision": true,
+      "pdfInput": "extract",
+      "reasoning": false,
+      "tools": true
+    },
+    "inputPrice": { "per1m": 0.15 },
+    "outputPrice": { "per1m": 0.6 },
+    "isActive": true,
+    "sortOrder": 5
+  }
+]

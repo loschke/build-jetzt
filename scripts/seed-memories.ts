@@ -42,12 +42,12 @@ if (!apiKey) {
 
 const userId = process.argv[2]
 if (!userId) {
-  console.error("Usage: npx tsx scripts/seed-memories.ts <LOGTO_USER_ID>")
+  console.error("Usage: npx tsx scripts/seed-memories.ts <USER_AUTH_SUB>")
   console.error("")
-  console.error("Die Logto User-ID findest du in der DB:")
-  console.error("  SELECT logto_id, email FROM users;")
+  console.error("Die Auth-Sub-ID findest du in der DB:")
+  console.error("  SELECT auth_sub, email FROM users;")
   console.error("")
-  console.error("Oder im Browser: Logto Dashboard → Users → User Details → User ID")
+  console.error("Oder im loschke-auth Dashboard → User → User-ID kopieren")
   process.exit(1)
 }
 
@@ -72,7 +72,7 @@ const memories = [
     { role: "assistant" as const, content: "Verstanden — Deutsch als Default, direkte Kommunikation ohne Floskeln." },
   ],
   [
-    { role: "user" as const, content: "Ich arbeite gerade an einer AI Chat Plattform (loschke-chat). Das Projekt ist bei Meilenstein 8 — Memory System." },
+    { role: "user" as const, content: "Ich arbeite gerade an einer AI Chat Plattform (build-jetzt). Das Projekt ist bei Meilenstein 8 — Memory System." },
     { role: "assistant" as const, content: "Spannend! Das Memory System ist der aktuelle Fokus." },
   ],
 ]

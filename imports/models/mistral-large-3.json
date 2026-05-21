@@ -1,0 +1,22 @@
+[
+  {
+    "modelId": "mistral/mistral-large-3",
+    "name": "Mistral 3 Large",
+    "provider": "Mistral",
+    "categories": ["allrounder"],
+    "region": "eu",
+    "contextWindow": 256000,
+    "maxOutputTokens": 8000,
+    "isDefault": false,
+    "capabilities": {
+      "vision": true,
+      "pdfInput": "extract",
+      "reasoning": true,
+      "tools": true
+    },
+    "inputPrice": { "per1m": 0.5 },
+    "outputPrice": { "per1m": 1.5 },
+    "isActive": true,
+    "sortOrder": 5
+  }
+]

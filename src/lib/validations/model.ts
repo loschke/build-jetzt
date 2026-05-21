@@ -1,7 +1,7 @@
 import { z } from "zod"
 
 /** Shared category enum — single source of truth for model categories */
-export const modelCategoryEnum = z.enum(["enterprise", "allrounder", "creative", "coding", "analysis", "fast", "image"])
+export const modelCategoryEnum = z.enum(["enterprise", "allrounder", "creative", "coding", "analysis", "fast", "image", "dsgvo-safe"])
 
 /** Zod schema for creating/importing a model (used by admin routes) */
 export const createModelSchema = z.object({
@@ -15,7 +15,9 @@ export const createModelSchema = z.object({
   isDefault: z.boolean().default(false),
   capabilities: z.object({
     vision: z.boolean().optional(),
-    fileInput: z.boolean().optional(),
+    pdfInput: z.enum(["native", "extract", "none"]).optional(),
+    reasoning: z.boolean().optional(),
+    tools: z.boolean().optional(),
   }).nullish(),
   inputPrice: z.object({
     per1m: z.number().optional(),

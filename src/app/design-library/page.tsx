@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation"
 import { getUser } from "@/lib/auth"
-import { ensureUserExists, getUserStatus, getUserRole } from "@/lib/db/queries/users"
+import { getUserStatus, getUserRole } from "@/lib/db/queries/users"
+import { ensureUserExistsCached } from "@/lib/auth/ensure-user-cached"
 import { isAdminRole } from "@/lib/admin-guard"
 import { features } from "@/config/features"
 import { ChatShell } from "@/components/layout/chat-shell"
@@ -11,7 +12,7 @@ export default async function DesignLibraryPage() {
 
   if (!user) redirect("/")
 
-  await ensureUserExists({ logtoId: user.id, email: user.email, name: user.name })
+  await ensureUserExistsCached({ authSub: user.id, email: user.email, name: user.name })
   const [status, role] = await Promise.all([
     getUserStatus(user.id),
     getUserRole(user.id),

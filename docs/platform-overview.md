@@ -8,7 +8,7 @@
 
 AI Chat Plattform mit Chat-Persistenz, Streaming, Artifact-System, Expert-System und Memory. Vergleichbar mit ChatGPT/Claude.ai, aber self-hosted und konfigurierbar. Multi-Instanz-fähig über Feature-Flags und Environment-Variablen.
 
-**Tech Stack:** Next.js 16 (App Router), TypeScript Strict, Tailwind CSS v4 + shadcn/ui, Vercel AI SDK, Vercel AI Gateway, Neon Postgres + Drizzle ORM, Logto Auth (OIDC), Cloudflare R2, Mem0 Cloud, Firecrawl, Vercel Deployment.
+**Tech Stack:** Next.js 16 (App Router), TypeScript Strict, Tailwind CSS v4 + shadcn/ui, Vercel AI SDK, Vercel AI Gateway, Neon Postgres + Drizzle ORM, loschke-auth (OIDC, eigener Provider), Cloudflare R2, Mem0 Cloud, Firecrawl, Vercel Deployment.
 
 **Status:** 10 Meilensteine + Post-M10 Features implementiert (Chat, Models, Artifacts, Experts, Skills/Quicktasks, File Upload, Projekte, MCP, Memory, Credits, Business Mode, YouTube, TTS, Stitch Design, Deep Research, Google Search, Anthropic Agent Skills, Collaboration/Sharing, User Workspace, Session Wrapup).
 
@@ -202,9 +202,10 @@ src/
 
 | Route                | Methode   | Funktion                      |
 | -------------------- | --------- | ----------------------------- |
-| `/api/auth/sign-in`  | GET, POST | Logto Sign-In Redirect        |
-| `/api/auth/sign-out` | POST      | Sign-Out                      |
-| `/api/auth/callback` | GET       | Logto Callback (Code → Token) |
+| `/api/auth/sign-in`  | GET       | Authorize-Redirect zu loschke-auth (PKCE, state, nonce)   |
+| `/api/auth/sign-out` | GET       | RP-initiated Logout via end-session                       |
+| `/api/auth/callback` | GET       | Code-Tausch + ID-Token-Verify + Org-Membership-Check      |
+| `/api/auth/error`    | GET       | Fehler-Page (no_membership, invalid_state, etc.)          |
 
 ---
 
@@ -526,20 +527,19 @@ Mem0 Cloud für semantische Suche über vergangene Chat-Inhalte. Bei jedem neuen
 
 ### Authentifizierung
 
-**Provider:** Logto (OIDC, gehostet auf `auth.lernen.diy`). Login via E-Mail-OTP.
+**Provider:** `loschke-auth` (eigener OIDC-Provider auf `auth.loschke.ai`, basierend auf Better-Auth + `@better-auth/oauth-provider`). Login via E-Mail-OTP.
 
-**Session:** Cookie-basiert (`logto_{appId}`). Next.js 16 `proxy.ts` (ersetzt middleware.ts) prüft Session bei allen geschützten Routes.
+**Implementation:** OIDC + PKCE via `arctic`, ID-Token-Verify via `jose` gegen JWKS. Code-Modul-Boundary unter `src/lib/auth/` (oidc, session, claims, bridge) — bereit für spaetere Extraktion zu shared Package.
 
-**User-Identität:** Logto `sub` Claim = `userId` in allen DB-Tabellen. Kein eigenes User-ID-System.
+**Session:** Cookie-basiert (`bj_id_token`, `bj_refresh`, HttpOnly + Secure + SameSite=Lax). Next.js 16 `proxy.ts` prüft Session bei allen geschützten Routes.
 
-**Zwei Auth-Helper:**
+**User-Identität:** OIDC `sub` Claim aus loschke-auth = `userId` in allen DB-Tabellen. Spalte `users.auth_sub` haelt den Wert.
 
-- `getUser()` — Nur Token-Claims, kein HTTP-Call. Für Sidebar, Header, Auth-Guards.
-- `getUserFull()` — Mit HTTP-Call zu Logto. Nur für Profil-Seite.
+**Multi-Instanz-Gate:** Im Callback prueft `checkOrgMembership()` gegen `claims.organizations[]`. Default-Slug = `OIDC_CLIENT_ID`. Verhindert Cross-Instanz-Zugriffe ueber den gemeinsamen Auth-Server.
 
 **User-Sync:** `requireAuth()` in API-Routes ruft `ensureUserExists()` auf — Upsert des Users in der lokalen DB beim ersten API-Call.
 
-**Dev-Bypass:** Wenn `LOGTO_APP_ID` nicht gesetzt → alles frei zugänglich.
+**Dev-Bypass:** Wenn `OIDC_CLIENT_ID` nicht gesetzt und `NODE_ENV=development` → alles frei zugänglich.
 
 ### Multi-Tenancy: Nicht implementiert
 
@@ -550,14 +550,14 @@ Mem0 Cloud für semantische Suche über vergangene Chat-Inhalte. Bei jedem neuen
 - Globale Experts und Skills gelten für alle User der Instanz
 - Admin-Zugang via E-Mail-Allowlist (`ADMIN_EMAILS` ENV)
 
-**Multi-Instanz statt Multi-Tenancy:** Die Plattform wird pro Kunde/Brand als separate Vercel-Instanz deployed. Jede Instanz hat eigene ENV-Variablen, eigene DB, eigene Logto-App. Die Codebasis ist identisch, Feature-Flags und Branding unterscheiden sich.
+**Multi-Instanz statt Multi-Tenancy:** Die Plattform wird pro Kunde/Brand als separate Vercel-Instanz deployed. Jede Instanz hat eigene ENV-Variablen, eigene DB, eigenen `oauth_client` + Org in `loschke-auth` (Org-Slug = OAuth-Client-ID). Die Codebasis ist identisch, Feature-Flags und Branding unterscheiden sich.
 
 ### Users-Schema
 
 ```
 users
 ├── id (uuid PK)                    → Internes PK, NICHT für Scoping verwendet
-├── logtoId (text, unique)          → Logto sub Claim = userId in allen anderen Tabellen
+├── authSub (text, unique)          → OIDC sub aus loschke-auth = userId in allen anderen Tabellen
 ├── email, name, avatarUrl
 ├── customInstructions (text)       → User-Einstellungen
 ├── defaultModelId (text)           → Bevorzugtes Model
@@ -575,7 +575,7 @@ users
 
 | Tabelle               | Funktion                    | Wichtige Relationen                                |
 | --------------------- | --------------------------- | -------------------------------------------------- |
-| `users`               | User-Profil + Einstellungen | logtoId = userId ueberall, role (user/admin/superadmin) |
+| `users`               | User-Profil + Einstellungen | authSub = userId ueberall, role (user/admin/superadmin) |
 | `chats`               | Chat-Sessions               | userId, expertId (FK), projectId (FK)              |
 | `messages`            | Chat-Nachrichten            | chatId (FK, cascade), parts (jsonb)                |
 | `artifacts`           | Persistierte Outputs        | chatId (FK), messageId (FK), version               |
@@ -758,7 +758,7 @@ Title Generation, Memory-Operationen, Web-Suche, MCP-Aufrufe (in Marge einkalkul
 
 | Bereich               | Maßnahme                                                                     |
 | --------------------- | ---------------------------------------------------------------------------- |
-| **Auth**              | Logto OIDC, Cookie-basiert, proxy.ts Guard                                   |
+| **Auth**              | loschke-auth OIDC + PKCE, HttpOnly-Cookies, proxy.ts Guard, Multi-Instanz-Org-Membership-Check |
 | **Autorisierung**     | userId-Scoping in allen Queries, requireAdmin Guard                          |
 | **HTTP Headers**      | X-Frame-Options, HSTS, CSP, Referrer-Policy (automatisch via next.config.ts) |
 | **CSP**               | Kein unsafe-eval, HTML-Artifacts in Sandbox                                  |

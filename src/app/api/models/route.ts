@@ -1,10 +1,6 @@
 import { requireAuth } from "@/lib/api-guards"
-import { getModels, CATEGORY_LABELS, type ModelCategory, type ModelConfig } from "@/config/models"
+import { getModels, CATEGORY_LABELS, CATEGORY_ORDER, type ModelCategory, type ModelConfig } from "@/config/models"
 import { checkRateLimit, RATE_LIMITS, rateLimitResponse } from "@/lib/rate-limit"
-
-const CATEGORY_ORDER: ModelCategory[] = [
-  "enterprise", "allrounder", "coding", "creative", "analysis", "fast",
-]
 
 export async function GET() {
   const auth = await requireAuth()

@@ -1,18 +1,29 @@
 "use client"
 
-import { useState } from "react"
-import { MessageCircle, Lightbulb, BrainCircuit, MessageSquareQuote, ListChecks, Users, Zap, Folder, Mic, Palette } from "lucide-react"
+import { useState, type ComponentType } from "react"
+import {
+  MessageCircle, Lightbulb, BrainCircuit, MessageSquareQuote, ListChecks,
+  Users, Zap, Folder, Mic, Palette,
+  MessageSquare, Bot, Sparkles, Brain, FileText, BookOpen, GraduationCap,
+  Shield, Lock, Workflow, Layers, Settings, CheckCircle, Search, PenLine,
+} from "lucide-react"
 import { useProject } from "./project-context"
 import { ExpertSelector } from "./expert-selector"
 import { QuicktaskSelector, type QuicktaskPublic } from "./quicktask-selector"
 import { QuicktaskForm } from "./quicktask-form"
 import { VoiceChatTab } from "./voice-chat-tab"
 import { DesignLibraryTab } from "./design-library-tab"
+import type { CustomStarterPrompt } from "@/config/landing"
 
 interface ChatEmptyStateProps {
   onSuggestionSelect: (text: string) => void
   selectedExpertId: string | null
-  onExpertSelect: (expertId: string | null, expertName?: string, expertIcon?: string | null) => void
+  onExpertSelect: (
+    expertId: string | null,
+    expertName?: string,
+    expertIcon?: string | null,
+    expertModelPreference?: string | null,
+  ) => void
   onQuicktaskSubmit: (slug: string, data: Record<string, string>) => void
   isSubmitting?: boolean
   userName?: string
@@ -21,11 +32,20 @@ interface ChatEmptyStateProps {
   onStartVoiceChat?: () => void
   creditsAvailable?: boolean
   designLibraryEnabled?: boolean
+  customStarterPrompts?: CustomStarterPrompt[]
 }
 
 type Tab = "chat" | "experts" | "quicktasks" | "voice" | "design"
 
-const suggestions = [
+type IconComponent = ComponentType<{ className?: string }>
+
+const STARTER_ICON_MAP: Record<string, IconComponent> = {
+  MessageSquare, Bot, Sparkles, Brain, BrainCircuit, Lightbulb, Zap,
+  FileText, BookOpen, GraduationCap, Users, Shield, Lock, Workflow, Layers,
+  Settings, CheckCircle, MessageSquareQuote, ListChecks, Search, PenLine,
+}
+
+const defaultSuggestions: { icon: IconComponent; text: string; description: string }[] = [
   {
     icon: Lightbulb,
     text: "Erkläre mir ein Thema einfach",
@@ -76,10 +96,20 @@ export function ChatEmptyState({
   onStartVoiceChat,
   creditsAvailable = true,
   designLibraryEnabled,
+  customStarterPrompts,
 }: ChatEmptyStateProps) {
   const [activeTab, setActiveTab] = useState<Tab>("chat")
   const [selectedQuicktask, setSelectedQuicktask] = useState<QuicktaskPublic | null>(null)
   const { projectName } = useProject()
+
+  const suggestions = customStarterPrompts && customStarterPrompts.length > 0
+    ? customStarterPrompts.map((p) => ({
+        icon: STARTER_ICON_MAP[p.icon] ?? Lightbulb,
+        text: p.text,
+        description: p.description,
+        prompt: p.prompt ?? p.text,
+      }))
+    : defaultSuggestions.map((s) => ({ ...s, prompt: s.text }))
 
   // Quicktask form view
   if (selectedQuicktask) {
@@ -146,7 +176,7 @@ export function ChatEmptyState({
             <button
               key={suggestion.text}
               type="button"
-              onClick={() => onSuggestionSelect(suggestion.text)}
+              onClick={() => onSuggestionSelect(suggestion.prompt)}
               className="group flex flex-col items-start gap-2 rounded-xl border p-4 text-left text-sm card-interactive hover:border-primary/20 hover:bg-muted/40"
             >
               <div className="flex size-8 items-center justify-center rounded-xl bg-muted text-muted-foreground group-hover:text-foreground">

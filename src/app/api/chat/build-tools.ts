@@ -1,5 +1,6 @@
 import { features } from "@/config/features"
 import { createArtifactTool } from "@/lib/ai/tools/create-artifact"
+import { readArtifactTool } from "@/lib/ai/tools/read-artifact"
 import { createQuizTool } from "@/lib/ai/tools/create-quiz"
 import { createReviewTool } from "@/lib/ai/tools/create-review"
 import { askUserTool } from "@/lib/ai/tools/ask-user"
@@ -14,6 +15,7 @@ import { suggestMemoryTool } from "@/lib/ai/tools/suggest-memory"
 import { generateImageTool, type UploadedImage } from "@/lib/ai/tools/generate-image"
 import { youtubeSearchTool } from "@/lib/ai/tools/youtube-search"
 import { youtubeAnalyzeTool } from "@/lib/ai/tools/youtube-analyze"
+import { lessonsSearchTool } from "@/lib/ai/tools/lessons-search"
 import { textToSpeechTool } from "@/lib/ai/tools/text-to-speech"
 import { extractBrandingTool } from "@/lib/ai/tools/extract-branding"
 import { generateDesignTool } from "@/lib/ai/tools/generate-design"
@@ -22,6 +24,7 @@ import { googleSearchTool } from "@/lib/ai/tools/google-search"
 import { searchDesignLibraryTool } from "@/lib/ai/tools/search-design-library"
 import { anthropic as anthropicProvider } from "@ai-sdk/anthropic"
 import { isAnthropicModel } from "@/lib/ai/anthropic-skills"
+import { getModelCapabilities } from "@/config/models"
 import type { SkillMetadata } from "@/lib/ai/skills/discovery"
 import { getErrorMessage } from "@/lib/errors"
 import type { MCPHandle } from "@/lib/mcp"
@@ -57,9 +60,18 @@ interface BuildToolsResult {
 export async function buildTools(params: BuildToolsParams): Promise<BuildToolsResult> {
   const { chatId, userId, skills, hasQuicktask, modelId, searchEnabled, memoryEnabled, mcpEnabled, expertMcpServerIds, expertAllowedTools, imageGenerationEnabled, uploadedImages } = params
 
+  // Skip the entire tool registry if the model declares it does not support function calling.
+  // `modelId` is empty string when privacy routing is active — we keep the historical
+  // behavior of disabling tools in that branch, so an empty modelId resolves to defaults.
+  if (modelId && !getModelCapabilities(modelId).tools) {
+    console.warn(`[build-tools] Model "${modelId}" has tools=false — registering empty tool set`)
+    return { tools: {}, mcpHandle: null }
+  }
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const tools: Record<string, any> = {
     create_artifact: createArtifactTool(chatId),
+    read_artifact: readArtifactTool(chatId),
     create_quiz: createQuizTool(chatId),
     create_review: createReviewTool(chatId),
     ask_user: askUserTool,
@@ -86,6 +98,10 @@ export async function buildTools(params: BuildToolsParams): Promise<BuildToolsRe
   // Add YouTube tools if enabled
   if (features.youtube.enabled) {
     tools.youtube_search = youtubeSearchTool(chatId, userId)
+  }
+  // GenAI-Tutor: lernen.diy-Lessons als Teaser-Cards
+  if (features.lessons.enabled) {
+    tools.lessons_search = lessonsSearchTool()
   }
   // YouTube Analyze uses Gemini multimodal (same key as image generation)
   if (features.imageGeneration.enabled) {

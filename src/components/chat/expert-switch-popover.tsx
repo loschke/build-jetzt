@@ -8,7 +8,12 @@ import { EXPERT_ICON_MAP, DEFAULT_EXPERT_ICON } from "@/lib/icon-map"
 
 interface ExpertSwitchPopoverProps {
   currentExpertId: string | null
-  onSelect: (expertId: string | null, expertName?: string, expertIcon?: string | null) => void
+  onSelect: (
+    expertId: string | null,
+    expertName?: string,
+    expertIcon?: string | null,
+    expertModelPreference?: string | null,
+  ) => void
   children: React.ReactNode
 }
 
@@ -28,7 +33,7 @@ export function ExpertSwitchPopover({ currentExpertId, onSelect, children }: Exp
 
   function handleSelect(expert: ExpertPublic | null) {
     if (expert) {
-      onSelect(expert.id, expert.name, expert.icon)
+      onSelect(expert.id, expert.name, expert.icon, expert.modelPreference)
     } else {
       onSelect(null)
     }

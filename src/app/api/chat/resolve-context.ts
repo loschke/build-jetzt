@@ -215,13 +215,19 @@ export async function resolveContext(params: ResolveContextParams): Promise<Chat
     projectDocuments: projectDocuments?.length ? projectDocuments : null,
     customInstructions,
     youtubeEnabled: features.youtube.enabled,
+    lessonsEnabled: features.lessons.enabled,
     ttsEnabled: features.tts.enabled,
     webToolsEnabled: features.search.enabled,
     googleSearchEnabled: features.googleSearch.enabled,
   })
 
-  // Model resolution chain: quicktask > expert > user default > system default
+  // Model resolution chain: quicktask > picker > expert > user default > platform default
+  // - Quicktask wins because it's a workflow-level requirement (e.g. vision needed).
+  // - Picker (requestModelId) is the user's explicit current selection — beats expert/user defaults.
+  //   Frontend auto-syncs the picker to expert.modelPreference on expert switch, so picking an
+  //   expert still routes to its preferred model unless the user manually overrides.
   const resolvedModelId = quicktaskMeta?.modelId
+    ?? requestModelId
     ?? expert?.modelPreference
     ?? userPrefs.defaultModelId
     ?? modelId
@@ -235,6 +241,8 @@ export async function resolveContext(params: ResolveContextParams): Promise<Chat
   let finalModelId = modelId
   if (getModelById(resolvedModelId)) {
     finalModelId = resolvedModelId
+  } else if (requestModelId && getModelById(requestModelId)) {
+    finalModelId = requestModelId
   } else if (expert?.modelPreference && getModelById(expert.modelPreference)) {
     finalModelId = expert.modelPreference
   } else if (userPrefs.defaultModelId && getModelById(userPrefs.defaultModelId)) {

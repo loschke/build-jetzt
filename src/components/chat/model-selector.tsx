@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { SlidersHorizontalIcon, CheckIcon } from "lucide-react"
+import { SlidersHorizontalIcon, CheckIcon, ImageIcon, BrainIcon, PaperclipIcon } from "lucide-react"
 import {
   ModelSelector as ModelSelectorRoot,
   ModelSelectorTrigger,
@@ -15,7 +15,13 @@ import {
   ModelSelectorEmpty,
 } from "@/components/ai-elements/model-selector"
 import { PromptInputButton } from "@/components/ai-elements/prompt-input"
-import type { ModelCategory } from "@/config/models"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
+import type { ModelCapabilities, ModelCategory } from "@/config/models"
+import {
+  formatCapabilityBadges,
+  formatContextWindow,
+  formatContextWindowTooltip,
+} from "@/lib/ai/model-capabilities"
 
 interface ModelInfo {
   id: string
@@ -24,6 +30,8 @@ interface ModelInfo {
   categories: ModelCategory[]
   region: "eu" | "us"
   isDefault: boolean
+  capabilities?: ModelCapabilities | null
+  contextWindow?: number
 }
 
 interface ModelGroup {
@@ -126,23 +134,65 @@ export function ModelSelector({ value, onChange, disabled }: ModelSelectorProps)
           <ModelSelectorEmpty>Kein Modell gefunden.</ModelSelectorEmpty>
           {deduplicatedGroups.map((group) => (
             <ModelSelectorGroup key={group.category} heading={group.label}>
-              {group.models.map((model) => (
-                <ModelSelectorItem
-                  key={model.id}
-                  value={model.id}
-                  onSelect={() => handleSelect(model.id)}
-                  className="flex items-center gap-2"
-                >
-                  <ModelSelectorLogo provider={providerSlug(model.provider)} />
-                  <ModelSelectorName>{model.name}</ModelSelectorName>
-                  <span className="text-xs text-muted-foreground">
-                    {REGION_FLAG[model.region]}
-                  </span>
-                  {model.id === value && (
-                    <CheckIcon className="ml-auto size-3.5 text-primary" />
-                  )}
-                </ModelSelectorItem>
-              ))}
+              {group.models.map((model) => {
+                const badges = formatCapabilityBadges(model.capabilities)
+                return (
+                  <ModelSelectorItem
+                    key={model.id}
+                    value={model.id}
+                    onSelect={() => handleSelect(model.id)}
+                    className="flex items-center gap-2"
+                  >
+                    <ModelSelectorLogo provider={providerSlug(model.provider)} />
+                    <ModelSelectorName>{model.name}</ModelSelectorName>
+                    <span className="text-xs text-muted-foreground">
+                      {REGION_FLAG[model.region]}
+                    </span>
+                    {badges.length > 0 && (
+                      <span className="ml-1 flex items-center gap-0.5">
+                        {badges.map((badge) => {
+                          const Icon = badge.icon === "paperclip"
+                            ? PaperclipIcon
+                            : badge.icon === "image"
+                              ? ImageIcon
+                              : BrainIcon
+                          return (
+                            <Tooltip key={badge.key}>
+                              <TooltipTrigger asChild>
+                                <span
+                                  className="inline-flex size-4 items-center justify-center rounded-sm bg-muted text-muted-foreground"
+                                  aria-label={badge.label}
+                                >
+                                  <Icon className="size-3" />
+                                </span>
+                              </TooltipTrigger>
+                              <TooltipContent side="top">{badge.tooltip}</TooltipContent>
+                            </Tooltip>
+                          )
+                        })}
+                      </span>
+                    )}
+                    {typeof model.contextWindow === "number" && (
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span
+                            className="ml-auto inline-flex items-center rounded-sm bg-muted px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-muted-foreground"
+                            aria-label={formatContextWindowTooltip(model.contextWindow)}
+                          >
+                            {formatContextWindow(model.contextWindow)}
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">
+                          {formatContextWindowTooltip(model.contextWindow)}
+                        </TooltipContent>
+                      </Tooltip>
+                    )}
+                    {model.id === value && (
+                      <CheckIcon className={`${typeof model.contextWindow === "number" ? "ml-1" : "ml-auto"} size-3.5 text-primary`} />
+                    )}
+                  </ModelSelectorItem>
+                )
+              })}
             </ModelSelectorGroup>
           ))}
         </ModelSelectorList>

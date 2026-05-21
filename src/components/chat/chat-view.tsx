@@ -46,6 +46,7 @@ import { SpeechButton } from "./speech-button"
 import { SuggestedReplies } from "./suggested-replies"
 import { ExpertSwitchPopover } from "./expert-switch-popover"
 import { ExpertSwitchDivider } from "./expert-switch-divider"
+import { ModelSelector } from "./model-selector"
 import { useArtifact, mapSavedPartsToUI } from "@/hooks/use-artifact"
 import { useResizeHandle } from "@/hooks/use-resize-handle"
 import type { QuizDefinition, QuizResults } from "@/types/quiz"
@@ -61,9 +62,16 @@ import { useProject } from "./project-context"
 import { useExpert } from "./expert-context"
 import { EXPERT_ICON_MAP, DEFAULT_EXPERT_ICON } from "@/lib/icon-map"
 import { chatConfig } from "@/config/chat"
+import { MAX_MESSAGE_LENGTH } from "@/lib/constants"
 import { features } from "@/config/features"
 import { getErrorMessage } from "@/lib/errors"
 import { WRAPUP_TYPES } from "@/config/wrapup"
+import type { ModelCapabilities } from "@/config/models"
+import {
+  getEffectiveAcceptString,
+  getMaxFilesForModel,
+  attachButtonTooltip,
+} from "@/lib/ai/model-capabilities"
 
 interface FormulaContext {
   name: string
@@ -89,9 +97,12 @@ interface ChatViewProps {
   memoryEnabled?: boolean
   voiceChatEnabled?: boolean
   designLibraryEnabled?: boolean
+  customStarterPrompts?: import("@/config/landing").CustomStarterPrompt[]
+  /** Server-injected business-mode status — when present, useBusinessMode skips its initial fetch */
+  initialBusinessModeStatus?: import("@/lib/business-mode/status").BusinessModeStatus | null
 }
 
-export function ChatView({ chatId, initialModelId, initialProjectId, initialArtifactId, formulaContext, promptOnlyMode, referenceImageContext, userName, ttsEnabled, memoryEnabled, voiceChatEnabled, designLibraryEnabled }: ChatViewProps) {
+export function ChatView({ chatId, initialModelId, initialProjectId, initialArtifactId, formulaContext, promptOnlyMode, referenceImageContext, userName, ttsEnabled, memoryEnabled, voiceChatEnabled, designLibraryEnabled, customStarterPrompts, initialBusinessModeStatus }: ChatViewProps) {
   const [input, setInput] = useState("")
   const [initialMessagesLoaded, setInitialMessagesLoaded] = useState(!chatId)
   const [modelId, setModelId] = useState(initialModelId ?? "")
@@ -104,7 +115,7 @@ export function ChatView({ chatId, initialModelId, initialProjectId, initialArti
   >(formulaContext ? { type: "formula", ...formulaContext } : referenceImageContext ? { type: "edit", imageUrl: referenceImageContext.url, originalPrompt: referenceImageContext.originalPrompt } : null)
   const { setProject } = useProject()
   const { expertName, expertIcon, setExpert } = useExpert()
-  const [modelMeta, setModelMeta] = useState<{ provider?: string; region?: "eu" | "us" } | null>(null)
+  const [modelMeta, setModelMeta] = useState<{ provider?: string; region?: "eu" | "us"; capabilities?: ModelCapabilities | null } | null>(null)
   const [hasAttachedFiles, setHasAttachedFiles] = useState(false)
   const [creditError, setCreditError] = useState<string | null>(null)
   const [suggestedRepliesEnabled, setSuggestedRepliesEnabled] = useState(true)
@@ -123,8 +134,10 @@ export function ChatView({ chatId, initialModelId, initialProjectId, initialArti
   const voiceChat = useVoiceChat()
   const voiceChatActive = voiceChat.state !== "idle" && voiceChat.state !== "disconnected" && voiceChat.state !== "error"
 
-  // Business Mode — PII detection + file consent
-  const businessMode = useBusinessMode()
+  // Business Mode — PII detection + file consent.
+  // When the server already injected the status (initialBusinessModeStatus), the hook
+  // skips its initial /api/business-mode/status fetch.
+  const businessMode = useBusinessMode(initialBusinessModeStatus)
 
   // Keep refs in sync with state
   modelIdRef.current = modelId
@@ -150,19 +163,19 @@ export function ChatView({ chatId, initialModelId, initialProjectId, initialArti
   }, [initialProjectId, chatId])
 
   // Cached models data shared between default model resolution and metadata lookup
-  const modelsDataRef = useRef<{ models: Array<{ id: string; provider: string; region: string; isDefault: boolean }> } | null>(null)
+  const modelsDataRef = useRef<{ models: Array<{ id: string; provider: string; region: string; isDefault: boolean; capabilities?: ModelCapabilities | null }> } | null>(null)
 
   // Load user default model + models data in a single parallel fetch
   useEffect(() => {
     if (modelId) {
-      // Model already set — only need models data for business mode metadata
-      if (features.businessMode.enabled && !modelMeta) {
+      // Model already set — fetch metadata for upload UX (always) + business mode (when enabled)
+      if (!modelMeta) {
         const cached = modelsDataRef.current
         if (cached) {
           const m = cached.models?.find((m) => m.id === modelId)
           if (m) {
             const region = m.region === "eu" || m.region === "us" ? m.region : undefined
-            setModelMeta({ provider: m.provider, region })
+            setModelMeta({ provider: m.provider, region, capabilities: m.capabilities ?? null })
           }
         } else {
           fetch("/api/models")
@@ -173,7 +186,7 @@ export function ChatView({ chatId, initialModelId, initialProjectId, initialArti
               const m = data.models?.find((m: { id: string }) => m.id === modelId)
               if (m) {
                 const region = m.region === "eu" || m.region === "us" ? m.region : undefined
-                setModelMeta({ provider: m.provider, region })
+                setModelMeta({ provider: m.provider, region, capabilities: m.capabilities ?? null })
               }
             })
             .catch((e) => console.warn("[chat-view]", getErrorMessage(e)))
@@ -207,12 +220,12 @@ export function ChatView({ chatId, initialModelId, initialProjectId, initialArti
           }
           if (data.defaultModelId) {
             setModelId(data.defaultModelId)
-            // Set model metadata from already-fetched models
-            if (features.businessMode.enabled && modelsData) {
+            // Set model metadata from already-fetched models (capabilities needed for upload UX)
+            if (modelsData) {
               const m = modelsData.models?.find((m: { id: string }) => m.id === data.defaultModelId)
               if (m) {
                 const region = m.region === "eu" || m.region === "us" ? m.region : undefined
-                setModelMeta({ provider: m.provider, region })
+                setModelMeta({ provider: m.provider, region, capabilities: m.capabilities ?? null })
               }
             }
             return
@@ -224,10 +237,8 @@ export function ChatView({ chatId, initialModelId, initialProjectId, initialArti
           const defaultModel = modelsData.models?.find((m: { isDefault: boolean }) => m.isDefault)
           if (defaultModel) {
             setModelId(defaultModel.id)
-            if (features.businessMode.enabled) {
-              const region = defaultModel.region === "eu" || defaultModel.region === "us" ? defaultModel.region : undefined
-              setModelMeta({ provider: defaultModel.provider, region })
-            }
+            const region = defaultModel.region === "eu" || defaultModel.region === "us" ? defaultModel.region : undefined
+            setModelMeta({ provider: defaultModel.provider, region, capabilities: defaultModel.capabilities ?? null })
           }
         }
       } catch {
@@ -350,7 +361,18 @@ export function ChatView({ chatId, initialModelId, initialProjectId, initialArti
           setMessages(uiMessages)
         }
 
-        if (data.modelId) setModelId(data.modelId)
+        if (data.modelId) {
+          setModelId(data.modelId)
+          // Refresh modelMeta so accept list / tooltips match the loaded chat's model
+          const cached = modelsDataRef.current
+          if (cached) {
+            const m = cached.models?.find((m) => m.id === data.modelId)
+            if (m) {
+              const region = m.region === "eu" || m.region === "us" ? m.region : undefined
+              setModelMeta({ provider: m.provider, region, capabilities: m.capabilities ?? null })
+            }
+          }
+        }
         if (data.expertId) {
           setExpertId(data.expertId)
           // Use enriched data from API response (no extra fetch needed)
@@ -392,12 +414,36 @@ export function ChatView({ chatId, initialModelId, initialProjectId, initialArti
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialArtifactId, initialMessagesLoaded])
 
+  const handleModelSelect = useCallback((newModelId: string) => {
+    setModelId(newModelId)
+    // Refresh metadata so file-upload UX (accept list, tooltips) reflects the new model
+    const cached = modelsDataRef.current
+    if (cached) {
+      const m = cached.models?.find((m) => m.id === newModelId)
+      if (m) {
+        const region = m.region === "eu" || m.region === "us" ? m.region : undefined
+        setModelMeta({ provider: m.provider, region, capabilities: m.capabilities ?? null })
+      }
+    }
+  }, [])
+
   const handleExpertSelect = useCallback(
-    (newExpertId: string | null, expertName?: string, expertIcon?: string | null) => {
+    (
+      newExpertId: string | null,
+      expertName?: string,
+      expertIcon?: string | null,
+      expertModelPreference?: string | null,
+    ) => {
       setExpertId(newExpertId)
       setExpert(newExpertId, expertName ?? null, expertIcon ?? null)
+      // Auto-sync picker to expert's preferred model. Server-side, picker beats expert,
+      // so without this the expert's modelPreference would never run unless the user
+      // happens to have it as their default. Manual override in the picker is still possible.
+      if (expertModelPreference) {
+        handleModelSelect(expertModelPreference)
+      }
     },
-    [setExpert]
+    [setExpert, handleModelSelect]
   )
 
   const handleStop = useCallback(() => {
@@ -694,6 +740,7 @@ export function ChatView({ chatId, initialModelId, initialProjectId, initialArti
                 voiceChatEnabled={voiceChatEnabled}
                 onStartVoiceChat={() => voiceChat.connect({ chatId, projectId: projectIdRef.current ?? undefined })}
                 designLibraryEnabled={designLibraryEnabled}
+                customStarterPrompts={customStarterPrompts}
               />
             ) : (
               <>
@@ -797,8 +844,8 @@ export function ChatView({ chatId, initialModelId, initialProjectId, initialArti
                 ? "rounded-b-2xl rounded-t-none border border-amber-400/40 bg-background input-prominent dark:border-amber-500/25"
                 : "rounded-2xl border bg-background input-prominent"
             }
-            accept={chatConfig.upload.accept}
-            maxFiles={chatConfig.upload.maxFiles}
+            accept={getEffectiveAcceptString(modelMeta?.capabilities, businessMode.safeChat.isActive)}
+            maxFiles={getMaxFilesForModel()}
             maxFileSize={chatConfig.upload.maxFileSize}
             globalDrop
           >
@@ -808,19 +855,40 @@ export function ChatView({ chatId, initialModelId, initialProjectId, initialArti
                 value={input}
                 onChange={(e) => setInput(e.currentTarget.value)}
                 placeholder="Nachricht eingeben..."
-                maxLength={2000}
+                maxLength={MAX_MESSAGE_LENGTH}
                 autoFocus={!chatId}
               />
             </PromptInputBody>
+            {input.length >= MAX_MESSAGE_LENGTH * 0.875 && (
+              <div className="flex items-center justify-between px-3 pb-1 text-xs">
+                <span className="text-muted-foreground">
+                  {input.length >= MAX_MESSAGE_LENGTH
+                    ? "Zeichenlimit erreicht. Für längere Texte nutze den Datei-Upload."
+                    : "Tipp: Längere Texte als Datei hochladen (.txt, .md, .pdf, .docx)"}
+                </span>
+                <span className={input.length >= MAX_MESSAGE_LENGTH ? "text-destructive font-medium" : "text-muted-foreground"}>
+                  {input.length.toLocaleString("de-DE")}/{MAX_MESSAGE_LENGTH.toLocaleString("de-DE")}
+                </span>
+              </div>
+            )}
             <PromptInputFooter>
               <PromptInputTools>
-                <AttachButton />
+                <AttachButton
+                  tooltip={attachButtonTooltip(modelMeta?.capabilities, businessMode.safeChat.isActive)}
+                />
                 <ExpertSwitchButton
                   expertId={expertId}
                   expertName={expertName}
                   expertIcon={expertIcon}
                   onSelect={handleExpertSelect}
                 />
+                {features.modelPickerInInput.enabled && (
+                  <ModelSelector
+                    value={modelId}
+                    onChange={handleModelSelect}
+                    disabled={isGenerating || readOnly}
+                  />
+                )}
                 {businessMode.safeChat.available && (
                   <SafeChatPopover safeChat={businessMode.safeChat} />
                 )}
@@ -935,8 +1003,9 @@ function AttachmentPreviews({ onFilesChange }: { onFilesChange?: (hasFiles: bool
 }
 
 /** Direct attach button — opens file dialog on click, no dropdown */
-function AttachButton() {
+function AttachButton({ tooltip }: { tooltip?: string | null }) {
   const { openFileDialog } = usePromptInputAttachments()
+  const tooltipText = tooltip ?? "Dateien anhängen"
   return (
     <Tooltip>
       <TooltipTrigger asChild>
@@ -946,12 +1015,15 @@ function AttachButton() {
           size="icon"
           className="size-8 rounded-lg"
           onClick={openFileDialog}
+          aria-label={tooltipText}
         >
           <PlusIcon className="size-4" />
-          <span className="sr-only">Dateien anhängen</span>
+          <span className="sr-only">{tooltipText}</span>
         </Button>
       </TooltipTrigger>
-      <TooltipContent side="top">Dateien anhängen</TooltipContent>
+      <TooltipContent side="top" className="max-w-xs text-center">
+        {tooltipText}
+      </TooltipContent>
     </Tooltip>
   )
 }
@@ -1003,7 +1075,12 @@ function ExpertSwitchButton({
   expertId: string | null
   expertName: string | null
   expertIcon: string | null
-  onSelect: (id: string | null, name?: string, icon?: string | null) => void
+  onSelect: (
+    id: string | null,
+    name?: string,
+    icon?: string | null,
+    modelPreference?: string | null,
+  ) => void
 }) {
   const Icon = expertIcon ? (EXPERT_ICON_MAP[expertIcon] ?? DEFAULT_EXPERT_ICON) : Users
   const hasExpert = expertId !== null

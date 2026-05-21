@@ -1,13 +1,18 @@
 import { redirect } from "next/navigation"
 import Link from "next/link"
 import { brand } from "@/config/brand"
+import { customLanding } from "@/config/landing"
 import { BrandWordmark } from "@/components/layout/brand-wordmark"
 import { LandingPage } from "@/components/landing/landing-page"
+import { CustomLanding } from "@/components/landing/custom-landing"
+import { CustomLandingFooter } from "@/components/landing/custom-landing-footer"
 import { getUser } from "@/lib/auth"
 import { ChatShell } from "@/components/layout/chat-shell"
 import { ChatView } from "@/components/chat/chat-view"
 import { features } from "@/config/features"
-import { ensureUserExists, getUserStatus, getUserRole } from "@/lib/db/queries/users"
+import { getUserStatus, getUserRole } from "@/lib/db/queries/users"
+import { ensureUserExistsCached } from "@/lib/auth/ensure-user-cached"
+import { getBusinessModeStatus } from "@/lib/business-mode/status"
 import { isAdminRole } from "@/lib/admin-guard"
 import { ExternalLink } from "lucide-react"
 import { queryDesignLibrary } from "@/lib/db/design-library"
@@ -21,7 +26,7 @@ export default async function HomePage({
 
   // Authenticated: check approval status before showing chat
   if (user) {
-    await ensureUserExists({ logtoId: user.id, email: user.email, name: user.name })
+    await ensureUserExistsCached({ authSub: user.id, email: user.email, name: user.name })
     const [status, role] = await Promise.all([
       getUserStatus(user.id),
       getUserRole(user.id),
@@ -55,6 +60,8 @@ export default async function HomePage({
       } catch { /* Library not reachable — proceed without context */ }
     }
 
+    const businessModeStatus = getBusinessModeStatus()
+
     return (
       <ChatShell>
         <ChatView
@@ -67,6 +74,8 @@ export default async function HomePage({
           memoryEnabled={features.memory.enabled}
           voiceChatEnabled={features.voiceChat.enabled}
           designLibraryEnabled={features.designLibrary.enabled}
+          customStarterPrompts={customLanding?.starterPrompts}
+          initialBusinessModeStatus={businessModeStatus}
         />
       </ChatShell>
     )
@@ -99,23 +108,27 @@ export default async function HomePage({
           {/* Header — sticky inside frame */}
           <header className="sticky top-[18px] z-[999] flex items-center justify-between px-6 py-4 sm:px-10 md:px-16 lg:px-20 bg-[#151416]/90 backdrop-blur-sm border-b border-white/10">
             <BrandWordmark className="text-xl text-white [&>span]:text-white" />
-            <a
-              href="https://loschke.ai"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-sm text-white/50 hover:text-white transition-colors"
-            >
-              loschke.ai
-              <ExternalLink className="h-3.5 w-3.5" />
-            </a>
+            {!customLanding && (
+              <a
+                href="https://loschke.ai"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-sm text-white/50 hover:text-white transition-colors"
+              >
+                loschke.ai
+                <ExternalLink className="h-3.5 w-3.5" />
+              </a>
+            )}
           </header>
 
           {/* Landing Page */}
           <main id="main-content">
-            <LandingPage />
+            {customLanding ? <CustomLanding config={customLanding} /> : <LandingPage />}
           </main>
 
-          {/* Footer — Accent Background */}
+          {customLanding ? (
+            <CustomLandingFooter config={customLanding} />
+          ) : (
           <footer className="bg-primary text-primary-foreground px-6 py-12 sm:px-10 md:px-16 lg:px-20">
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-[1fr_auto_auto_auto_auto] gap-12">
               {/* Brand */}
@@ -186,8 +199,18 @@ export default async function HomePage({
                 </h4>
                 <ul className="space-y-2">
                   <li>
-                    <a href="https://linkedin.com/in/ricoloschke" target="_blank" rel="noopener noreferrer" className="text-sm text-primary-foreground/80 hover:text-primary-foreground transition-colors">
+                    <a href="https://www.linkedin.com/in/rico-loschke/" target="_blank" rel="noopener noreferrer" className="text-sm text-primary-foreground/80 hover:text-primary-foreground transition-colors">
                       LinkedIn
+                    </a>
+                  </li>
+                  <li>
+                    <a href="https://www.youtube.com/@LoschkeAI" target="_blank" rel="noopener noreferrer" className="text-sm text-primary-foreground/80 hover:text-primary-foreground transition-colors">
+                      YouTube
+                    </a>
+                  </li>
+                  <li>
+                    <a href="https://www.instagram.com/loschkeai/" target="_blank" rel="noopener noreferrer" className="text-sm text-primary-foreground/80 hover:text-primary-foreground transition-colors">
+                      Instagram
                     </a>
                   </li>
                 </ul>
@@ -223,6 +246,7 @@ export default async function HomePage({
               </p>
             </div>
           </footer>
+          )}
         </div>
       </div>
     </div>

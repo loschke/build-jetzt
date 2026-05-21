@@ -54,6 +54,7 @@ export function getAllRegistrations(): ToolRegistration[] {
 import { registration as askUser } from "./ask-user"
 import { registration as contentAlternatives } from "./content-alternatives"
 import { registration as createArtifact } from "./create-artifact"
+import { registration as readArtifact } from "./read-artifact"
 import { registration as createQuiz } from "./create-quiz"
 import { registration as createReview } from "./create-review"
 import { registration as webSearch } from "./web-search"
@@ -66,6 +67,7 @@ import { registration as suggestMemory } from "./suggest-memory"
 import { registration as generateImage } from "./generate-image"
 import { registration as youtubeSearch } from "./youtube-search"
 import { registration as youtubeAnalyze } from "./youtube-analyze"
+import { registration as lessonsSearch } from "./lessons-search"
 import { registration as textToSpeech } from "./text-to-speech"
 import { registration as extractBranding } from "./extract-branding"
 import { registration as generateDesign } from "./generate-design"
@@ -77,6 +79,7 @@ const builtins: ToolRegistration[] = [
   askUser,
   contentAlternatives,
   createArtifact,
+  readArtifact,
   createQuiz,
   createReview,
   webSearch,
@@ -89,6 +92,7 @@ const builtins: ToolRegistration[] = [
   generateImage,
   youtubeSearch,
   youtubeAnalyze,
+  lessonsSearch,
   textToSpeech,
   extractBranding,
   generateDesign,

@@ -1,0 +1,22 @@
+[
+  {
+    "modelId": "anthropic/claude-opus-4-7",
+    "name": "Claude Opus",
+    "provider": "Anthropic",
+    "categories": ["enterprise", "analysis", "creative", "coding"],
+    "region": "us",
+    "contextWindow": 1000000,
+    "maxOutputTokens": 128000,
+    "isDefault": false,
+    "capabilities": {
+      "vision": true,
+      "pdfInput": "native",
+      "reasoning": true,
+      "tools": true
+    },
+    "inputPrice": { "per1m": 5 },
+    "outputPrice": { "per1m": 25 },
+    "isActive": true,
+    "sortOrder": 2
+  }
+]

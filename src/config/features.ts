@@ -41,6 +41,9 @@ export const features = {
   youtube: {
     enabled: !!process.env.YOUTUBE_API_KEY,
   },
+  lessons: {
+    enabled: process.env.LESSONS_TUTOR_ENABLED !== "false",
+  },
   tts: {
     enabled: !!process.env.GOOGLE_GENERATIVE_AI_API_KEY,
   },
@@ -73,5 +76,8 @@ export const features = {
   voiceChat: {
     enabled: !!process.env.GOOGLE_GENERATIVE_AI_API_KEY
       && process.env.VOICE_CHAT_ENABLED === "true",
+  },
+  modelPickerInInput: {
+    enabled: process.env.NEXT_PUBLIC_MODEL_PICKER_ENABLED === "true",
   },
 } as const

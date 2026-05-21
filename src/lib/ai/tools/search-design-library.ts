@@ -128,7 +128,7 @@ async function searchResults(query: string, category?: string, limit = 8): Promi
   `, params)
 
   return rows.map((r) => ({
-    id: r.id, promptText: r.promptTextDe ?? r.promptText,
+    id: r.id, promptText: r.promptText,
     category: r.category, previewUrl: r.previewUrl,
     formulaId: r.formulaId, imageModel: r.imageModel,
   }))

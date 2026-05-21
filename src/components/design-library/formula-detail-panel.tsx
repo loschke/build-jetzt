@@ -65,7 +65,7 @@ function renderLegend(text: string): ReactNode {
 
 function ExampleImageCard({ example, onEdit }: { example: Example; onEdit: () => void }) {
   const [copied, setCopied] = useState(false)
-  const promptText = example.promptTextDe ?? example.promptText
+  const promptText = example.promptText
 
   const handleCopy = useCallback((e: React.MouseEvent) => {
     e.stopPropagation()
@@ -146,7 +146,7 @@ export function FormulaDetailPanel({ formula, formulaName, open, onClose }: Form
   }
 
   const handleEditImage = (example: Example) => {
-    const prompt = example.promptTextDe ?? example.promptText
+    const prompt = example.promptText
     router.push(`/?referenceImage=${encodeURIComponent(example.previewUrl)}&originalPrompt=${encodeURIComponent(prompt)}&expert=design-studio`)
   }
 

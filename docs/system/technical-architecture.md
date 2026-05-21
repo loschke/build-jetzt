@@ -70,7 +70,7 @@ Modelle werden in der `models`-Tabelle verwaltet mit:
 
 - **Preis:** `inputPrice.per1m` und `outputPrice.per1m` (Dollar pro 1M Tokens)
 - **Region:** `eu` oder `us` (fuer Datenschutz-Awareness)
-- **Capabilities:** `vision`, `fileInput` (steuern File-Upload-Verhalten)
+- **Capabilities:** `vision` (Bilder), `pdfInput` (`native`/`extract`/`none`), `reasoning`, `tools` — steuern UI-File-Upload + Server-Pipeline
 - **Kategorien:** enterprise, allrounder, creative, coding, analysis, fast
 
 **Cache:** 60s TTL auf Modul-Ebene. `clearModelCache()` nach Admin-Mutations.
@@ -290,7 +290,7 @@ Experts sind KI-Personas mit eigener Persoenlichkeit, Modell-Praeferenz, Tempera
 ### Globale vs. eigene Experts
 
 - **Global** (`userId = NULL`): Die 7 Default-Experts. Von Admins verwaltbar, nicht loeschbar.
-- **Eigene** (`userId = <logto-sub>`): User-erstellte Experts. Nur fuer den Ersteller sichtbar (wenn `isPublic = false`).
+- **Eigene** (`userId = <auth-sub>`): User-erstellte Experts. Nur fuer den Ersteller sichtbar (wenn `isPublic = false`).
 
 ### 7 Default-Experts
 
@@ -473,7 +473,7 @@ MCP-Verbindungen werden im `finally`-Block von `onFinish` geschlossen. `Promise.
 ```
 users
 ├── id (PK, uuid)
-├── logtoId (unique, text — Logto sub claim)
+├── authSub (unique, text — OIDC sub claim aus loschke-auth)
 ├── email, name, avatarUrl
 ├── role ("user" | "admin" | "superadmin")
 ├── defaultModelId

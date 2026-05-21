@@ -3,13 +3,11 @@
  */
 
 import { getUser, type AppUser } from "@/lib/auth"
-import { ensureUserExists, getUserStatus, getUserRole } from "@/lib/db/queries/users"
+import { getUserStatus, getUserRole } from "@/lib/db/queries/users"
+import { ensureUserExistsCached } from "@/lib/auth/ensure-user-cached"
 import { isAdminRole } from "@/lib/admin-guard"
 
 const DEFAULT_MAX_BODY = 1024 * 1024 // 1MB
-
-/** Cache of user IDs already upserted in this process lifetime */
-const knownUserIds = new Set<string>()
 
 type AuthSuccess = { user: AppUser; error?: never }
 type AuthFailure = { user?: never; error: Response }
@@ -30,11 +28,9 @@ export async function requireAuth(): Promise<AuthSuccess | AuthFailure> {
     return { error: Response.json({ error: "Unauthorized" }, { status: 401 }) }
   }
 
-  // Upsert user record so DB queries (custom instructions etc.) work
-  if (!knownUserIds.has(user.id)) {
-    await ensureUserExists({ logtoId: user.id, email: user.email, name: user.name })
-    knownUserIds.add(user.id)
-  }
+  // Upsert user record so DB queries (custom instructions etc.) work.
+  // Cached per Lambda lifetime — see src/lib/auth/ensure-user-cached.ts
+  await ensureUserExistsCached({ authSub: user.id, email: user.email, name: user.name })
 
   // Check user approval status — admins/superadmins bypass
   const [status, role] = await Promise.all([

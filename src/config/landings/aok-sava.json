@@ -1,0 +1,55 @@
+{
+  "companyName": "AOK SAVA",
+  "hero": {
+    "title": "Arbeitsplatz Mission SAVA",
+    "subline": "Gemeinsame KI-Plattform für die Mission SAVA der AOK Sachsen-Anhalt. Wissen, Sparring, Konzept-Arbeit an einem Ort."
+  },
+  "intro": "Diese Plattform unterstützt das Team aus AOK Sachsen-Anhalt, queo und Loschke bei der gemeinsamen Arbeit an SAVA — von Mission-Übersicht bis Pflegeassistent-Iteration.\n\nDie SAVA-Wissensdatenbank ist als MCP angebunden: Jede Antwort ist mit Pfad-Verweisen auf die Quell-Files belegt, nichts erfunden. Vier Experten decken die typischen Arbeitsbereiche ab — wähle den passenden im Chat oder starte mit einem der Prompts unten.",
+  "features": [
+    {
+      "icon": "BookOpen",
+      "title": "Belegtes Wissen",
+      "text": "Alle Antworten gegen die SAVA-Wissensdatenbank geprüft. Quellen werden mit Pfad-Verweis genannt — nichts ohne Beleg."
+    },
+    {
+      "icon": "Users",
+      "title": "Vier SAVA-Experten",
+      "text": "Mission-Überblick, Agent-Framework, Methodik für neue Projekte, Coaching für den Pflegeassistent-Piloten."
+    },
+    {
+      "icon": "Shield",
+      "title": "Geschlossener Raum",
+      "text": "Login nur für freigeschaltete Team-Mitglieder. Inhalte verlassen die Instanz nicht."
+    }
+  ],
+  "starterPrompts": [
+    {
+      "icon": "MessageSquareQuote",
+      "text": "Gib mir einen Überblick zur Mission SAVA",
+      "description": "Vision, Stakeholder und aktueller Stand der Initiative",
+      "prompt": "Gib mir einen strukturierten Überblick zur Mission SAVA. Gehe dabei auf folgende Punkte ein: (1) Vision und übergeordnetes Ziel, (2) beteiligte Organisationen und ihre Rollen (AOK Sachsen-Anhalt, queo, Loschke), (3) aktuelle Phase der Initiative und nächste Meilensteine, (4) zentrale Use-Cases bzw. Piloten. Recherchiere ausschließlich in der SAVA-Wissensdatenbank und belege jede Aussage mit Pfad-Verweis auf die Quell-Datei. Wenn ein Punkt in der Knowledge Base nicht eindeutig dokumentiert ist, sage das explizit, statt zu raten."
+    },
+    {
+      "icon": "Search",
+      "text": "Wie funktioniert der Sensor in SAVA?",
+      "description": "Intentionen und Umgebungszustände als Input für den Agent",
+      "prompt": "Erkläre mir die Sensor-Komponente des SAVA-Agent-Frameworks im Detail. Gehe ein auf: (1) welche Intentionen erkannt werden und woher sie kommen, (2) welche Umgebungszustände erfasst werden, (3) wie diese Inputs strukturiert an die nachgelagerten Komponenten (Motor, Stimme, Kompass) weitergegeben werden, (4) konkrete Beispiele aus dem Pflegeassistent-Piloten, falls dokumentiert. Recherchiere in der SAVA-Wissensdatenbank und belege jede Aussage mit Pfad-Verweis."
+    },
+    {
+      "icon": "BrainCircuit",
+      "text": "Erkläre mir das SAVA-Agent-Framework",
+      "description": "Sensor, Motor, Stimme, Kompass — das generische Modell hinter SAVA",
+      "prompt": "Erkläre das generische SAVA-Agent-Framework mit seinen vier Komponenten Sensor, Motor, Stimme und Kompass. Für jede Komponente: (1) Aufgabe und Verantwortung, (2) Input und Output, (3) Zusammenspiel mit den anderen Komponenten, (4) ein konkretes Beispiel aus einem dokumentierten Use-Case. Recherchiere in der SAVA-Wissensdatenbank, belege jede Aussage mit Pfad-Verweis und kennzeichne klar, was generisches Framework ist und was bereits konkret im Pflegeassistent-Piloten implementiert ist."
+    },
+    {
+      "icon": "Lightbulb",
+      "text": "Wie ist die SAVA Knowledge Base aufgebaut?",
+      "description": "Ordnerstruktur, Inhalte und Meta-Daten",
+      "prompt": "Beschreibe den Aufbau der SAVA-Wissensdatenbank. Gehe ein auf: (1) Top-Level-Ordnerstruktur und welche Inhalte wo liegen, (2) typische Datei-Typen und Meta-Daten, (3) wie Themen miteinander verlinkt sind, (4) Empfehlung, wo ich für typische Fragen (Mission-Überblick, Framework, Pilot-Status) zuerst suchen sollte. Liste die Hauptbereiche mit konkretem Pfad-Beispiel auf."
+    }
+  ],
+  "cta": {
+    "loginLabel": "Anmelden"
+  },
+  "footerNote": "Bei Fragen zum Zugang: rico@sevenx.de"
+}
