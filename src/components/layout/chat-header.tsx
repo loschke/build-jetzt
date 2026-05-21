@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { Folder, Plus, MessageSquare, FolderPlus, Users, BookOpen, Palette } from "lucide-react"
 import { SidebarTrigger } from "@/components/ui/sidebar"
 import { Separator } from "@/components/ui/separator"
@@ -29,6 +29,7 @@ interface ChatHeaderProps {
 
 export function ChatHeader({ isAdmin, user, designLibraryEnabled }: ChatHeaderProps) {
   const pathname = usePathname()
+  const router = useRouter()
   const { projectName, isSharedProject } = useProject()
   const [projectDialogOpen, setProjectDialogOpen] = useState(false)
 
@@ -37,6 +38,17 @@ export function ChatHeader({ isAdmin, user, designLibraryEnabled }: ChatHeaderPr
     : null
 
   function handleNewChat() {
+    // Soft-navigation when leaving a real chat route (/c/[id] → /):
+    // Page Component changes from /c/[chatId]/page.tsx to /page.tsx → ChatView remounts
+    // automatically with a fresh state. Sidebar (ChatShell) stays mounted, no full reboot.
+    if (pathname.startsWith("/c/")) {
+      router.push("/")
+      return
+    }
+    // Otherwise we're already on /, possibly with an active chat whose URL was
+    // synced via window.history.replaceState. Same Page Component is mounted with
+    // stateful ChatView — router.push("/") would be a no-op and leave the state.
+    // Hard reload is the simplest way to guarantee a clean ChatView.
     window.location.href = "/"
   }
 
