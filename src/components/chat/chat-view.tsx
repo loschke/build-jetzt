@@ -414,14 +414,6 @@ export function ChatView({ chatId, initialModelId, initialProjectId, initialArti
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialArtifactId, initialMessagesLoaded])
 
-  const handleExpertSelect = useCallback(
-    (newExpertId: string | null, expertName?: string, expertIcon?: string | null) => {
-      setExpertId(newExpertId)
-      setExpert(newExpertId, expertName ?? null, expertIcon ?? null)
-    },
-    [setExpert]
-  )
-
   const handleModelSelect = useCallback((newModelId: string) => {
     setModelId(newModelId)
     // Refresh metadata so file-upload UX (accept list, tooltips) reflects the new model
@@ -434,6 +426,25 @@ export function ChatView({ chatId, initialModelId, initialProjectId, initialArti
       }
     }
   }, [])
+
+  const handleExpertSelect = useCallback(
+    (
+      newExpertId: string | null,
+      expertName?: string,
+      expertIcon?: string | null,
+      expertModelPreference?: string | null,
+    ) => {
+      setExpertId(newExpertId)
+      setExpert(newExpertId, expertName ?? null, expertIcon ?? null)
+      // Auto-sync picker to expert's preferred model. Server-side, picker beats expert,
+      // so without this the expert's modelPreference would never run unless the user
+      // happens to have it as their default. Manual override in the picker is still possible.
+      if (expertModelPreference) {
+        handleModelSelect(expertModelPreference)
+      }
+    },
+    [setExpert, handleModelSelect]
+  )
 
   const handleStop = useCallback(() => {
     stop()
@@ -1064,7 +1075,12 @@ function ExpertSwitchButton({
   expertId: string | null
   expertName: string | null
   expertIcon: string | null
-  onSelect: (id: string | null, name?: string, icon?: string | null) => void
+  onSelect: (
+    id: string | null,
+    name?: string,
+    icon?: string | null,
+    modelPreference?: string | null,
+  ) => void
 }) {
   const Icon = expertIcon ? (EXPERT_ICON_MAP[expertIcon] ?? DEFAULT_EXPERT_ICON) : Users
   const hasExpert = expertId !== null

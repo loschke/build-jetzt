@@ -9,7 +9,12 @@ const FILTER_MINE = "__mine__"
 
 interface ExpertSelectorProps {
   selectedExpertId: string | null
-  onExpertSelect: (expertId: string | null, expertName?: string, expertIcon?: string | null) => void
+  onExpertSelect: (
+    expertId: string | null,
+    expertName?: string,
+    expertIcon?: string | null,
+    expertModelPreference?: string | null,
+  ) => void
 }
 
 export function ExpertSelector({ selectedExpertId, onExpertSelect }: ExpertSelectorProps) {
@@ -97,7 +102,7 @@ export function ExpertSelector({ selectedExpertId, onExpertSelect }: ExpertSelec
               key={expert.id}
               type="button"
               aria-pressed={isSelected}
-              onClick={() => isSelected ? onExpertSelect(null) : onExpertSelect(expert.id, expert.name, expert.icon)}
+              onClick={() => isSelected ? onExpertSelect(null) : onExpertSelect(expert.id, expert.name, expert.icon, expert.modelPreference)}
               className={`group relative flex flex-col items-start gap-2 rounded-xl border p-4 text-left text-sm card-interactive ${
                 isSelected
                   ? "border-primary bg-primary/5 ring-1 ring-primary/20"

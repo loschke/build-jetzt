@@ -18,7 +18,12 @@ import type { CustomStarterPrompt } from "@/config/landing"
 interface ChatEmptyStateProps {
   onSuggestionSelect: (text: string) => void
   selectedExpertId: string | null
-  onExpertSelect: (expertId: string | null, expertName?: string, expertIcon?: string | null) => void
+  onExpertSelect: (
+    expertId: string | null,
+    expertName?: string,
+    expertIcon?: string | null,
+    expertModelPreference?: string | null,
+  ) => void
   onQuicktaskSubmit: (slug: string, data: Record<string, string>) => void
   isSubmitting?: boolean
   userName?: string
