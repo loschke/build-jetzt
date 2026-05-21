@@ -401,6 +401,7 @@ export function AssistantChat({ experts, availableFormats }: AssistantChatProps)
                     <span>@{currentExpert.name}</span>
                     <button
                       type="button"
+                      aria-label="Expert zurücksetzen"
                       className="hover:bg-primary/20 ml-0.5 rounded-full p-0.5 transition-colors"
                       onClick={handleResetExpert}
                     >
