@@ -1,0 +1,1 @@
+CREATE INDEX "skills_active_global_idx" ON "skills" USING btree ("sort_order","name") WHERE "skills"."is_active" = true AND "skills"."user_id" IS NULL;

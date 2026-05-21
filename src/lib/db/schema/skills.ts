@@ -31,6 +31,10 @@ export const skills = pgTable("skills", {
   index("skills_mode_idx").on(t.mode),
   index("skills_is_active_idx").on(t.isActive),
   index("skills_is_public_idx").on(t.isPublic),
+  // Optimiert getActiveSkills() — globale aktive Skills mit Sort-Order direkt aus dem Index lesbar
+  index("skills_active_global_idx")
+    .on(t.sortOrder, t.name)
+    .where(sql`${t.isActive} = true AND ${t.userId} IS NULL`),
 ])
 
 /** Field definition for quicktask forms (stored as jsonb) */
