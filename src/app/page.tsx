@@ -12,6 +12,7 @@ import { ChatView } from "@/components/chat/chat-view"
 import { features } from "@/config/features"
 import { getUserStatus, getUserRole } from "@/lib/db/queries/users"
 import { ensureUserExistsCached } from "@/lib/auth/ensure-user-cached"
+import { getBusinessModeStatus } from "@/lib/business-mode/status"
 import { isAdminRole } from "@/lib/admin-guard"
 import { ExternalLink } from "lucide-react"
 import { queryDesignLibrary } from "@/lib/db/design-library"
@@ -59,6 +60,8 @@ export default async function HomePage({
       } catch { /* Library not reachable — proceed without context */ }
     }
 
+    const businessModeStatus = getBusinessModeStatus()
+
     return (
       <ChatShell>
         <ChatView
@@ -72,6 +75,7 @@ export default async function HomePage({
           voiceChatEnabled={features.voiceChat.enabled}
           designLibraryEnabled={features.designLibrary.enabled}
           customStarterPrompts={customLanding?.starterPrompts}
+          initialBusinessModeStatus={businessModeStatus}
         />
       </ChatShell>
     )

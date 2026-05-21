@@ -98,9 +98,11 @@ interface ChatViewProps {
   voiceChatEnabled?: boolean
   designLibraryEnabled?: boolean
   customStarterPrompts?: import("@/config/landing").CustomStarterPrompt[]
+  /** Server-injected business-mode status — when present, useBusinessMode skips its initial fetch */
+  initialBusinessModeStatus?: import("@/lib/business-mode/status").BusinessModeStatus | null
 }
 
-export function ChatView({ chatId, initialModelId, initialProjectId, initialArtifactId, formulaContext, promptOnlyMode, referenceImageContext, userName, ttsEnabled, memoryEnabled, voiceChatEnabled, designLibraryEnabled, customStarterPrompts }: ChatViewProps) {
+export function ChatView({ chatId, initialModelId, initialProjectId, initialArtifactId, formulaContext, promptOnlyMode, referenceImageContext, userName, ttsEnabled, memoryEnabled, voiceChatEnabled, designLibraryEnabled, customStarterPrompts, initialBusinessModeStatus }: ChatViewProps) {
   const [input, setInput] = useState("")
   const [initialMessagesLoaded, setInitialMessagesLoaded] = useState(!chatId)
   const [modelId, setModelId] = useState(initialModelId ?? "")
@@ -132,8 +134,10 @@ export function ChatView({ chatId, initialModelId, initialProjectId, initialArti
   const voiceChat = useVoiceChat()
   const voiceChatActive = voiceChat.state !== "idle" && voiceChat.state !== "disconnected" && voiceChat.state !== "error"
 
-  // Business Mode — PII detection + file consent
-  const businessMode = useBusinessMode()
+  // Business Mode — PII detection + file consent.
+  // When the server already injected the status (initialBusinessModeStatus), the hook
+  // skips its initial /api/business-mode/status fetch.
+  const businessMode = useBusinessMode(initialBusinessModeStatus)
 
   // Keep refs in sync with state
   modelIdRef.current = modelId

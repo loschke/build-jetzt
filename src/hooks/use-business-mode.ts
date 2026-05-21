@@ -2,23 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react"
 import type { PiiFinding } from "@/lib/pii/types"
+import type { BusinessModeStatus, PrivacyRoute } from "@/lib/business-mode/status"
 
-interface BusinessModeStatus {
-  enabled: boolean
-  options: {
-    redaction: boolean
-    euModel: boolean
-    deModel: boolean
-    localModel: boolean
-  }
-  safeChat?: {
-    route: PrivacyRoute
-    label: string
-    hasLocalModel: boolean
-  }
-}
-
-export type PrivacyRoute = "eu" | "de" | "local"
+export type { PrivacyRoute } from "@/lib/business-mode/status"
 
 const ROUTE_TO_ACTION = {
   eu: "send_eu",
@@ -76,8 +62,12 @@ function resolveSafeRoute(status: BusinessModeStatus | null): PrivacyRoute {
   return status?.safeChat?.route ?? (status?.options?.euModel ? "eu" : "de")
 }
 
-export function useBusinessMode() {
-  const [status, setStatus] = useState<BusinessModeStatus | null>(null)
+export function useBusinessMode(initialStatus?: BusinessModeStatus | null) {
+  // Server-Component-Pages können den Status via getBusinessModeStatus() einlesen
+  // und als Prop durchreichen — dann sparen wir uns den /api/business-mode/status
+  // Fetch beim Initial-Mount. Wird `initialStatus` nicht übergeben (undefined),
+  // läuft der bisherige Client-Fetch im useEffect.
+  const [status, setStatus] = useState<BusinessModeStatus | null>(initialStatus ?? null)
   const resolveRef = useRef<((decision: SendDecision) => void) | null>(null)
 
   const [piiDialog, setPiiDialog] = useState<PiiDialogState>({
@@ -96,15 +86,17 @@ export function useBusinessMode() {
   const [safeChatSessionOverride, setSafeChatSessionOverride] = useState<boolean | null>(null)
   const [safeChatMode, setSafeChatMode] = useState<SafeChatMode>("safe")
 
-  // Fetch business mode status on mount; SafeChat preference loaded via initSafeChatPreference
+  // Fetch business mode status on mount only if not provided as initial prop.
+  // When a Server Component already injected the status, skip the redundant HTTP call.
   useEffect(() => {
+    if (initialStatus !== undefined) return
     fetch("/api/business-mode/status")
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data) setStatus(data as BusinessModeStatus)
       })
       .catch(() => {})
-  }, [])
+  }, [initialStatus])
 
   /** Called by ChatView after it fetches /api/user/instructions (avoids duplicate fetch) */
   const initSafeChatPreference = useCallback((enabled: boolean) => {
