@@ -461,6 +461,27 @@ Einfache Refactorings in klar umrissenen Funktionen.
 
 Ziel: Bei warmer Lambda-Instanz fallen `tools/list`-Calls für die nächsten 10 min komplett weg.
 
+#### Baseline-Messung (2026-05-21, post-Phase-1)
+
+Nach Deployment der Phase-1-Runden A+B liefert das `[mcp]`-Logging (Task 1.3) eine stabile Baseline für die Phase-2-Wirkung. Zwei Beispiel-Zeilen aus dem Produktiv-Log:
+
+```
+[mcp] connected 4/4 servers in 1664ms: sava-agent-context(1508ms),
+      design-library(1397ms), loschke-blog(1662ms), lernen-content(1556ms)
+[mcp] connected 4/4 servers in 1848ms: sava-agent-context(1502ms),
+      design-library(1520ms), loschke-blog(1628ms), lernen-content(1846ms)
+```
+
+| Metrik | Wert |
+|---|---|
+| Aktive MCP-Server | 4 (lernen-content, design-library, loschke-blog, sava-agent-context) |
+| Init-Latenz pro Server | 1.4-1.8s (gleichmäßig verteilt) |
+| Init-Latenz gesamt (parallel) | **1664-1848ms** |
+| Roundtrips pro Server | 4 (GET SSE + POST initialize + POST initialized + POST tools/list) |
+| **Erwartung nach Phase 2 (warme Instanz)** | **< 50ms** (nur Cache-Lookup) |
+
+Die gleichmäßige Latenz-Verteilung über alle 4 Server deutet auf den gemeinsamen Bottleneck am `mcp.loschke.ai`-Hub hin, nicht auf einzelne langsame Server. Phase 2 entfernt diese ~1.6s pro Chat-Request vom kritischen Pfad — pro warmer Lambda-Instanz, gemessen am `[mcp]`-Log.
+
 | # | Änderung | Datei |
 |---|----------|-------|
 | 2.1 | Modul-Level-Cache `Map<serverId+url, { client, tools, expiresAt }>` mit 10 min TTL | Neuer Helper `src/lib/mcp/discovery-cache.ts` |
