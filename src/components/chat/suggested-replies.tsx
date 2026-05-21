@@ -23,7 +23,22 @@ export function SuggestedReplies({ chatId, onSelect, disabled }: SuggestedReplie
     async function poll() {
       if (cancelled || attempt >= DELAYS.length) return
       try {
-        const res = await fetch(`/api/chats/${chatId}/suggestions`)
+        // redirect:"manual" prevents the proxy's 307 (auth) from being followed
+        // cross-origin, which would throw a network error and trigger pointless retries.
+        const res = await fetch(`/api/chats/${chatId}/suggestions`, {
+          redirect: "manual",
+        })
+
+        // Auth failure (proxy redirect, 401, 403) → abort permanently, no retry.
+        // The user has to re-authenticate; further polling can't recover the state.
+        if (
+          res.type === "opaqueredirect" ||
+          res.status === 401 ||
+          res.status === 403
+        ) {
+          return
+        }
+
         if (!res.ok || cancelled) return
         const data = await res.json()
         const replies = data?.suggestedReplies

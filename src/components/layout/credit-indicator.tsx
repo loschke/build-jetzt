@@ -30,14 +30,12 @@ export function CreditIndicator() {
 
     load()
 
-    // Refresh balance periodically and after chat messages
-    const interval = setInterval(load, 60_000)
+    // Refresh balance after chat messages (no background polling — credits only change via user activity)
     const handleUpdate = () => { setTimeout(load, 2000) }
     window.addEventListener("chat-updated", handleUpdate)
 
     return () => {
       mounted = false
-      clearInterval(interval)
       window.removeEventListener("chat-updated", handleUpdate)
     }
   }, [])

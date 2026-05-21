@@ -77,10 +77,27 @@ export async function connectMCPServers(
     return { tools: {}, close: async () => {} }
   }
 
-  const results = await Promise.all(configs.map(connectServer))
-  const connected = results.filter(
-    (r): r is NonNullable<typeof r> => r !== null
+  // Measure per-server connect duration for observability (baseline for Phase 2 cache).
+  const totalStart = Date.now()
+  const timed = await Promise.all(
+    configs.map(async (config) => {
+      const serverStart = Date.now()
+      const result = await connectServer(config)
+      return { id: config.id, durationMs: Date.now() - serverStart, result }
+    })
   )
+
+  const okCount = timed.filter((t) => t.result !== null).length
+  const summary = timed
+    .map((t) => `${t.id}(${t.durationMs}ms${t.result === null ? "!" : ""})`)
+    .join(", ")
+  console.log(
+    `[mcp] connected ${okCount}/${configs.length} servers in ${Date.now() - totalStart}ms: ${summary}`
+  )
+
+  const connected = timed
+    .map((t) => t.result)
+    .filter((r): r is NonNullable<typeof r> => r !== null)
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const mergedTools: Record<string, any> = {}

@@ -115,21 +115,27 @@ export function createOnFinish(params: CreateOnFinishParams): StreamTextOnFinish
 
       console.log(`[persist] Saved: chat=${resolvedChatId}, user=${!!persistedParts}, assistant=${!!savedAssistantMessageId}, parts=${assistantParts.length}`)
 
-      // 7. Expert update (after response)
-      after(() => updateExpertIfChanged({ resolvedChatId, userId, isNewChat, expert, existingExpertId }))
-
-      // 8. Title generation (after response)
-      after(() => generateTitle({ resolvedChatId, userId, isNewChat, userMsg }))
-
-      // 9. Credit deduction (awaited)
+      // 7. Credit deduction (awaited — must complete before fire-and-forget batch below)
       if (totalUsage) {
         await deductUsageCredits({ userId, resolvedChatId, finalModelId, totalUsage })
       }
 
-      // 10. Suggested replies (after response)
-      if (userSuggestedRepliesEnabled && savedAssistantMessageId && assistantParts.length > 0) {
-        after(() => triggerSuggestedReplies({ resolvedChatId, userId, messages, savedAssistantMessageId, finalModelId }))
-      }
+      // 8. Post-response fire-and-forget batch — Expert update + Title gen + Suggested replies
+      //    run in parallel via Promise.allSettled inside a single after() callback.
+      //    Vercel executes separate after() callbacks sequentially, so wrapping them in one
+      //    Promise.allSettled is what actually parallelizes the LLM calls (title + replies).
+      after(async () => {
+        const tasks: Promise<unknown>[] = [
+          updateExpertIfChanged({ resolvedChatId, userId, isNewChat, expert, existingExpertId }),
+          generateTitle({ resolvedChatId, userId, isNewChat, userMsg }),
+        ]
+        if (userSuggestedRepliesEnabled && savedAssistantMessageId && assistantParts.length > 0) {
+          tasks.push(
+            triggerSuggestedReplies({ resolvedChatId, userId, messages, savedAssistantMessageId, finalModelId }),
+          )
+        }
+        await Promise.allSettled(tasks)
+      })
 
     } catch (error) {
       console.error("Failed to persist chat data:", getErrorMessage(error))

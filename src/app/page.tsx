@@ -10,7 +10,8 @@ import { getUser } from "@/lib/auth"
 import { ChatShell } from "@/components/layout/chat-shell"
 import { ChatView } from "@/components/chat/chat-view"
 import { features } from "@/config/features"
-import { ensureUserExists, getUserStatus, getUserRole } from "@/lib/db/queries/users"
+import { getUserStatus, getUserRole } from "@/lib/db/queries/users"
+import { ensureUserExistsCached } from "@/lib/auth/ensure-user-cached"
 import { isAdminRole } from "@/lib/admin-guard"
 import { ExternalLink } from "lucide-react"
 import { queryDesignLibrary } from "@/lib/db/design-library"
@@ -24,7 +25,7 @@ export default async function HomePage({
 
   // Authenticated: check approval status before showing chat
   if (user) {
-    await ensureUserExists({ authSub: user.id, email: user.email, name: user.name })
+    await ensureUserExistsCached({ authSub: user.id, email: user.email, name: user.name })
     const [status, role] = await Promise.all([
       getUserStatus(user.id),
       getUserRole(user.id),

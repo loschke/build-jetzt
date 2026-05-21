@@ -13,6 +13,7 @@ import {
   sessionCookieOptions,
 } from "@/lib/auth/session"
 import { ensureUserExists } from "@/lib/db/queries/users"
+import { markUserExists } from "@/lib/auth/ensure-user-cached"
 
 function errorRedirect(baseUrl: URL, reason: string, detail?: string): NextResponse {
   const target = new URL("/api/auth/error", baseUrl)
@@ -83,11 +84,14 @@ export async function GET(request: Request) {
   }
 
   try {
+    // Direct upsert with fresh OIDC claims (bypasses cache so profile updates propagate).
+    // Then prime the cache so subsequent page mounts in this Lambda skip the redundant upsert.
     await ensureUserExists({
       authSub: claims.sub,
       email: claims.email,
       name: claims.name ?? null,
     })
+    markUserExists(claims.sub)
   } catch (err) {
     console.error("[auth/callback] ensureUserExists failed", err)
     return errorRedirect(url, "db_upsert_failed", err instanceof Error ? err.message : String(err))
