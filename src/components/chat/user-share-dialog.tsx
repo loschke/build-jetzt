@@ -140,8 +140,9 @@ export function UserShareDialog({ open, onOpenChange, chatId, chatTitle }: UserS
                     size="icon"
                     className="size-7 text-muted-foreground hover:text-destructive"
                     onClick={() => handleRevoke(r.id)}
+                    aria-label="Freigabe widerrufen"
                   >
-                    <Trash2 className="size-3.5" />
+                    <Trash2 className="size-3.5" aria-hidden="true" />
                   </Button>
                 </div>
               ))}
