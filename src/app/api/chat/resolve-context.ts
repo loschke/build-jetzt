@@ -46,6 +46,8 @@ interface ResolveContextParams {
   wrapupContext?: string
   wrapupFormat?: "text" | "audio"
   messages?: Array<{ role: string; parts?: Array<{ type: string; text?: string }> }>
+  /** When set, the system prompt drops tool sections that don't work under privacy routing. */
+  privacyRoutingActive?: boolean
 }
 
 /**
@@ -69,7 +71,7 @@ function extractSearchQuery(params: ResolveContextParams): string {
 }
 
 export async function resolveContext(params: ResolveContextParams): Promise<ChatContext | Response> {
-  const { userId, requestChatId, requestExpertId, requestModelId, requestProjectId, quicktaskSlug, quicktaskData, wrapupType, wrapupContext, wrapupFormat } = params
+  const { userId, requestChatId, requestExpertId, requestModelId, requestProjectId, quicktaskSlug, quicktaskData, wrapupType, wrapupContext, wrapupFormat, privacyRoutingActive } = params
 
   const modelId = requestModelId ?? aiDefaults.model
 
@@ -218,7 +220,8 @@ export async function resolveContext(params: ResolveContextParams): Promise<Chat
     lessonsEnabled: features.lessons.enabled,
     ttsEnabled: features.tts.enabled,
     webToolsEnabled: features.search.enabled,
-    googleSearchEnabled: features.googleSearch.enabled,
+    googleSearchEnabled: features.googleSearch.enabled && !privacyRoutingActive,
+    privacyRoutingActive,
   })
 
   // Model resolution chain: quicktask > picker > expert > user default > platform default

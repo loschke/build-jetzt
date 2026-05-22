@@ -6,7 +6,7 @@
 import type { SkillMetadata } from "@/lib/ai/skills/discovery"
 
 import { CHAT_DEFAULT_PROMPT, TITLE_GENERATION_PROMPT } from "./base"
-import { ARTIFACT_INSTRUCTIONS } from "./artifacts"
+import { ARTIFACT_INSTRUCTIONS, buildArtifactInstructions } from "./artifacts"
 import { YOUTUBE_INSTRUCTIONS, TTS_INSTRUCTIONS, buildWebToolsInstructions, GOOGLE_SEARCH_INSTRUCTIONS, buildMcpToolsInstructions, LESSONS_INSTRUCTIONS } from "./tools"
 
 // Re-export all sub-module exports for direct access
@@ -42,6 +42,9 @@ export interface BuildSystemPromptOptions {
   webToolsEnabled?: boolean
   googleSearchEnabled?: boolean
   mcpToolNames?: string[]
+  /** When true, omits prompt sections for tools that are disabled under privacy routing
+   * (currently: Deep Research). Prevents the model from advertising tools it cannot use. */
+  privacyRoutingActive?: boolean
 }
 
 /**
@@ -67,8 +70,14 @@ export function buildSystemPrompt(options?: BuildSystemPromptOptions): string {
     sections.push(SYSTEM_PROMPTS.chat)
   }
 
-  // 2. Artifact instructions (always included)
-  sections.push(SYSTEM_PROMPTS.artifacts)
+  // 2. Artifact instructions (always included).
+  // Use pre-built constant in the common case, rebuild only when privacy routing
+  // is active so Deep Research / similar privacy-disabled tools are dropped.
+  sections.push(
+    options?.privacyRoutingActive
+      ? buildArtifactInstructions(true)
+      : SYSTEM_PROMPTS.artifacts
+  )
 
   // 2.5. YouTube tools instructions (when enabled)
   if (options?.youtubeEnabled) {

@@ -9,8 +9,14 @@ import { QUIZ_INSTRUCTIONS, CONTENT_ALTERNATIVES_INSTRUCTIONS, REVIEW_INSTRUCTIO
 /**
  * Build the full artifact instructions block.
  * Includes conditional sections for Stitch, Deep Research, Mermaid, and interactive tools.
+ *
+ * @param privacyRoutingActive — when true, omit sections for tools that are disabled
+ *   under privacy routing (currently: Deep Research). Without this, the model would
+ *   advertise tools it cannot actually call.
  */
-export function buildArtifactInstructions(): string {
+export function buildArtifactInstructions(privacyRoutingActive = false): string {
+  const deepResearchAvailable = features.deepResearch.enabled && !privacyRoutingActive
+
   return `## Artifacts
 
 Du hast ein \`create_artifact\` Tool zur Verfügung. Nutze es wenn der User nach einem eigenständigen Output fragt:
@@ -61,7 +67,7 @@ Tool-Calls liefern dir bei Artifact-erstellenden Tools nur Metadaten zurück (\`
 4. Echte Mehrdeutigkeit ohne Kontext → kurz nachfragen, NICHT raten
 
 **Vergleichsanfragen** ("vergleiche X mit Y", "passen die zusammen?") → mehrere \`read_artifact\`-Calls parallel ausführen. Bei großen Artifacts \`maxChars\` reduzieren, um das Context-Window zu schonen.
-${features.stitch.enabled ? `\n${DESIGN_INSTRUCTIONS}` : ""}${features.deepResearch.enabled ? `
+${features.stitch.enabled ? `\n${DESIGN_INSTRUCTIONS}` : ""}${deepResearchAvailable ? `
 ### Deep Research (\`deep_research\`)
 Starte eine umfassende Deep Research wenn:
 - Der User eine komplexe, mehrteilige Recherche-Frage stellt

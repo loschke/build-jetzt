@@ -257,9 +257,11 @@ export function ChatView({ chatId, initialModelId, initialProjectId, initialArti
           const qt = quicktaskRef.current
           const pr = privacyRouteRef.current
           const wu = wrapupRef.current
-          // Clear one-shot refs after reading (prevents stale data on next message)
+          // Quicktask + Wrapup are one-shot user actions — clear after reading.
+          // Privacy route is NOT one-shot: must persist across tool-call follow-ups in the
+          // same stream cycle (AI SDK auto-fires another request after a tool result, and the
+          // user's privacy choice must apply to that too). Reset happens on the next handleSubmit.
           quicktaskRef.current = null
-          privacyRouteRef.current = undefined
           wrapupRef.current = null
           return {
             body: {
@@ -547,6 +549,12 @@ export function ChatView({ chatId, initialModelId, initialProjectId, initialArti
     async (message: PromptInputMessage) => {
       if (!message.text.trim() && message.files.length === 0) return
 
+      // Reset privacy ref at the start of every user-initiated submit.
+      // The ref is NOT cleared in prepareSendMessagesRequest so that tool-call follow-ups
+      // within the same stream cycle keep the user's privacy choice — but each fresh user
+      // submit must start from a clean state.
+      privacyRouteRef.current = undefined
+
       // SafeChat: auto-route to configured privacy model, skip PII dialog
       if (businessMode.safeChat.isActive) {
         privacyRouteRef.current = businessMode.safeChat.route
@@ -563,9 +571,6 @@ export function ChatView({ chatId, initialModelId, initialProjectId, initialArti
         const decision = await businessMode.checkBeforeSend(message.text, filesMeta)
 
         if (decision.action === "cancel") return
-
-        // Clear privacyRoute ref before setting
-        privacyRouteRef.current = undefined
 
         if (decision.action === "send_redacted") {
           sendMessage({ text: decision.text, files: message.files })
@@ -603,6 +608,9 @@ export function ChatView({ chatId, initialModelId, initialProjectId, initialArti
 
       const text = summary || `Quicktask: ${slug}`
 
+      // Reset privacy ref at the start of every user-initiated submit (see handleSubmit comment).
+      privacyRouteRef.current = undefined
+
       // SafeChat: auto-route for quicktasks too
       if (businessMode.safeChat.isActive) {
         privacyRouteRef.current = businessMode.safeChat.route
@@ -615,8 +623,6 @@ export function ChatView({ chatId, initialModelId, initialProjectId, initialArti
       if (businessMode.isEnabled) {
         const decision = await businessMode.checkBeforeSend(text)
         if (decision.action === "cancel") return
-
-        privacyRouteRef.current = undefined
 
         if (isPrivacyRouteAction(decision.action)) {
           privacyRouteRef.current = decision.privacyRoute

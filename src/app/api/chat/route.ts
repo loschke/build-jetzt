@@ -160,6 +160,7 @@ export async function POST(req: Request) {
     wrapupContext,
     wrapupFormat,
     messages,
+    privacyRoutingActive: !!effectivePrivacyRoute,
   })
 
   // resolveContext returns Response on validation failure
@@ -226,7 +227,9 @@ export async function POST(req: Request) {
 
   // Effective model ID for DB/metadata
   const effectiveModelId = usePrivacyModel
-    ? (effectivePrivacyRoute === "eu" ? `mistral/${businessModeConfig.euModelId}` : `local/${businessModeConfig.localModelId}`)
+    ? (effectivePrivacyRoute === "eu" ? `mistral/${businessModeConfig.euModelId}`
+      : effectivePrivacyRoute === "de" ? `ionos/${businessModeConfig.deModelId}`
+      : `local/${businessModeConfig.localModelId}`)
     : finalModelId
 
   // Display model name for UI
