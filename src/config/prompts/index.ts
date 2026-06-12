@@ -61,10 +61,14 @@ export interface BuildSystemPromptOptions {
 export function buildSystemPrompt(options?: BuildSystemPromptOptions): string {
   const sections: string[] = []
 
-  // 0. Current date context
+  // 0. Current date context — explicit temporal grounding so the model does not
+  // anchor to its training-data cutoff (e.g. searching for "2024"/"2025" when it is 2026).
   const now = new Date()
   const dateStr = now.toLocaleDateString("de-DE", { weekday: "long", year: "numeric", month: "long", day: "numeric" })
-  sections.push(`Aktuelles Datum: ${dateStr}`)
+  const currentYear = now.getFullYear()
+  sections.push(
+    `## Zeitlicher Kontext\nHeute ist ${dateStr}. Wir leben im Jahr ${currentYear}. Dein Trainingswissen hat einen frueheren Stand und kann bei aktuellen Ereignissen, Produktversionen, Preisen und Fakten veraltet sein — verlasse dich dafuer nicht allein auf dein internes Wissen.\nWenn du das Web durchsuchst oder recherchierst, formuliere Suchanfragen fuer die Gegenwart: nutze das laufende Jahr ${currentYear} oder relative Begriffe wie "aktuell" bzw. "neueste". Verwende keine zurueckliegenden Jahre (etwa ${currentYear - 1} oder ${currentYear - 2}) in Suchanfragen, ausser der Nutzer fragt ausdruecklich nach einem bestimmten frueheren Zeitraum.`
+  )
 
   // 1. Expert persona or default
   if (options?.expert?.systemPrompt) {
