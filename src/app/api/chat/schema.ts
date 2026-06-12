@@ -48,6 +48,8 @@ export const chatBodySchema = z.object({
     .optional(),
   projectId: z.string().max(20).regex(/^[a-zA-Z0-9_-]+$/).optional(),
   privacyRoute: z.enum(["eu", "de", "local"]).optional(),
+  /** Pur-Modus: bare LLM, no tools/skills/MCP/memory/artifacts (device-local demo switch). */
+  pureMode: z.boolean().optional(),
   wrapupType: z.enum(["summary", "action-items", "prd", "memories"]).optional(),
   wrapupContext: z.string().max(1000).optional(),
   wrapupFormat: z.enum(["text", "audio"]).optional(),

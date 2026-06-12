@@ -45,6 +45,8 @@ interface BuildToolsParams {
   imageGenerationEnabled?: boolean
   /** Uploaded images from the current user message (for image combining) */
   uploadedImages?: UploadedImage[]
+  /** Pur-Modus: skip the entire tool registry — bare LLM with no tools at all. */
+  pureMode?: boolean
 }
 
 interface BuildToolsResult {
@@ -58,7 +60,13 @@ interface BuildToolsResult {
  * Includes built-in tools and optionally MCP tools.
  */
 export async function buildTools(params: BuildToolsParams): Promise<BuildToolsResult> {
-  const { chatId, userId, skills, hasQuicktask, modelId, searchEnabled, memoryEnabled, mcpEnabled, expertMcpServerIds, expertAllowedTools, imageGenerationEnabled, uploadedImages } = params
+  const { chatId, userId, skills, hasQuicktask, modelId, searchEnabled, memoryEnabled, mcpEnabled, expertMcpServerIds, expertAllowedTools, imageGenerationEnabled, uploadedImages, pureMode } = params
+
+  // Pur-Modus: bare LLM. No tools, no skills, no MCP — the model answers from
+  // its own knowledge only. This is the seminar "plain chat" contrast.
+  if (pureMode) {
+    return { tools: {}, mcpHandle: null }
+  }
 
   // Skip the entire tool registry if the model declares it does not support function calling.
   // `modelId` is empty string when privacy routing is active — we keep the historical

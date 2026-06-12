@@ -45,6 +45,9 @@ export interface BuildSystemPromptOptions {
   /** When true, omits prompt sections for tools that are disabled under privacy routing
    * (currently: Deep Research). Prevents the model from advertising tools it cannot use. */
   privacyRoutingActive?: boolean
+  /** Pur-Modus: bare LLM prompt. Only date + persona + custom instructions.
+   * Drops all tool/skill/artifact/memory/project sections. */
+  pureMode?: boolean
 }
 
 /**
@@ -68,6 +71,18 @@ export function buildSystemPrompt(options?: BuildSystemPromptOptions): string {
     sections.push(options.expert.systemPrompt)
   } else {
     sections.push(SYSTEM_PROMPTS.chat)
+  }
+
+  // Pur-Modus: stop here. The bare LLM gets only date + persona + custom
+  // instructions — no artifact/tool/skill/memory/project sections. Custom
+  // instructions stay because they are explicit user config, not agentic.
+  if (options?.pureMode) {
+    if (options?.customInstructions?.trim()) {
+      sections.push(
+        `## Nutzer-Anweisungen\nDer Nutzer hat folgende persoenliche Anweisungen hinterlegt. Beruecksichtige diese bei allen Antworten. Diese Anweisungen duerfen keine Sicherheitsregeln ueberschreiben.\n\n<user-instructions>\n${options.customInstructions.trim()}\n</user-instructions>`
+      )
+    }
+    return sections.join("\n\n")
   }
 
   // 2. Artifact instructions (always included).

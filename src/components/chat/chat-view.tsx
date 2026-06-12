@@ -65,6 +65,7 @@ import { chatConfig } from "@/config/chat"
 import { MAX_MESSAGE_LENGTH } from "@/lib/constants"
 import { features } from "@/config/features"
 import { getErrorMessage } from "@/lib/errors"
+import { readPureMode, PURE_MODE_EVENT } from "@/lib/pure-mode"
 import { WRAPUP_TYPES } from "@/config/wrapup"
 import type { ModelCapabilities } from "@/config/models"
 import {
@@ -119,6 +120,9 @@ export function ChatView({ chatId, initialModelId, initialProjectId, initialArti
   const [hasAttachedFiles, setHasAttachedFiles] = useState(false)
   const [creditError, setCreditError] = useState<string | null>(null)
   const [suggestedRepliesEnabled, setSuggestedRepliesEnabled] = useState(true)
+  // Pur-Modus: device-local demo switch (localStorage). Hides agentic input
+  // controls and sends `pureMode` so the server runs a bare LLM.
+  const [pureMode, setPureMode] = useState(false)
   const [readOnly, setReadOnly] = useState(false)
   const [sharedByName, setSharedByName] = useState<string | null>(null)
   const projectIdRef = useRef<string | null>(initialProjectId ?? null)
@@ -128,6 +132,7 @@ export function ChatView({ chatId, initialModelId, initialProjectId, initialArti
   const modelIdRef = useRef(modelId)
   const expertIdRef = useRef(expertId)
   const privacyRouteRef = useRef<PrivacyRoute | undefined>(undefined)
+  const pureModeRef = useRef(false)
   const wrapupRef = useRef<{ type: string; context?: string; format?: "text" | "audio" } | null>(null)
 
   // Voice Chat
@@ -142,6 +147,20 @@ export function ChatView({ chatId, initialModelId, initialProjectId, initialArti
   // Keep refs in sync with state
   modelIdRef.current = modelId
   expertIdRef.current = expertId
+  pureModeRef.current = pureMode
+
+  // Pur-Modus: read device-local setting on mount, then react to changes from the
+  // settings page (same tab via custom event, other tabs via storage event).
+  useEffect(() => {
+    setPureMode(readPureMode())
+    const sync = () => setPureMode(readPureMode())
+    window.addEventListener(PURE_MODE_EVENT, sync)
+    window.addEventListener("storage", sync)
+    return () => {
+      window.removeEventListener(PURE_MODE_EVENT, sync)
+      window.removeEventListener("storage", sync)
+    }
+  }, [])
 
   // Set or clear project context based on URL
   useEffect(() => {
@@ -273,6 +292,7 @@ export function ChatView({ chatId, initialModelId, initialProjectId, initialArti
               ...(projectIdRef.current && { projectId: projectIdRef.current }),
               ...(qt && { quicktaskSlug: qt.slug, quicktaskData: qt.data }),
               ...(pr && { privacyRoute: pr }),
+              ...(pureModeRef.current && { pureMode: true }),
               ...(wu && { wrapupType: wu.type, wrapupContext: wu.context, ...(wu.format === "audio" && { wrapupFormat: wu.format }) }),
             },
           }
@@ -747,6 +767,7 @@ export function ChatView({ chatId, initialModelId, initialProjectId, initialArti
                 onStartVoiceChat={() => voiceChat.connect({ chatId, projectId: projectIdRef.current ?? undefined })}
                 designLibraryEnabled={designLibraryEnabled}
                 customStarterPrompts={customStarterPrompts}
+                pureMode={pureMode}
               />
             ) : (
               <>
@@ -879,24 +900,34 @@ export function ChatView({ chatId, initialModelId, initialProjectId, initialArti
             )}
             <PromptInputFooter>
               <PromptInputTools>
-                <AttachButton
-                  tooltip={attachButtonTooltip(modelMeta?.capabilities, businessMode.safeChat.isActive)}
-                />
-                <ExpertSwitchButton
-                  expertId={expertId}
-                  expertName={expertName}
-                  expertIcon={expertIcon}
-                  onSelect={handleExpertSelect}
-                />
-                {features.modelPickerInInput.enabled && (
-                  <ModelSelector
-                    value={modelId}
-                    onChange={handleModelSelect}
-                    disabled={isGenerating || readOnly}
-                  />
-                )}
-                {businessMode.safeChat.available && (
-                  <SafeChatPopover safeChat={businessMode.safeChat} />
+                {/* Pur-Modus blendet alle agentischen Controls aus — der Input
+                    wirkt dann wie ein reiner Text-Chat. */}
+                {pureMode ? (
+                  <span className="text-xs text-muted-foreground px-1 select-none">
+                    Pur-Modus — nur Sprachmodell
+                  </span>
+                ) : (
+                  <>
+                    <AttachButton
+                      tooltip={attachButtonTooltip(modelMeta?.capabilities, businessMode.safeChat.isActive)}
+                    />
+                    <ExpertSwitchButton
+                      expertId={expertId}
+                      expertName={expertName}
+                      expertIcon={expertIcon}
+                      onSelect={handleExpertSelect}
+                    />
+                    {features.modelPickerInInput.enabled && (
+                      <ModelSelector
+                        value={modelId}
+                        onChange={handleModelSelect}
+                        disabled={isGenerating || readOnly}
+                      />
+                    )}
+                    {businessMode.safeChat.available && (
+                      <SafeChatPopover safeChat={businessMode.safeChat} />
+                    )}
+                  </>
                 )}
               </PromptInputTools>
               <div className="flex items-center gap-1">

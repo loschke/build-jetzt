@@ -67,7 +67,10 @@ export async function POST(req: Request) {
   const parsed = parseBody(chatBodySchema, raw)
   if (!parsed.success) return parsed.response
 
-  const { messages, chatId: requestChatId, modelId: requestModelId, expertId: requestExpertId, quicktaskSlug, quicktaskData, projectId: requestProjectId, privacyRoute: requestPrivacyRoute, wrapupType, wrapupContext, wrapupFormat } = parsed.data
+  const { messages, chatId: requestChatId, modelId: requestModelId, expertId: requestExpertId, quicktaskSlug, quicktaskData, projectId: requestProjectId, privacyRoute: requestPrivacyRoute, wrapupType, wrapupContext, wrapupFormat, pureMode: requestPureMode } = parsed.data
+
+  // Pur-Modus: bare LLM, no tools/skills/MCP/memory/artifacts. Device-local demo switch.
+  const pureMode = !!requestPureMode
 
   // Pre-flight credit balance check
   if (features.credits.enabled) {
@@ -161,6 +164,7 @@ export async function POST(req: Request) {
     wrapupFormat,
     messages,
     privacyRoutingActive: !!effectivePrivacyRoute,
+    pureMode,
   })
 
   // resolveContext returns Response on validation failure
@@ -223,6 +227,7 @@ export async function POST(req: Request) {
     expertAllowedTools: allowedTools,
     imageGenerationEnabled: imageGenEnabled,
     uploadedImages,
+    pureMode,
   })
 
   // Effective model ID for DB/metadata
@@ -244,7 +249,8 @@ export async function POST(req: Request) {
   // Reasoning support is now driven by the model's capability flag, not provider hardcoding.
   // Anthropic-Sonnet/Opus → reasoning=true, Anthropic-Haiku → reasoning=false in seed data.
   const supportsThinking = !privacyModel && getModelCapabilities(finalModelId).reasoning
-  const skillsConfig = isAnthropic ? buildSkillsConfig(finalModelId) : undefined
+  // Pur-Modus also disables Anthropic container skills (PPTX/XLSX/DOCX/PDF) — those are agentic.
+  const skillsConfig = isAnthropic && !pureMode ? buildSkillsConfig(finalModelId) : undefined
 
   // Skills require direct Anthropic provider (gateway doesn't forward container.skills)
   const anthropicApiKey = process.env.ANTHROPIC_API_KEY

@@ -33,6 +33,8 @@ interface ChatEmptyStateProps {
   creditsAvailable?: boolean
   designLibraryEnabled?: boolean
   customStarterPrompts?: CustomStarterPrompt[]
+  /** Pur-Modus: hide the Experten/Quicktasks/Voice/Design tabs — only greeting + chat suggestions. */
+  pureMode?: boolean
 }
 
 type Tab = "chat" | "experts" | "quicktasks" | "voice" | "design"
@@ -97,6 +99,7 @@ export function ChatEmptyState({
   creditsAvailable = true,
   designLibraryEnabled,
   customStarterPrompts,
+  pureMode,
 }: ChatEmptyStateProps) {
   const [activeTab, setActiveTab] = useState<Tab>("chat")
   const [selectedQuicktask, setSelectedQuicktask] = useState<QuicktaskPublic | null>(null)
@@ -148,7 +151,8 @@ export function ChatEmptyState({
         </p>
       </div>
 
-      {/* Tabs */}
+      {/* Tabs — hidden in Pur-Modus so the empty state has no agentic surfaces */}
+      {!pureMode && (
       <div className="flex gap-1 rounded-full bg-muted p-1" role="tablist">
         {[...baseTabs, ...(designLibraryEnabled ? [designTab] : []), ...(voiceChatEnabled ? [voiceTab] : [])].map((tab) => (
           <button
@@ -168,6 +172,7 @@ export function ChatEmptyState({
           </button>
         ))}
       </div>
+      )}
 
       {/* Tab content */}
       {activeTab === "chat" && (

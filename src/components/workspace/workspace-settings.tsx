@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { MemoryManagementDialog } from "@/components/chat/memory-management-dialog"
+import { readPureMode, writePureMode } from "@/lib/pure-mode"
 
 const MAX_LENGTH = 2000
 
@@ -38,6 +39,8 @@ export function WorkspaceSettings() {
   const [status, setStatus] = useState<"idle" | "saving" | "success" | "error">("idle")
   const [message, setMessage] = useState("")
   const [memoryDialogOpen, setMemoryDialogOpen] = useState(false)
+  // Pur-Modus: device-local (localStorage), not a DB preference. Persists on toggle.
+  const [pureMode, setPureMode] = useState(false)
 
   const loadData = useCallback(async () => {
     setIsLoading(true)
@@ -70,6 +73,9 @@ export function WorkspaceSettings() {
   }, [])
 
   useEffect(() => { loadData() }, [loadData])
+
+  // Pur-Modus is browser-local — read it directly, not from the API.
+  useEffect(() => { setPureMode(readPureMode()) }, [])
 
   const handleSave = async () => {
     setStatus("saving")
@@ -191,6 +197,23 @@ export function WorkspaceSettings() {
           </Label>
         </div>
       )}
+
+      <div className="space-y-1.5 rounded-md border border-dashed p-3">
+        <div className="flex items-center gap-3">
+          <Switch
+            id="pure-mode-toggle"
+            checked={pureMode}
+            onCheckedChange={(val) => { setPureMode(val); writePureMode(val) }}
+          />
+          <Label htmlFor="pure-mode-toggle" className="text-sm">
+            Pur-Modus — nur das Sprachmodell, ohne Werkzeuge, Skills, MCP, Memory und Artifacts
+          </Label>
+        </div>
+        <p className="text-xs text-muted-foreground pl-[3.25rem]">
+          Fuer Demos: zeigt, wie ein reiner Text-Chat ohne Agentik antwortet. Gilt nur in diesem Browser.
+          Aenderung wirkt nach dem naechsten Laden eines Chats.
+        </p>
+      </div>
 
       {creditsEnabled && creditsBalance !== undefined && (
         <div className="rounded-md border p-4">

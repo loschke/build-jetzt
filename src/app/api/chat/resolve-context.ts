@@ -48,6 +48,8 @@ interface ResolveContextParams {
   messages?: Array<{ role: string; parts?: Array<{ type: string; text?: string }> }>
   /** When set, the system prompt drops tool sections that don't work under privacy routing. */
   privacyRoutingActive?: boolean
+  /** Pur-Modus: bare LLM. Skips memory search and strips the system prompt to persona only. */
+  pureMode?: boolean
 }
 
 /**
@@ -71,7 +73,7 @@ function extractSearchQuery(params: ResolveContextParams): string {
 }
 
 export async function resolveContext(params: ResolveContextParams): Promise<ChatContext | Response> {
-  const { userId, requestChatId, requestExpertId, requestModelId, requestProjectId, quicktaskSlug, quicktaskData, wrapupType, wrapupContext, wrapupFormat, privacyRoutingActive } = params
+  const { userId, requestChatId, requestExpertId, requestModelId, requestProjectId, quicktaskSlug, quicktaskData, wrapupType, wrapupContext, wrapupFormat, privacyRoutingActive, pureMode } = params
 
   const modelId = requestModelId ?? aiDefaults.model
 
@@ -183,9 +185,10 @@ export async function resolveContext(params: ResolveContextParams): Promise<Chat
     if (wt) wrapupPrompt = buildWrapupPrompt(wt, wrapupContext, wrapupFormat ?? "text")
   }
 
-  // Memory search: only on new chats + user opt-in + instance feature enabled
+  // Memory search: only on new chats + user opt-in + instance feature enabled.
+  // Pur-Modus skips it entirely — the bare LLM gets no recalled context.
   let memories: MemoryEntry[] = []
-  if (isNewChat && features.memory.enabled && userPrefs.memoryEnabled) {
+  if (!pureMode && isNewChat && features.memory.enabled && userPrefs.memoryEnabled) {
     const searchQuery = extractSearchQuery(params)
     if (searchQuery) {
       memories = await Promise.race([
@@ -222,6 +225,7 @@ export async function resolveContext(params: ResolveContextParams): Promise<Chat
     webToolsEnabled: features.search.enabled,
     googleSearchEnabled: features.googleSearch.enabled && !privacyRoutingActive,
     privacyRoutingActive,
+    pureMode,
   })
 
   // Model resolution chain: quicktask > picker > expert > user default > platform default
