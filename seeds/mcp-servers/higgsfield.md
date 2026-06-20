@@ -3,7 +3,7 @@ name: Higgsfield
 serverId: higgsfield
 description: Higgsfield AI — Bild- und Videogenerierung über dein eigenes Higgsfield-Konto
 url: https://mcp.higgsfield.ai/mcp
-transport: sse
+transport: http
 authType: oauth
 oauthScopes: openid email offline_access
 sortOrder: 62
