@@ -163,11 +163,15 @@ export async function buildTools(params: BuildToolsParams): Promise<BuildToolsRe
     try {
       const { getActiveMCPServersForExpert } = await import("@/config/mcp")
       const { connectMCPServers } = await import("@/lib/mcp")
+      const { resolveChatMcp } = await import("@/lib/mcp/chat-oauth")
 
-      const servers = await getActiveMCPServersForExpert(expertMcpServerIds)
+      const activeServers = await getActiveMCPServersForExpert(expertMcpServerIds)
+      // OAuth-Server pro User auflösen (nur verbundene einbinden + authProvider bauen).
+      // Statische Server bleiben unverändert; ohne OAuth-Server keine Extra-Abfrage.
+      const { servers, authProviders } = await resolveChatMcp(userId, activeServers)
 
       if (servers.length > 0) {
-        mcpHandle = await connectMCPServers(servers)
+        mcpHandle = await connectMCPServers(servers, authProviders)
 
         // Merge MCP tools, applying collision guard and allowedTools filter
         for (const [name, tool] of Object.entries(mcpHandle.tools)) {

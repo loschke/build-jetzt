@@ -10,6 +10,8 @@ export const createMcpServerSchema = z.object({
   headers: z.record(z.string(), z.string()).nullish(),
   envVar: z.string().max(100).nullish(),
   enabledTools: z.array(z.string().max(200)).max(100).nullish(),
+  authType: z.enum(["static", "oauth"]).default("static"),
+  oauthScopes: z.string().max(500).nullish(),
   isActive: z.boolean().default(true),
   sortOrder: z.number().int().min(0).max(1000).default(0),
 })

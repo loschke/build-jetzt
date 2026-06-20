@@ -14,6 +14,10 @@ export interface CreateMcpServerInput {
   enabledTools?: string[] | null
   isActive?: boolean
   sortOrder?: number
+  /** "static" (Default) | "oauth" */
+  authType?: string
+  /** OAuth-Scopes (space-separated), nur bei authType="oauth" */
+  oauthScopes?: string | null
 }
 
 export interface UpdateMcpServerInput {
@@ -27,6 +31,8 @@ export interface UpdateMcpServerInput {
   enabledTools?: string[] | null
   isActive?: boolean
   sortOrder?: number
+  authType?: string
+  oauthScopes?: string | null
 }
 
 /** Get all active MCP servers, ordered by sortOrder */
@@ -86,6 +92,8 @@ export async function createMcpServer(data: CreateMcpServerInput) {
       headers: data.headers ?? null,
       envVar: data.envVar ?? null,
       enabledTools: data.enabledTools ?? null,
+      authType: data.authType ?? "static",
+      oauthScopes: data.oauthScopes ?? null,
       isActive: data.isActive ?? true,
       sortOrder: data.sortOrder ?? 0,
     })
@@ -117,6 +125,28 @@ export async function deleteMcpServer(id: string) {
   return deleted ?? null
 }
 
+/**
+ * Persistiert die DCR-Client-Registrierung eines OAuth-Servers (laufzeit-verwaltet).
+ * Bewusst getrennt vom Upsert/Seed, damit Re-Seeding die registrierte Client-Info nicht überschreibt.
+ */
+export async function setMcpOauthClientInfo(
+  serverId: string,
+  info: { clientId: string; clientSecretEnc?: string | null }
+) {
+  const db = getDb()
+  const [updated] = await db
+    .update(mcpServers)
+    .set({
+      oauthClientId: info.clientId,
+      oauthClientSecretEnc: info.clientSecretEnc ?? null,
+      oauthClientRegisteredAt: new Date(),
+      updatedAt: new Date(),
+    })
+    .where(eq(mcpServers.serverId, serverId))
+    .returning()
+  return updated ?? null
+}
+
 /** Upsert MCP server by serverId. Used for seeding and imports. */
 export async function upsertMcpServerByServerId(data: CreateMcpServerInput) {
   const existing = await getMcpServerByServerId(data.serverId)
@@ -129,6 +159,8 @@ export async function upsertMcpServerByServerId(data: CreateMcpServerInput) {
       headers: data.headers ?? null,
       envVar: data.envVar ?? null,
       enabledTools: data.enabledTools ?? null,
+      authType: data.authType ?? "static",
+      oauthScopes: data.oauthScopes ?? null,
       isActive: data.isActive ?? true,
       sortOrder: data.sortOrder ?? 0,
     })

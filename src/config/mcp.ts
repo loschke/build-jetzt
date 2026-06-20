@@ -20,6 +20,14 @@ export interface MCPServerConfig {
   headers?: Record<string, string>
   /** Tool allowlist. undefined = all tools, string[] = only these tools */
   enabledTools?: string[]
+  /** Auth-Modus: "static" (Default) = ${VAR}-Header; "oauth" = Account-Auth pro User */
+  authType?: "static" | "oauth"
+  /** OAuth-Scopes (space-separated), nur bei authType="oauth" */
+  oauthScopes?: string
+  /** DCR-Client-ID (pro Server), nur bei authType="oauth" */
+  oauthClientId?: string
+  /** Verschlüsseltes DCR-Client-Secret (pro Server), nur bei authType="oauth" */
+  oauthClientSecretEnc?: string
 }
 
 // --- Cache ---
@@ -65,6 +73,10 @@ function dbRowToConfig(row: {
   envVar: string | null
   headers: Record<string, string> | null
   enabledTools: string[] | null
+  authType?: string | null
+  oauthScopes?: string | null
+  oauthClientId?: string | null
+  oauthClientSecretEnc?: string | null
 }): MCPServerConfig {
   return {
     id: row.serverId,
@@ -74,6 +86,10 @@ function dbRowToConfig(row: {
     envVar: row.envVar ?? undefined,
     headers: row.headers ?? undefined,
     enabledTools: row.enabledTools ?? undefined,
+    authType: row.authType === "oauth" ? "oauth" : "static",
+    oauthScopes: row.oauthScopes ?? undefined,
+    oauthClientId: row.oauthClientId ?? undefined,
+    oauthClientSecretEnc: row.oauthClientSecretEnc ?? undefined,
   }
 }
 

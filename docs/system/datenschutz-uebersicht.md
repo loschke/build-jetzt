@@ -119,6 +119,23 @@
 
 **Hinweis:** Oeffentliche Shares machen den gesamten Chat-Verlauf ohne Authentifizierung lesbar. User muessen dies aktiv ausloesen und koennen es jederzeit widerrufen.
 
+### 2.9 OAuth-Verbindungen zu externen MCP-Diensten (Account-Auth)
+
+| Aspekt | Details |
+|--------|---------|
+| **Zweck** | User verbinden externe Dienste (z. B. Neon, Vercel, Higgsfield) mit ihrem EIGENEN Konto, um deren Tools im Chat zu nutzen |
+| **Rechtsgrundlage** | Art. 6 Abs. 1 lit. a DSGVO (Einwilligung — User loest „Verbinden" aktiv aus) |
+| **Datenkategorien** | OAuth Access-/Refresh-Token, Token-Typ, Ablaufzeitpunkt, gewaehrte Scopes, Server-Referenz; transienter PKCE-State (State-Nonce, Code-Verifier) |
+| **Speicherort** | `user_mcp_connections` (Tokens, **AES-256-GCM-verschluesselt**) + `mcp_oauth_sessions` (transient, TTL ~10 Min), Neon Postgres |
+| **Speicherfrist** | Bis zum Trennen durch User (`DELETE`) bzw. bis Tokens ablaufen; PKCE-Sessions max. 10 Min |
+| **Empfaenger** | Der jeweilige externe Anbieter (z. B. Neon, Vercel, Higgsfield) — bei Tool-Nutzung laufen Anfragen ueber das Konto des Users; Neon (DB-Hosting) |
+
+**Hinweise:**
+- Tokens werden mit einem plattformweiten Schluessel (`MCP_TOKEN_ENCRYPTION_KEY`) verschluesselt gespeichert; nie im Klartext, nie in Logs, nie in API-Antworten.
+- Generierungen/Aktionen laufen ueber das **Anbieter-Konto des Users** (dessen Credits/Kontingente), nicht ueber die Plattform.
+- Ohne gesetzten Encryption-Key ist der OAuth-Pfad inaktiv (fail-closed) — es werden keine solchen Daten verarbeitet.
+- Die Anbieter sind Auftragsverarbeiter bzw. eigenstaendig Verantwortliche je nach Dienst; entsprechende AV-/Nutzungsbedingungen des Anbieters gelten.
+
 ---
 
 ## 3. Datenkategorien-Matrix
