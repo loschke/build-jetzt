@@ -1,4 +1,5 @@
 import { createMCPClient } from "@ai-sdk/mcp"
+import type { OAuthClientProvider } from "@ai-sdk/mcp"
 
 import type { MCPServerConfig } from "@/config/mcp"
 import { resolveHeaders } from "@/config/mcp"
@@ -18,7 +19,9 @@ export interface MCPHandle {
 
 /** Connect to a single MCP server and return its tools (prefixed) */
 async function connectServer(
-  config: MCPServerConfig
+  config: MCPServerConfig,
+  /** Optional per-user OAuth provider (Account-Auth). Wenn gesetzt, übernimmt er die Auth. */
+  authProvider?: OAuthClientProvider
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Promise<{ tools: Record<string, any>; close: () => Promise<void> } | null> {
   try {
@@ -33,7 +36,11 @@ async function connectServer(
         transport: {
           type: config.transport ?? "sse",
           url: config.url,
-          headers: resolveHeaders(config.headers),
+          // OAuth-Server: authProvider übernimmt Auth (keine statischen Header).
+          // Static-Server (kein authProvider): exakt der bisherige Pfad.
+          ...(authProvider
+            ? { authProvider }
+            : { headers: resolveHeaders(config.headers) }),
         },
       }),
       new Promise<never>((_, reject) =>
@@ -71,7 +78,9 @@ async function connectServer(
 
 /** Connect to multiple MCP servers in parallel, merge their tools */
 export async function connectMCPServers(
-  configs: MCPServerConfig[]
+  configs: MCPServerConfig[],
+  /** Optionale per-Server OAuth-Provider (per-User, per-Request gebaut — NIE cachen). */
+  authProviders?: Map<string, OAuthClientProvider>
 ): Promise<MCPHandle> {
   if (configs.length === 0) {
     return { tools: {}, close: async () => {} }
@@ -82,7 +91,7 @@ export async function connectMCPServers(
   const timed = await Promise.all(
     configs.map(async (config) => {
       const serverStart = Date.now()
-      const result = await connectServer(config)
+      const result = await connectServer(config, authProviders?.get(config.id))
       return { id: config.id, durationMs: Date.now() - serverStart, result }
     })
   )

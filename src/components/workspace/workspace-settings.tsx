@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
 import { MemoryManagementDialog } from "@/components/chat/memory-management-dialog"
+import { McpConnections } from "@/components/workspace/mcp-connections"
 import { readPureMode, writePureMode } from "@/lib/pure-mode"
 
 const MAX_LENGTH = 2000
@@ -214,6 +215,8 @@ export function WorkspaceSettings() {
           Aenderung wirkt nach dem naechsten Laden eines Chats.
         </p>
       </div>
+
+      <McpConnections />
 
       {creditsEnabled && creditsBalance !== undefined && (
         <div className="rounded-md border p-4">

@@ -15,6 +15,7 @@ interface McpServerRow {
   url: string
   transport: string
   envVar: string | null
+  authType?: string | null
   isActive: boolean
   sortOrder: number
 }
@@ -162,6 +163,9 @@ export function McpServersAdmin({ initialServers }: McpServersAdminProps) {
                   </td>
                   <td className="px-3 py-2 md:px-4">
                     <Badge variant="secondary">{server.transport.toUpperCase()}</Badge>
+                    {server.authType === "oauth" && (
+                      <Badge variant="outline" className="ml-1">OAuth</Badge>
+                    )}
                   </td>
                   <td className="hidden px-4 py-2 text-muted-foreground md:table-cell">
                     {server.envVar ? (

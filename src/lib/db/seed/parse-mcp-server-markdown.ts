@@ -16,6 +16,8 @@ const mcpServerFrontmatterSchema = z.object({
   headers: z.record(z.string(), z.string()).optional(),
   envVar: z.string().optional(),
   enabledTools: z.array(z.string()).optional(),
+  authType: z.enum(["static", "oauth"]).optional(),
+  oauthScopes: z.string().optional(),
   isActive: z.boolean().optional(),
   sortOrder: z.number().optional(),
 })
@@ -41,6 +43,8 @@ export function parseMcpServerMarkdown(raw: string): CreateMcpServerInput | null
       headers: fm.headers ?? null,
       envVar: fm.envVar ?? null,
       enabledTools: fm.enabledTools ?? null,
+      authType: fm.authType ?? "static",
+      oauthScopes: fm.oauthScopes ?? null,
       isActive: fm.isActive ?? true,
       sortOrder: fm.sortOrder ?? 0,
     }
