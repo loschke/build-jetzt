@@ -13,7 +13,8 @@
     "db:studio": "drizzle-kit studio",
     "db:seed": "npx tsx --env-file=.env src/lib/db/seed/seed-experts.ts",
     "db:bootstrap-migrations": "node --env-file-if-exists=.env --env-file-if-exists=.env.local scripts/bootstrap-drizzle-migrations.mjs",
-    "sync:lessons": "npx tsx scripts/sync-lessons.ts"
+    "sync:lessons": "npx tsx scripts/sync-lessons.ts",
+    "sync:experts": "node scripts/expert-md-to-json.mjs"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.49",
