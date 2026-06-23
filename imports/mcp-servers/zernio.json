@@ -1,0 +1,32 @@
+[
+  {
+    "serverId": "zernio",
+    "name": "Zernio Social Publishing",
+    "description": "Social-Media-Publishing über Zernio (LinkedIn, Instagram u.a.). Posts erstellen/planen/veröffentlichen, Media-Upload, Cross-Posting, Accounts auflisten. enabledTools-Whitelist aktiv — nur die Publishing-Kern-Tools sind freigegeben (Zernio exponiert 402 Tools insgesamt).",
+    "url": "https://mcp.zernio.com/mcp",
+    "transport": "http",
+    "headers": { "Authorization": "Bearer ${ZERNIO_MCP_TOKEN}" },
+    "envVar": "ZERNIO_MCP_TOKEN",
+    "enabledTools": [
+      "accounts_list",
+      "accounts_get",
+      "posts_list",
+      "posts_get",
+      "posts_create",
+      "posts_update",
+      "posts_delete",
+      "posts_publish_now",
+      "posts_cross_post",
+      "posts_list_failed",
+      "posts_retry",
+      "media_generate_upload_link",
+      "media_check_upload_status",
+      "get_analytics",
+      "get_best_time_to_post",
+      "get_instagram_demographics",
+      "docs_search"
+    ],
+    "isActive": true,
+    "sortOrder": 60
+  }
+]
