@@ -1,3 +1,5 @@
+> **⚠️ Superseded (2026-06-23):** Dieser Vorschlag entstand gegen eine frühe KB-Version. Aktueller Stand: `docs/ideas/sava-experts-v2-redesign.md`. Hier nur noch als Historie.
+
 # Vorschlag: SAVA-Expert-Familie für build.jetzt
 
 > **Adressat:** Rico Loschke

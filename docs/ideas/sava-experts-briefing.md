@@ -1,3 +1,5 @@
+> **⚠️ Superseded (2026-06-23):** Dieses Briefing entstand gegen eine frühe KB-Version. Aktueller Stand: `docs/ideas/sava-experts-v2-redesign.md`. Hier nur noch als Historie.
+
 # Briefing: SAVA-Expert-Familie in build.jetzt
 
 > **Adressat:** Claude Code Agent in `build-jetzt/`.
