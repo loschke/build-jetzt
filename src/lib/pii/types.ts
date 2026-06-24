@@ -19,6 +19,8 @@ export type PiiEntityType =
   | "tax_id"
   | "svn"
   | "plz_city"
+  | "street_address"
+  | "geo_coordinates"
   | "ip_address"
   | "url"
 
@@ -40,6 +42,8 @@ export const PII_LABELS: Record<PiiEntityType, string> = {
   tax_id: "Steuer-ID",
   svn: "Sozialversicherungsnummer",
   plz_city: "PLZ + Ort",
+  street_address: "Straße + Hausnummer",
+  geo_coordinates: "Geo-Koordinaten",
   ip_address: "IP-Adresse",
   url: "URL",
 }

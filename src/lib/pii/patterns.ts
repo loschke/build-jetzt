@@ -37,6 +37,20 @@ const SVN_REGEX = /\b\d{2}\s?\d{6}\s?[A-Z]\s?\d{3}\b/g
 const PLZ_CITY_REGEX = /\b\d{5}\s+[A-ZÄÖÜ][a-zäöüß]{2,}(?:\s(?:am|an|bei|im|ob|in)\s[A-ZÄÖÜ][a-zäöüß]+|\s[A-ZÄÖÜ][a-zäöüß]+)?\b/g
 
 /**
+ * German street address: street name (incl. common suffixes or `str.`
+ * abbreviation, single- or two-word) followed by a house number.
+ * Matches: Ruschestrasse 91, Hauptstr. 12a, Berliner Allee 5
+ */
+const STREET_ADDRESS_REGEX =
+  /\b[A-ZÄÖÜ][a-zäöüß]+(?:straße|strasse|str\.|weg|allee|gasse|platz|ring|damm|ufer|steig|chaussee|wall|graben|zeile|bogen|pfad|markt|hof)\s+\d{1,4}[a-z]?\b|\b[A-ZÄÖÜ][a-zäöüß]+\s(?:Straße|Strasse|Weg|Allee|Gasse|Platz|Ring|Damm|Ufer|Steig|Chaussee|Wall|Graben)\s+\d{1,4}[a-z]?\b/g
+
+/**
+ * Geo coordinates: lat,lng pair with ≥4 decimals each (dot or comma decimal).
+ * Matches: 53.261252, 11.579092 and 53,261252, 11,579092
+ */
+const GEO_COORD_REGEX = /[-+]?\d{1,2}[.,]\d{4,}\s*,\s*[-+]?\d{1,3}[.,]\d{4,}/g
+
+/**
  * Credit card numbers: 13-19 digits with optional spaces/dashes
  * Matches common formats: 4111 1111 1111 1111, 4111-1111-1111-1111
  */
@@ -56,6 +70,65 @@ const EMAIL_REGEX = /\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b/g
  * URLs with protocol
  */
 const URL_REGEX = /https?:\/\/[^\s<>"{}|\\^`[\]]+/gi
+
+/**
+ * Sensitive URL query-param markers.
+ * Substrings: long enough to match unambiguously (also catches `api_key`,
+ * `X-Amz-Signature` etc. after normalization).
+ */
+const SENSITIVE_PARAM_SUBSTRINGS = [
+  "token",
+  "secret",
+  "password",
+  "passwd",
+  "signature",
+  "credential",
+  "apikey",
+  "accesskey",
+]
+/** Exact matches: short/ambiguous keys that must not match inside other words. */
+const SENSITIVE_PARAM_EXACT = new Set([
+  "key",
+  "sig",
+  "sid",
+  "pwd",
+  "pass",
+  "auth",
+  "session",
+  "sessionid",
+  "access",
+])
+
+/**
+ * A URL is only treated as PII when it actually carries sensitive data:
+ * embedded credentials (userinfo) or a sensitive query parameter.
+ * Plain public URLs (docs, articles, repos) are intentionally ignored —
+ * an email inside a URL is still caught by the separate email pattern.
+ */
+function urlContainsSensitiveData(raw: string): boolean {
+  let url: URL
+  try {
+    url = new URL(raw)
+  } catch {
+    return false
+  }
+  // https://user:pass@host
+  if (url.username || url.password) return true
+  // Sensitive query parameters (?token=…, ?X-Amz-Signature=…)
+  for (const name of url.searchParams.keys()) {
+    const normalized = name.toLowerCase().replace(/[^a-z0-9]/g, "")
+    if (SENSITIVE_PARAM_SUBSTRINGS.some((s) => normalized.includes(s))) return true
+    if (SENSITIVE_PARAM_EXACT.has(normalized)) return true
+  }
+  return false
+}
+
+/** Validate a geo-coordinate match: lat ≤ 90, lng ≤ 180 (cuts false positives). */
+function isValidGeoCoordinate(match: string): boolean {
+  const m = match.match(/^([-+]?\d{1,2})[.,]\d{4,}\s*,\s*([-+]?\d{1,3})[.,]\d{4,}$/)
+  if (!m) return false
+  return Math.abs(Number(m[1])) <= 90 && Math.abs(Number(m[2])) <= 180
+}
 
 /** Credit card Luhn check */
 function isValidLuhn(num: string): boolean {
@@ -101,8 +174,20 @@ const PATTERNS: PatternDef[] = [
   },
   { type: "svn", label: "Sozialversicherungsnummer", regex: SVN_REGEX },
   { type: "plz_city", label: "PLZ + Ort", regex: PLZ_CITY_REGEX },
+  { type: "street_address", label: "Straße + Hausnummer", regex: STREET_ADDRESS_REGEX },
+  {
+    type: "geo_coordinates",
+    label: "Geo-Koordinaten",
+    regex: GEO_COORD_REGEX,
+    validate: (match) => isValidGeoCoordinate(match),
+  },
   { type: "ip_address", label: "IP-Adresse", regex: IPV4_REGEX },
-  { type: "url", label: "URL", regex: URL_REGEX },
+  {
+    type: "url",
+    label: "URL",
+    regex: URL_REGEX,
+    validate: (match) => urlContainsSensitiveData(match),
+  },
 ]
 
 /**

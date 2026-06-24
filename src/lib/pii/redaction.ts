@@ -26,6 +26,10 @@ const REDACTION_STRATEGIES: Record<PiiEntityType, RedactionStrategy> = {
   plz_city: (v) => {
     return `${v.slice(0, 2)}*** ****`
   },
+  street_address: (v) => {
+    return `${v.slice(0, 3)}*** ***`
+  },
+  geo_coordinates: () => "**.******, **.******",
   ip_address: (v) => {
     const parts = v.split(".")
     return `${parts[0] ?? "*"}.${parts[1] ?? "*"}.*.*`
