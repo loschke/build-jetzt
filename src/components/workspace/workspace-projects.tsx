@@ -22,6 +22,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
+import { ProjectDocuments } from "@/components/chat/project-documents"
 
 interface ProjectRow {
   id: string
@@ -434,6 +435,13 @@ function ProjectForm({ project, onSuccess }: { project: ProjectRow | null; onSuc
           maxLength={10000}
         />
       </div>
+
+      {/* Knowledge files — only for existing projects (need a project id) */}
+      {project && (
+        <div className="border-t pt-4">
+          <ProjectDocuments projectId={project.id} />
+        </div>
+      )}
 
       {message && (
         <div className={`flex items-center gap-2 rounded-md p-3 text-sm ${
