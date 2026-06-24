@@ -106,9 +106,12 @@ export function McpAppFrame({ serverId, resourceUri, toolInput, toolOutput, them
         if (!win) throw new Error("iframe ohne contentWindow")
 
         // 2. Sandbox + permissions BEFORE the widget content loads.
+        // allow-popups/downloads/forms enable the widget's interactive controls
+        // (download, external links, form buttons). NO allow-same-origin → the
+        // iframe keeps an opaque origin with no access to host DOM/cookies.
         const allow = buildAllowAttribute(ui.permissions)
         if (allow) frame.setAttribute("allow", allow)
-        frame.setAttribute("sandbox", "allow-scripts")
+        frame.setAttribute("sandbox", "allow-scripts allow-popups allow-downloads allow-forms")
 
         // 3. Wire the bridge with minimal host capabilities.
         const bridge = new AppBridge(null, HOST_INFO, MINIMAL_CAPS, {
@@ -143,8 +146,40 @@ export function McpAppFrame({ serverId, resourceUri, toolInput, toolOutput, them
           if (/^https?:\/\//i.test(url)) window.open(url, "_blank", "noopener,noreferrer")
           return {}
         }
-        bridge.ondownloadfile = async () => ({})
-        bridge.onrequestdisplaymode = async ({ mode }) => ({ mode })
+        bridge.ondownloadfile = async ({ contents }) => {
+          dbg("downloadfile", { count: Array.isArray(contents) ? contents.length : 0 })
+          for (const item of (contents ?? []) as Array<Record<string, unknown>>) {
+            try {
+              if (item.type === "resource" && item.resource && typeof item.resource === "object") {
+                const res = item.resource as { uri?: string; blob?: string; text?: string; mimeType?: string }
+                const blob = typeof res.blob === "string"
+                  ? new Blob([Uint8Array.from(atob(res.blob), (c) => c.charCodeAt(0))], { type: res.mimeType })
+                  : new Blob([res.text ?? ""], { type: res.mimeType })
+                const url = URL.createObjectURL(blob)
+                const a = document.createElement("a")
+                a.href = url
+                a.download = res.uri?.split("/").pop() ?? "download"
+                a.click()
+                URL.revokeObjectURL(url)
+              } else if (item.type === "resource_link" && typeof item.uri === "string") {
+                window.open(item.uri, "_blank", "noopener,noreferrer")
+              }
+            } catch (e) {
+              dbg("downloadfile.fail", { detail: e instanceof Error ? e.message : String(e) })
+            }
+          }
+          return {}
+        }
+        bridge.onmessage = async (params) => {
+          // Logged so we can see if a widget button routes through ui/message
+          // (e.g. "recreate"). Not yet injected into the chat — observe first.
+          dbg("ui/message", { role: (params as { role?: string })?.role })
+          return {}
+        }
+        bridge.onrequestdisplaymode = async ({ mode }) => {
+          dbg("request-display-mode", { mode })
+          return { mode }
+        }
         bridge.addEventListener("sizechange", ({ height: h }) => {
           if (typeof h === "number" && h > 0) setHeight(Math.min(Math.max(h, 80), 1600))
         })
@@ -210,7 +245,10 @@ export function McpAppFrame({ serverId, resourceUri, toolInput, toolOutput, them
   }, [serverId, resourceUri])
 
   return (
-    <div className="overflow-hidden rounded-xl border widget-card">
+    // w-[60rem] max-w-full forces the w-fit MessageContent parent to expand to its
+    // max width so the widget fills the message column instead of collapsing to the
+    // iframe's intrinsic 300px.
+    <div className="w-[60rem] max-w-full overflow-hidden rounded-xl border widget-card">
       {status === "error" ? (
         <div className="p-3 text-sm text-muted-foreground">
           MCP-Widget nicht verfügbar{errorMsg ? ` (${errorMsg})` : ""}.
