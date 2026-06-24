@@ -37,7 +37,7 @@ export async function POST(request: Request) {
   const result = await readUiResource(userId, parsed.serverId, parsed.uri)
   if ("error" in result) {
     const status = result.error === "not_connected" ? 409 : result.error === "server_not_found" ? 404 : 502
-    return Response.json({ error: result.error }, { status })
+    return Response.json({ error: result.error, detail: result.detail }, { status })
   }
 
   return Response.json({ contents: result.contents })

@@ -27,6 +27,12 @@ const APP_CALL_TIMEOUT = 30_000
 
 export type AppHostError = "server_not_found" | "not_connected" | "tool_not_allowed" | "connect_failed"
 
+/** Structured, secret-safe diagnostics for the MCP Apps host legs. */
+function log(op: string, fields: Record<string, unknown>) {
+  const parts = Object.entries(fields).map(([k, v]) => `${k}=${typeof v === "string" ? v : JSON.stringify(v)}`)
+  console.info(`[MCP-App] ${op} ${parts.join(" ")}`)
+}
+
 type ResolveResult =
   | { ok: true; config: MCPServerConfig; authProvider?: OAuthClientProvider }
   | { ok: false; error: AppHostError }
@@ -61,14 +67,23 @@ export async function readUiResource(
   userId: string,
   serverId: string,
   uri: string
-): Promise<{ contents: UiResourceContent[] } | { error: AppHostError }> {
-  if (!uri.startsWith("ui://")) return { error: "server_not_found" }
+): Promise<{ contents: UiResourceContent[] } | { error: AppHostError; detail?: string }> {
+  if (!uri.startsWith("ui://")) return { error: "server_not_found", detail: "uri must start with ui://" }
+  const t0 = Date.now()
   const r = await resolveServer(userId, serverId)
-  if (!r.ok) return { error: r.error }
+  if (!r.ok) {
+    log("readResource.resolve", { server: serverId, error: r.error })
+    return { error: r.error }
+  }
 
+  const tConnect = Date.now()
   const conn = await connectMcpClient(r.config, r.authProvider)
-  if (!conn) return { error: "connect_failed" }
+  if (!conn) {
+    log("readResource.connect", { server: serverId, error: "connect_failed", connectMs: Date.now() - tConnect })
+    return { error: "connect_failed", detail: "could not connect to server" }
+  }
   try {
+    const tRead = Date.now()
     const result = await conn.client.readResource({ uri })
     const contents: UiResourceContent[] = (result.contents ?? []).map((c) => ({
       uri: typeof c.uri === "string" ? c.uri : uri,
@@ -76,10 +91,19 @@ export async function readUiResource(
       text: typeof (c as { text?: unknown }).text === "string" ? (c as { text: string }).text : undefined,
       meta: ((c as { _meta?: Record<string, unknown> })._meta) ?? undefined,
     }))
+    log("readResource.ok", {
+      server: serverId,
+      uri,
+      connectMs: tRead - tConnect,
+      readMs: Date.now() - tRead,
+      totalMs: Date.now() - t0,
+      bytes: contents[0]?.text?.length ?? 0,
+    })
     return { contents }
   } catch (error) {
-    console.warn(`[MCP-App] readResource failed for ${serverId}:`, getErrorMessage(error))
-    return { error: "connect_failed" }
+    const detail = getErrorMessage(error)
+    log("readResource.fail", { server: serverId, uri, totalMs: Date.now() - t0, detail })
+    return { error: "connect_failed", detail }
   } finally {
     conn.close().catch(() => {})
   }
@@ -94,33 +118,54 @@ export async function callAppTool(
   serverId: string,
   toolName: string,
   args: Record<string, unknown>
-): Promise<{ result: unknown } | { error: AppHostError }> {
+): Promise<{ result: unknown } | { error: AppHostError; detail?: string }> {
+  const t0 = Date.now()
   const r = await resolveServer(userId, serverId)
-  if (!r.ok) return { error: r.error }
+  if (!r.ok) {
+    log("callTool.resolve", { server: serverId, tool: toolName, error: r.error })
+    return { error: r.error }
+  }
 
   // Honor the server's tool allowlist (capability gating).
   if (r.config.enabledTools && !r.config.enabledTools.includes(toolName)) {
-    return { error: "tool_not_allowed" }
+    log("callTool.gated", { server: serverId, tool: toolName })
+    return { error: "tool_not_allowed", detail: `tool not in allowlist: ${toolName}` }
   }
 
+  const tConnect = Date.now()
   const conn = await connectMcpClient(r.config, r.authProvider)
-  if (!conn) return { error: "connect_failed" }
+  if (!conn) {
+    log("callTool.connect", { server: serverId, tool: toolName, error: "connect_failed", connectMs: Date.now() - tConnect })
+    return { error: "connect_failed", detail: "could not connect to server" }
+  }
   try {
+    const tTools = Date.now()
     const tools = await conn.client.tools()
+    const tExec = Date.now()
     const tool = tools[toolName]
     if (!tool || typeof tool.execute !== "function") {
-      return { error: "tool_not_allowed" }
+      log("callTool.missing", { server: serverId, tool: toolName, available: Object.keys(tools).length })
+      return { error: "tool_not_allowed", detail: `tool not found on server: ${toolName}` }
     }
     const result = await Promise.race([
       tool.execute(args, { toolCallId: "mcp-app", messages: [] }),
       new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("app tool-call timeout")), APP_CALL_TIMEOUT)
+        setTimeout(() => reject(new Error(`app tool-call timeout after ${APP_CALL_TIMEOUT}ms`)), APP_CALL_TIMEOUT)
       ),
     ])
+    log("callTool.ok", {
+      server: serverId,
+      tool: toolName,
+      connectMs: tTools - tConnect,
+      listMs: tExec - tTools,
+      execMs: Date.now() - tExec,
+      totalMs: Date.now() - t0,
+    })
     return { result }
   } catch (error) {
-    console.warn(`[MCP-App] tool-call ${serverId}/${toolName} failed:`, getErrorMessage(error))
-    return { error: "connect_failed" }
+    const detail = getErrorMessage(error)
+    log("callTool.fail", { server: serverId, tool: toolName, totalMs: Date.now() - t0, detail })
+    return { error: "connect_failed", detail }
   } finally {
     conn.close().catch(() => {})
   }

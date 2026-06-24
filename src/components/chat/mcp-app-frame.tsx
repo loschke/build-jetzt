@@ -62,23 +62,39 @@ export function McpAppFrame({ serverId, resourceUri, toolInput, toolOutput, them
 
   useEffect(() => {
     let cancelled = false
+    let initWatch: ReturnType<typeof setTimeout> | undefined
     const iframe = iframeRef.current
     if (!iframe) return
 
+    const t0 = Date.now()
+    // Diagnostics: every phase lands in window.__MCP_APP_LOG (copy/paste) + console.
+    const dbg = (phase: string, extra?: Record<string, unknown>) => {
+      const entry = { t: Date.now() - t0, server: serverId, phase, ...extra }
+      const w = window as unknown as { __MCP_APP_LOG?: unknown[] }
+      ;(w.__MCP_APP_LOG ??= []).push(entry)
+      console.info(`[McpApp +${entry.t}ms] ${phase}`, extra ?? "")
+    }
+
     async function boot() {
       try {
+        dbg("boot", { resourceUri })
         // 1. Read the ui:// resource (HTML + optional csp/permissions meta).
         const res = await fetch("/api/mcp/app-resource", {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({ serverId, uri: resourceUri }),
         })
-        if (!res.ok) throw new Error(`resource ${res.status}`)
+        if (!res.ok) {
+          const body = (await res.json().catch(() => ({}))) as { error?: string; detail?: string }
+          dbg("resource.fail", { status: res.status, error: body.error, detail: body.detail })
+          throw new Error(`Resource ${res.status}: ${body.detail ?? body.error ?? ""}`)
+        }
         const { contents } = (await res.json()) as {
           contents: Array<{ text?: string; meta?: Record<string, unknown> }>
         }
         const content = contents?.[0]
         if (!content?.text) throw new Error("leere UI-Resource")
+        dbg("resource.ok", { bytes: content.text.length })
         if (cancelled || !iframeRef.current) return
 
         const ui = (content.meta?.ui ?? {}) as {
@@ -98,6 +114,7 @@ export function McpAppFrame({ serverId, resourceUri, toolInput, toolOutput, them
         await new Promise<void>((resolve) => {
           iframeRef.current?.addEventListener("load", () => resolve(), { once: true })
         })
+        dbg("iframe.load")
         if (cancelled || !iframeRef.current?.contentWindow) return
 
         // 3. Wire the bridge with minimal host capabilities.
@@ -112,16 +129,24 @@ export function McpAppFrame({ serverId, resourceUri, toolInput, toolOutput, them
         bridgeRef.current = bridge
 
         bridge.oncalltool = async (params) => {
+          const ts = Date.now()
+          dbg("calltool→", { tool: params.name })
           const r = await fetch("/api/mcp/app-call", {
             method: "POST",
             headers: { "content-type": "application/json" },
             body: JSON.stringify({ serverId, toolName: params.name, arguments: params.arguments ?? {} }),
           })
-          if (!r.ok) throw new Error(`tool-call ${r.status}`)
-          const { result } = (await r.json()) as { result: unknown }
+          if (!r.ok) {
+            const body = (await r.json().catch(() => ({}))) as { error?: string; detail?: string }
+            dbg("calltool✗", { tool: params.name, status: r.status, error: body.error, detail: body.detail, ms: Date.now() - ts })
+            throw new Error(`tool-call ${r.status}: ${body.detail ?? body.error ?? ""}`)
+          }
+          const { result } = (await r.json()) as { result: { isError?: boolean } }
+          dbg("calltool✓", { tool: params.name, ms: Date.now() - ts, isError: result?.isError ?? false })
           return result as Awaited<ReturnType<AppBridge["callTool"]>>
         }
         bridge.onopenlink = async ({ url }) => {
+          dbg("openlink", { url })
           if (/^https?:\/\//i.test(url)) window.open(url, "_blank", "noopener,noreferrer")
           return {}
         }
@@ -132,6 +157,8 @@ export function McpAppFrame({ serverId, resourceUri, toolInput, toolOutput, them
         })
 
         bridge.addEventListener("initialized", () => {
+          if (initWatch) clearTimeout(initWatch)
+          dbg("initialized", { appCaps: bridge.getAppCapabilities(), app: bridge.getAppVersion() })
           bridge
             .sendToolInput({ arguments: (toolInput ?? {}) as Record<string, unknown> })
             .then(() =>
@@ -139,14 +166,24 @@ export function McpAppFrame({ serverId, resourceUri, toolInput, toolOutput, them
                 (toolOutput ?? { content: [] }) as Parameters<AppBridge["sendToolResult"]>[0]
               )
             )
-            .catch(() => {})
+            .then(() => dbg("pushed.toolInput+toolResult"))
+            .catch((e) => dbg("push.fail", { detail: e instanceof Error ? e.message : String(e) }))
         })
 
+        // Watchdog: distinguishes a stuck handshake from a stuck tool-call.
+        initWatch = setTimeout(() => {
+          if (!cancelled) dbg("WARN", { msg: "ui/initialize nicht empfangen nach 10s — Handshake-Race?" })
+        }, 10_000)
+
+        dbg("bridge.connect→")
         await bridge.connect(new PostMessageTransport(iframeRef.current.contentWindow, iframeRef.current.contentWindow))
+        dbg("bridge.connect✓")
         if (!cancelled) setStatus("ready")
       } catch (err) {
         if (cancelled) return
-        setErrorMsg(err instanceof Error ? err.message : "Widget konnte nicht geladen werden")
+        const msg = err instanceof Error ? err.message : "Widget konnte nicht geladen werden"
+        dbg("error", { detail: msg })
+        setErrorMsg(msg)
         setStatus("error")
       }
     }
@@ -155,6 +192,7 @@ export function McpAppFrame({ serverId, resourceUri, toolInput, toolOutput, them
 
     return () => {
       cancelled = true
+      if (initWatch) clearTimeout(initWatch)
       const bridge = bridgeRef.current
       bridgeRef.current = null
       if (bridge) {

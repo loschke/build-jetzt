@@ -43,7 +43,7 @@ export async function POST(request: Request) {
       result.error === "not_connected" ? 409 :
       result.error === "server_not_found" ? 404 :
       result.error === "tool_not_allowed" ? 403 : 502
-    return Response.json({ error: result.error }, { status })
+    return Response.json({ error: result.error, detail: result.detail }, { status })
   }
 
   return Response.json({ result: result.result })
