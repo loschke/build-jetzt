@@ -101,21 +101,14 @@ export function McpAppFrame({ serverId, resourceUri, toolInput, toolOutput, them
           csp?: { resourceDomains?: string[]; connectDomains?: string[] }
           permissions?: McpUiResourcePermissions
         }
-        const allow = buildAllowAttribute(ui.permissions)
-        if (allow) iframeRef.current.setAttribute("allow", allow)
-        iframeRef.current.setAttribute("sandbox", "allow-scripts")
-        iframeRef.current.srcdoc = injectWidgetCsp(
-          content.text,
-          ui.csp?.resourceDomains ?? [],
-          ui.csp?.connectDomains ?? []
-        )
+        const frame = iframeRef.current
+        const win = frame.contentWindow
+        if (!win) throw new Error("iframe ohne contentWindow")
 
-        // 2. Wait for the iframe document to load.
-        await new Promise<void>((resolve) => {
-          iframeRef.current?.addEventListener("load", () => resolve(), { once: true })
-        })
-        dbg("iframe.load")
-        if (cancelled || !iframeRef.current?.contentWindow) return
+        // 2. Sandbox + permissions BEFORE the widget content loads.
+        const allow = buildAllowAttribute(ui.permissions)
+        if (allow) frame.setAttribute("allow", allow)
+        frame.setAttribute("sandbox", "allow-scripts")
 
         // 3. Wire the bridge with minimal host capabilities.
         const bridge = new AppBridge(null, HOST_INFO, MINIMAL_CAPS, {
@@ -175,9 +168,22 @@ export function McpAppFrame({ serverId, resourceUri, toolInput, toolOutput, them
           if (!cancelled) dbg("WARN", { msg: "ui/initialize nicht empfangen nach 10s — Handshake-Race?" })
         }, 10_000)
 
+        // 4. Connect (attach host listener) BEFORE loading the widget. Otherwise the
+        // widget's ui/initialize — sent the moment its script runs — races ahead of
+        // our listener and is lost, so the host never replies and the widget times out.
+        frame.addEventListener("load", () => dbg("iframe.load"), { once: true })
         dbg("bridge.connect→")
-        await bridge.connect(new PostMessageTransport(iframeRef.current.contentWindow, iframeRef.current.contentWindow))
-        dbg("bridge.connect✓")
+        await bridge.connect(new PostMessageTransport(win, win))
+        dbg("bridge.connect✓ (host listening)")
+        if (cancelled) return
+
+        // 5. Now load the widget — the host is already listening for ui/initialize.
+        dbg("srcdoc.set")
+        frame.srcdoc = injectWidgetCsp(
+          content.text,
+          ui.csp?.resourceDomains ?? [],
+          ui.csp?.connectDomains ?? []
+        )
         if (!cancelled) setStatus("ready")
       } catch (err) {
         if (cancelled) return
