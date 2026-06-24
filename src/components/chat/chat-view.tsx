@@ -619,6 +619,14 @@ export function ChatView({ chatId, initialModelId, initialProjectId, initialArti
     [sendMessage]
   )
 
+  // MCP App widget posted a ui/message (recreate/animate/edit/…) → send to the chat.
+  const handleAppMessage = useCallback(
+    (text: string) => {
+      if (text) sendMessage({ text })
+    },
+    [sendMessage]
+  )
+
   const handleQuicktaskSubmit = useCallback(
     async (slug: string, data: Record<string, string>) => {
       const summary = Object.entries(data)
@@ -800,6 +808,7 @@ export function ChatView({ chatId, initialModelId, initialProjectId, initialArti
                         selectedArtifact={selectedArtifact}
                         onArtifactClick={handleArtifactCardClick}
                         onToolResult={handleToolResult}
+                        onAppMessage={handleAppMessage}
                         onEdit={handleEditMessage}
                       />
                     </React.Fragment>

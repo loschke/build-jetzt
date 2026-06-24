@@ -24,6 +24,8 @@ export interface McpAppFrameProps {
   toolInput?: unknown
   /** The tool result (pushed to the widget; it polls onward itself). */
   toolOutput?: unknown
+  /** Called when the widget posts a ui/message (e.g. "recreate") — sent to the chat. */
+  onAppMessage?: (text: string) => void
   theme?: "light" | "dark"
 }
 
@@ -34,6 +36,10 @@ const MINIMAL_CAPS = {
   logging: {},
   openLinks: {},
   downloadFile: {},
+  // The widget routes ALL action buttons (recreate/animate/edit/upscale/…) through
+  // ui/message. Advertising it enables those controls; the host adds the message to
+  // the chat so the agent acts on it.
+  message: { text: {} },
 } as const
 
 /** Strip any existing CSP and inject a tight one for the self-contained widget. */
@@ -53,9 +59,12 @@ function injectWidgetCsp(html: string, resourceDomains: string[], connectDomains
   return csp + stripped
 }
 
-export function McpAppFrame({ serverId, resourceUri, toolInput, toolOutput, theme = "dark" }: McpAppFrameProps) {
+export function McpAppFrame({ serverId, resourceUri, toolInput, toolOutput, onAppMessage, theme = "dark" }: McpAppFrameProps) {
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const bridgeRef = useRef<AppBridge | null>(null)
+  // Latest callback in a ref so the bridge handler (set once) never goes stale.
+  const onAppMessageRef = useRef(onAppMessage)
+  onAppMessageRef.current = onAppMessage
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading")
   const [errorMsg, setErrorMsg] = useState<string>("")
   const [height, setHeight] = useState(120)
@@ -171,10 +180,20 @@ export function McpAppFrame({ serverId, resourceUri, toolInput, toolOutput, them
           return {}
         }
         bridge.onmessage = async (params) => {
-          // Logged so we can see if a widget button routes through ui/message
-          // (e.g. "recreate"). Not yet injected into the chat — observe first.
-          dbg("ui/message", { role: (params as { role?: string })?.role })
-          return {}
+          // Generic: every widget action button (recreate/animate/edit/upscale/…)
+          // routes through ui/message. Add its text to the chat → the agent acts.
+          const content = (params as { content?: Array<{ type?: string; text?: string }> })?.content ?? []
+          const text = content
+            .filter((c) => c?.type === "text" && typeof c.text === "string")
+            .map((c) => c.text as string)
+            .join("\n")
+            .trim()
+          dbg("ui/message", { role: (params as { role?: string })?.role, chars: text.length })
+          if (text && onAppMessageRef.current) {
+            onAppMessageRef.current(text)
+            return {}
+          }
+          return { isError: true }
         }
         bridge.onrequestdisplaymode = async ({ mode }) => {
           dbg("request-display-mode", { mode })

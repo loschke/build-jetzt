@@ -61,6 +61,7 @@ interface ChatMessageProps {
     reviewMode?: boolean
   }) => void
   onToolResult?: (toolCallId: string, toolName: string, result: unknown) => void
+  onAppMessage?: (text: string) => void
   onEdit?: (messageId: string, messageText: string) => void
 }
 
@@ -89,7 +90,8 @@ function isGenericToolPart(part: { type: string; [key: string]: unknown }): bool
 function renderMcpAppFrame(
   part: { type: string; [key: string]: unknown },
   map: McpAppToolMap,
-  key: string
+  key: string,
+  onAppMessage?: (text: string) => void
 ): React.ReactNode | null {
   const toolName = (part as { toolName?: string }).toolName
   if (!toolName) return null
@@ -104,6 +106,7 @@ function renderMcpAppFrame(
       resourceUri={appTool.resourceUri}
       toolInput={(part as { input?: unknown }).input}
       toolOutput={(part as { output?: unknown }).output}
+      onAppMessage={onAppMessage}
     />
   )
 }
@@ -116,6 +119,7 @@ export const ChatMessage = memo(function ChatMessage({
   selectedArtifact,
   onArtifactClick,
   onToolResult,
+  onAppMessage,
   onEdit,
 }: ChatMessageProps) {
   const isUser = message.role === "user"
@@ -232,7 +236,7 @@ export const ChatMessage = memo(function ChatMessage({
               }
               // Ebene B: interactive MCP App widget (tools with a ui:// resource).
               if (features.mcpApps.enabled && part.type === "dynamic-tool") {
-                const frame = renderMcpAppFrame(part, mcpAppTools, `${message.id}-mcpapp-${i}`)
+                const frame = renderMcpAppFrame(part, mcpAppTools, `${message.id}-mcpapp-${i}`, onAppMessage)
                 if (frame) return frame
               }
               if (isGenericToolPart(part)) {
