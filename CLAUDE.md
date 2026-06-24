@@ -318,6 +318,7 @@ Details: `docs/system/deployment-guide.md` und `docs/system/feature-flags-konfig
 | Dokument | Beschreibung |
 |----------|-------------|
 | `docs/system/technical-architecture.md` | Technische Architektur (Tools, Skills, Experts, Memory, MCP, DB, onFinish-Flow) |
+| `docs/system/mcp-apps-host.md` | MCP-Apps-Host (Ebene A+B): Referenz + Guide für eigene MCP Apps (flag-gated PoC) |
 | `docs/system/system-prompt-architektur.md` | System-Prompt-Aufbau (7 Layer, Stellschrauben) |
 | `docs/system/feature-flags-konfiguration.md` | Feature-Flags, ENV-Referenz, Tier-Baukasten |
 | `docs/system/platform-capabilities.md` | Nutzer-Perspektive (Marketing, Feature-Übersicht) |
