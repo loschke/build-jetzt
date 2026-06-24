@@ -23,6 +23,18 @@ export const features = {
   mcp: {
     enabled: !!process.env.MCP_ENABLED,
   },
+  // Ebene A: rich rendering of MCP tool results that carry direct media (image/audio).
+  // Client-side, additive, safe. Default on; disable for strict isolation profiles.
+  mcpRichOutput: {
+    enabled: process.env.NEXT_PUBLIC_MCP_RICH_OUTPUT !== "false",
+  },
+  // Ebene B (M2): interactive MCP Apps host — renders ui:// widgets in a sandboxed
+  // iframe and proxies app tool-calls over the user's authenticated MCP connection.
+  // Renders foreign HTML + proxies calls → opt-in, default OFF. Requires OAuth-MCP.
+  // NEXT_PUBLIC so both the client (mount detection) and server routes can gate on it.
+  mcpApps: {
+    enabled: process.env.NEXT_PUBLIC_MCP_APPS_ENABLED === "true",
+  },
   admin: {
     enabled: !!(process.env.ADMIN_EMAILS || process.env.SUPERADMIN_EMAIL),
   },

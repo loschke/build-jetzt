@@ -1,6 +1,7 @@
 "use client"
 
 import { memo, useCallback, useRef, useState, useEffect } from "react"
+import dynamic from "next/dynamic"
 import { CopyIcon, DownloadIcon, PencilIcon } from "lucide-react"
 
 import {
@@ -19,10 +20,17 @@ import {
 import { ToolStatus } from "./tool-status"
 import { MemoryIndicator } from "./memory-indicator"
 import { MessageAttachments } from "./message-attachment"
-import { renderToolPart, hasToolRenderer, extractGenericToolData } from "./tool-renderers"
+import { renderToolPart, renderMcpRichResult, hasToolRenderer, extractGenericToolData } from "./tool-renderers"
 import { isCustomRendered } from "@/lib/ai/tools/registry"
 import { features } from "@/config/features"
+import { useMcpAppTools, type McpAppToolMap } from "@/hooks/use-mcp-app-tools"
 import type { SelectedArtifact } from "@/hooks/use-artifact"
+
+// Pulls in AppBridge + the MCP SDK — load only when an MCP App actually renders.
+const McpAppFrame = dynamic(
+  () => import("./mcp-app-frame").then((m) => m.McpAppFrame),
+  { ssr: false }
+)
 
 interface MessageMetadata {
   modelId?: string
@@ -73,6 +81,33 @@ function isGenericToolPart(part: { type: string; [key: string]: unknown }): bool
   return false
 }
 
+/**
+ * Render an interactive MCP App widget for a dynamic-tool part whose tool declares
+ * a ui:// resource (Ebene B). Returns null unless the tool is in the app-tools map
+ * and the result is available (the widget needs the result to push + self-poll).
+ */
+function renderMcpAppFrame(
+  part: { type: string; [key: string]: unknown },
+  map: McpAppToolMap,
+  key: string
+): React.ReactNode | null {
+  const toolName = (part as { toolName?: string }).toolName
+  if (!toolName) return null
+  const appTool = map[toolName]
+  if (!appTool) return null
+  const state = (part as { state?: string }).state
+  if (state !== "output-available" && state !== "result") return null
+  return (
+    <McpAppFrame
+      key={key}
+      serverId={appTool.serverId}
+      resourceUri={appTool.resourceUri}
+      toolInput={(part as { input?: unknown }).input}
+      toolOutput={(part as { output?: unknown }).output}
+    />
+  )
+}
+
 
 export const ChatMessage = memo(function ChatMessage({
   message,
@@ -84,6 +119,7 @@ export const ChatMessage = memo(function ChatMessage({
   onEdit,
 }: ChatMessageProps) {
   const isUser = message.role === "user"
+  const mcpAppTools = useMcpAppTools()
   const meta = (message.metadata ?? undefined) as MessageMetadata | undefined
   const messageText = message.parts
     ?.filter((part): part is { type: string; text: string; [key: string]: unknown } => part.type === "text" && "text" in part)
@@ -194,11 +230,22 @@ export const ChatMessage = memo(function ChatMessage({
                 const rendered = renderToolPart(toolName, ctx, `${message.id}-${toolName}-${i}`)
                 if (rendered) return rendered
               }
+              // Ebene B: interactive MCP App widget (tools with a ui:// resource).
+              if (features.mcpApps.enabled && part.type === "dynamic-tool") {
+                const frame = renderMcpAppFrame(part, mcpAppTools, `${message.id}-mcpapp-${i}`)
+                if (frame) return frame
+              }
               if (isGenericToolPart(part)) {
+                const key = `${message.id}-tool-${i}`
+                // Ebene A: render direct media (image/audio) richly; else plain status.
+                if (features.mcpRichOutput.enabled) {
+                  const rich = renderMcpRichResult(part, key)
+                  if (rich) return rich
+                }
                 const { toolName, state, input, output, errorText, inputDetail } = extractGenericToolData(part)
                 return (
                   <ToolStatus
-                    key={`${message.id}-tool-${i}`}
+                    key={key}
                     toolName={toolName}
                     state={state}
                     input={input}

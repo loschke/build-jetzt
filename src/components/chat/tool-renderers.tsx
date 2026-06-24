@@ -15,8 +15,10 @@ import { AudioPlayer, AudioPlayerSkeleton, type AudioPlayerData } from "@/compon
 import { DeepResearchProgress } from "./deep-research-progress"
 import { ToolStatus } from "./tool-status"
 import { FileDownloadCard } from "./file-download-card"
+import { McpMediaBlocks } from "./mcp-rich-result"
 import { extractArtifactFromToolPart } from "@/hooks/use-artifact"
 import { extractFileRefs } from "@/lib/ai/anthropic-skills"
+import { extractMcpMediaBlocks } from "@/lib/ai/mcp-content"
 import { unwrapToolOutput } from "@/lib/ai/tool-output"
 import { safeDomain } from "@/lib/url-validation"
 import type { SelectedArtifact } from "@/hooks/use-artifact"
@@ -603,6 +605,34 @@ const TOOL_RENDERERS: Record<string, ToolRenderer> = {
   deep_research: renderDeepResearch,
   code_execution: renderCodeExecution,
   suggest_memory: renderSuggestMemory,
+}
+
+/**
+ * Ebene A — render a generic/MCP tool part richly when its result carries direct
+ * media content (image/audio). Shows the standard ToolStatus header for provenance
+ * plus the rendered media below. Returns null when there is no renderable media,
+ * so the caller falls back to the plain ToolStatus.
+ */
+export function renderMcpRichResult(
+  part: { type: string; [key: string]: unknown },
+  key: string
+): ReactNode | null {
+  const data = extractGenericToolData(part)
+  const blocks = extractMcpMediaBlocks(data.output)
+  if (blocks.length === 0) return null
+  return (
+    <div key={key} className="space-y-2">
+      <ToolStatus
+        toolName={data.toolName}
+        state={data.state}
+        input={data.input}
+        output={data.output}
+        errorText={data.errorText}
+        inputDetail={data.inputDetail}
+      />
+      <McpMediaBlocks blocks={blocks} />
+    </div>
+  )
 }
 
 /**

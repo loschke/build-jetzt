@@ -39,6 +39,7 @@
     "@google/genai": "^1.46.0",
     "@google/stitch-sdk": "^0.0.3",
     "@mendable/firecrawl-js": "^4.15.0",
+    "@modelcontextprotocol/ext-apps": "1.7.4",
     "@neondatabase/serverless": "^1.0.2",
     "@radix-ui/react-toggle": "^1.1.10",
     "@radix-ui/react-toggle-group": "^1.1.11",

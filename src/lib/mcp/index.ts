@@ -76,6 +76,55 @@ async function connectServer(
   }
 }
 
+/** Raw single-server MCP client handle for MCP Apps (resource reads + app tool-calls). */
+export interface MCPClientHandle {
+  client: Awaited<ReturnType<typeof createMCPClient>>
+  close: () => Promise<void>
+}
+
+/**
+ * Connect to a SINGLE MCP server and expose the raw `@ai-sdk/mcp` client
+ * (for `readResource` and app-initiated tool calls). Used by the MCP Apps host.
+ * Fresh per call, never cached (consistent with the OAuth-MCP lifecycle).
+ * Returns null if the URL is blocked or the connection fails.
+ */
+export async function connectMcpClient(
+  config: MCPServerConfig,
+  authProvider?: OAuthClientProvider
+): Promise<MCPClientHandle | null> {
+  try {
+    if (!isAllowedUrl(config.url)) {
+      console.warn(`[MCP] Blocked app connection to ${config.id}: URL not allowed`)
+      return null
+    }
+    const client = await Promise.race([
+      createMCPClient({
+        transport: {
+          type: config.transport ?? "sse",
+          url: config.url,
+          ...(authProvider
+            ? { authProvider }
+            : { headers: resolveHeaders(config.headers) }),
+        },
+      }),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error(`MCP timeout: ${config.id}`)), CONNECTION_TIMEOUT)
+      ),
+    ])
+    return {
+      client,
+      close: () =>
+        Promise.race([
+          client.close(),
+          new Promise<void>((resolve) => setTimeout(resolve, CLOSE_TIMEOUT)),
+        ]),
+    }
+  } catch (error) {
+    console.warn(`[MCP] Failed app connection to ${config.id}:`, getErrorMessage(error))
+    return null
+  }
+}
+
 /** Connect to multiple MCP servers in parallel, merge their tools */
 export async function connectMCPServers(
   configs: MCPServerConfig[],
