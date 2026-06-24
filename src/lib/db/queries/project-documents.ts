@@ -67,6 +67,47 @@ export async function createProjectDocument(
 }
 
 /**
+ * Get a single document (incl. content) scoped by projectId.
+ * Access control must be verified by caller via canAccessProject().
+ */
+export async function getProjectDocumentById(documentId: string, projectId: string) {
+  const db = getDb()
+  const [doc] = await db
+    .select({
+      id: projectDocuments.id,
+      title: projectDocuments.title,
+      content: projectDocuments.content,
+      mimeType: projectDocuments.mimeType,
+      tokenCount: projectDocuments.tokenCount,
+    })
+    .from(projectDocuments)
+    .where(and(eq(projectDocuments.id, documentId), eq(projectDocuments.projectId, projectId)))
+  return doc ?? null
+}
+
+/**
+ * Update a document's content + token count, scoped by projectId.
+ * Access control must be verified by caller via canAccessProject().
+ */
+export async function updateProjectDocument(
+  documentId: string,
+  projectId: string,
+  data: { content: string; tokenCount: number }
+) {
+  const db = getDb()
+  const [updated] = await db
+    .update(projectDocuments)
+    .set({
+      content: data.content,
+      tokenCount: data.tokenCount,
+      updatedAt: new Date(),
+    })
+    .where(and(eq(projectDocuments.id, documentId), eq(projectDocuments.projectId, projectId)))
+    .returning()
+  return updated ?? null
+}
+
+/**
  * Delete a document by ID and projectId.
  * Access control must be verified by caller via canAccessProject().
  */

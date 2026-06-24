@@ -1,9 +1,17 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef } from "react"
-import { FileText, Trash2, Upload, Loader2 } from "lucide-react"
+import { FileText, Trash2, Upload, Loader2, Pencil } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog"
+import { ArtifactEditor } from "@/components/assistant/artifact-editor"
 import type { ProjectDocumentPublic } from "@/types/project"
 
 interface DocumentsResponse {
@@ -35,6 +43,13 @@ export function ProjectDocuments({ projectId, className }: ProjectDocumentsProps
   const [isUploading, setIsUploading] = useState(false)
   const [docError, setDocError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
+
+  // Editor state
+  const [editingDoc, setEditingDoc] = useState<{ id: string; title: string } | null>(null)
+  const [editorContent, setEditorContent] = useState("")
+  const [isLoadingContent, setIsLoadingContent] = useState(false)
+  const [isSavingEdit, setIsSavingEdit] = useState(false)
+  const [editError, setEditError] = useState<string | null>(null)
 
   const loadDocuments = useCallback(async () => {
     if (!projectId) return
@@ -82,6 +97,50 @@ export function ProjectDocuments({ projectId, className }: ProjectDocumentsProps
       setIsUploading(false)
       // Reset file input
       if (fileInputRef.current) fileInputRef.current.value = ""
+    }
+  }
+
+  async function openEditor(doc: ProjectDocumentPublic) {
+    setEditError(null)
+    setEditorContent("")
+    setEditingDoc({ id: doc.id, title: doc.title })
+    setIsLoadingContent(true)
+    try {
+      const res = await fetch(`/api/projects/${projectId}/documents/${doc.id}`)
+      if (!res.ok) {
+        setEditError("Datei konnte nicht geladen werden")
+        return
+      }
+      const data = await res.json()
+      setEditorContent(data.content ?? "")
+    } catch {
+      setEditError("Datei konnte nicht geladen werden")
+    } finally {
+      setIsLoadingContent(false)
+    }
+  }
+
+  async function handleSaveEdit() {
+    if (!editingDoc) return
+    setEditError(null)
+    setIsSavingEdit(true)
+    try {
+      const res = await fetch(`/api/projects/${projectId}/documents/${editingDoc.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content: editorContent }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({ error: "Speichern fehlgeschlagen" }))
+        setEditError(data.error ?? "Speichern fehlgeschlagen")
+        return
+      }
+      setEditingDoc(null)
+      await loadDocuments()
+    } catch {
+      setEditError("Speichern fehlgeschlagen")
+    } finally {
+      setIsSavingEdit(false)
     }
   }
 
@@ -137,7 +196,18 @@ export function ProjectDocuments({ projectId, className }: ProjectDocumentsProps
                     variant="ghost"
                     size="icon"
                     className="size-7 shrink-0"
+                    onClick={() => openEditor(doc)}
+                    title="Bearbeiten"
+                  >
+                    <Pencil className="size-3.5" />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="size-7 shrink-0"
                     onClick={() => handleDeleteDoc(doc.id)}
+                    title="Löschen"
                   >
                     <Trash2 className="size-3.5" />
                   </Button>
@@ -180,6 +250,53 @@ export function ProjectDocuments({ projectId, className }: ProjectDocumentsProps
           </p>
         </>
       )}
+
+      {/* Editor dialog */}
+      <Dialog open={!!editingDoc} onOpenChange={(o) => { if (!o) setEditingDoc(null) }}>
+        <DialogContent className="flex max-h-[85vh] flex-col gap-3 sm:max-w-3xl">
+          <DialogHeader>
+            <DialogTitle className="truncate">{editingDoc?.title}</DialogTitle>
+          </DialogHeader>
+
+          {isLoadingContent ? (
+            <div className="flex items-center gap-2 py-8 text-sm text-muted-foreground">
+              <Loader2 className="size-4 animate-spin" />
+              Lade Inhalt...
+            </div>
+          ) : (
+            <div className="h-[55vh] overflow-hidden rounded-md border">
+              <ArtifactEditor
+                value={editorContent}
+                onChange={setEditorContent}
+                language="markdown"
+              />
+            </div>
+          )}
+
+          {editError && <p className="text-xs text-destructive">{editError}</p>}
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setEditingDoc(null)}
+              disabled={isSavingEdit}
+            >
+              Abbrechen
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              onClick={handleSaveEdit}
+              disabled={isLoadingContent || isSavingEdit || !editorContent.trim()}
+            >
+              {isSavingEdit && <Loader2 className="mr-2 size-4 animate-spin" />}
+              Speichern
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
