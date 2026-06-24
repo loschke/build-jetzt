@@ -9,6 +9,8 @@ interface TokenBucket {
 }
 
 interface RateLimitConfig {
+  /** Bucket name — namespaces the per-user bucket so route types don't share tokens */
+  name: string
   /** Max requests in the window */
   maxRequests: number
   /** Window duration in milliseconds */
@@ -43,7 +45,9 @@ export function checkRateLimit(
   const now = Date.now()
   cleanup()
 
-  const key = `${identifier}`
+  // Namespace by config name so each route type gets an independent bucket
+  // (e.g. widget polling on `mcpPoll` does not starve the user's `chat`/`api`).
+  const key = `${identifier}:${config.name}`
   const bucket = buckets.get(key)
 
   if (!bucket || now - bucket.lastRefill >= config.windowMs) {
@@ -63,11 +67,13 @@ export function checkRateLimit(
 
 // Pre-configured limiters for different route types
 export const RATE_LIMITS = {
-  chat: { maxRequests: 20, windowMs: 60_000 },
-  api: { maxRequests: 60, windowMs: 60_000 },
-  web: { maxRequests: 30, windowMs: 60_000 },
-  upload: { maxRequests: 10, windowMs: 60_000 },
-  voiceChat: { maxRequests: 10, windowMs: 60_000 },
+  chat: { name: "chat", maxRequests: 20, windowMs: 60_000 },
+  api: { name: "api", maxRequests: 60, windowMs: 60_000 },
+  web: { name: "web", maxRequests: 30, windowMs: 60_000 },
+  upload: { name: "upload", maxRequests: 10, windowMs: 60_000 },
+  voiceChat: { name: "voiceChat", maxRequests: 10, windowMs: 60_000 },
+  // MCP App widget polling (job_status etc.) — own bucket, headroom for ~2s polls + actions.
+  mcpPoll: { name: "mcpPoll", maxRequests: 120, windowMs: 60_000 },
 } as const
 
 export function rateLimitResponse(retryAfterMs: number): Response {

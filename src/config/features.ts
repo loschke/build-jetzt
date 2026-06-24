@@ -35,6 +35,11 @@ export const features = {
   mcpApps: {
     enabled: process.env.NEXT_PUBLIC_MCP_APPS_ENABLED === "true",
   },
+  // Verbose MCP Apps diagnostics (client window.__MCP_APP_LOG + server timing logs).
+  // Off by default — keeps hot-path logging quiet in production.
+  mcpAppsDebug: {
+    enabled: process.env.NEXT_PUBLIC_MCP_APPS_DEBUG === "true",
+  },
   admin: {
     enabled: !!(process.env.ADMIN_EMAILS || process.env.SUPERADMIN_EMAIL),
   },

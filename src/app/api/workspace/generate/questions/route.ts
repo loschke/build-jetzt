@@ -10,7 +10,7 @@ import {
   QUESTIONS_SYSTEM_PROMPT,
 } from "@/lib/ai/prompts/workspace-generator"
 
-const RATE_LIMIT = { maxRequests: 10, windowMs: 60_000 }
+const RATE_LIMIT = { name: "workspace-gen-questions", maxRequests: 10, windowMs: 60_000 }
 
 const requestSchema = z.object({
   type: z.enum(["expert", "skill"]),

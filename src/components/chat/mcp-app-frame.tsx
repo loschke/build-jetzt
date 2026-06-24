@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react"
 import { AppBridge, PostMessageTransport, buildAllowAttribute } from "@modelcontextprotocol/ext-apps/app-bridge"
 import type { McpUiResourcePermissions } from "@modelcontextprotocol/ext-apps/app-bridge"
+import { features } from "@/config/features"
 
 /**
  * MCP Apps host frame (Ebene B / M2.3).
@@ -42,14 +43,48 @@ const MINIMAL_CAPS = {
   message: { text: {} },
 } as const
 
-/** Strip any existing CSP and inject a tight one for the self-contained widget. */
+const MAX_APP_MESSAGE_CHARS = 2000
+
+/** Permissions-Policy features the host will ever pass to a widget iframe. The
+ * server's declared `_meta.ui.permissions` is intersected against this so a
+ * malicious widget can't self-grant drive-by camera/microphone/geolocation. */
+const ALLOWED_PERMISSIONS: ReadonlyArray<keyof McpUiResourcePermissions> = ["clipboardWrite"]
+
+function filterPermissions(p: McpUiResourcePermissions | undefined): McpUiResourcePermissions | undefined {
+  if (!p) return undefined
+  const out: McpUiResourcePermissions = {}
+  for (const key of ALLOWED_PERMISSIONS) {
+    if (p[key]) out[key] = p[key]
+  }
+  return Object.keys(out).length ? out : undefined
+}
+
+/** Restrict a widget-supplied download filename to a safe basename. */
+function safeFilename(name: string | undefined): string {
+  const base = (name ?? "").split(/[\\/]/).pop() ?? ""
+  const cleaned = base.replace(/[^a-zA-Z0-9._-]/g, "_").replace(/^\.+/, "").slice(0, 100)
+  return cleaned || "download"
+}
+
+/**
+ * Strip any existing CSP and inject a tight one. script-src/style-src drop the
+ * blanket `https:` → no loading of REMOTE cross-origin scripts (the real vector);
+ * `data:`/`blob:` stay (self-contained workers/inline assets — grant nothing beyond
+ * the inline scripts the server already ships). connect-src defaults to 'none'
+ * (blocks fetch/XHR/WebSocket exfil; the bridge uses postMessage, unaffected).
+ * img-src/media-src keep `https:` because servers (e.g. Higgsfield) return CDN
+ * media URLs in tool results and often do NOT declare resourceDomains — a residual
+ * img-beacon exfil risk, accepted under the semi-trusted-server model.
+ */
 function injectWidgetCsp(html: string, resourceDomains: string[], connectDomains: string[]): string {
-  const res = ["data:", "blob:", "https:", ...resourceDomains].join(" ")
+  const declared = resourceDomains.join(" ")
+  const code = ["'unsafe-inline'", "data:", "blob:", ...resourceDomains].join(" ") // no remote https
+  const media = ["data:", "blob:", "https:", ...resourceDomains].join(" ") // images/media: CDN allowed
   const connect = connectDomains.length ? connectDomains.join(" ") : "'none'"
   const csp =
     `<meta http-equiv="Content-Security-Policy" content="` +
-    `default-src 'none'; script-src 'unsafe-inline' ${res}; style-src 'unsafe-inline' ${res}; ` +
-    `img-src ${res}; media-src ${res}; font-src ${res}; connect-src ${connect};">`
+    `default-src 'none'; script-src ${code}; style-src ${code}; ` +
+    `img-src ${media}; media-src ${media}; font-src data: ${declared}; connect-src ${connect};">`
   const stripped = html.replace(/<meta\s+http-equiv\s*=\s*["']Content-Security-Policy["'][^>]*>/gi, "")
   const headMatch = stripped.match(/<head(\s[^>]*)?>/i)
   if (headMatch && headMatch.index != null) {
@@ -67,20 +102,24 @@ export function McpAppFrame({ serverId, resourceUri, toolInput, toolOutput, onAp
   onAppMessageRef.current = onAppMessage
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading")
   const [errorMsg, setErrorMsg] = useState<string>("")
-  const [height, setHeight] = useState(120)
+  const [height, setHeight] = useState(360)
 
   useEffect(() => {
     let cancelled = false
     let initWatch: ReturnType<typeof setTimeout> | undefined
+    let transport: PostMessageTransport | undefined
     const iframe = iframeRef.current
     if (!iframe) return
 
     const t0 = Date.now()
-    // Diagnostics: every phase lands in window.__MCP_APP_LOG (copy/paste) + console.
+    // Diagnostics behind a debug flag (window.__MCP_APP_LOG, capped) — quiet by default.
     const dbg = (phase: string, extra?: Record<string, unknown>) => {
+      if (!features.mcpAppsDebug.enabled) return
       const entry = { t: Date.now() - t0, server: serverId, phase, ...extra }
       const w = window as unknown as { __MCP_APP_LOG?: unknown[] }
-      ;(w.__MCP_APP_LOG ??= []).push(entry)
+      const logArr = (w.__MCP_APP_LOG ??= [])
+      logArr.push(entry)
+      if (logArr.length > 500) logArr.shift()
       console.info(`[McpApp +${entry.t}ms] ${phase}`, extra ?? "")
     }
 
@@ -118,7 +157,7 @@ export function McpAppFrame({ serverId, resourceUri, toolInput, toolOutput, onAp
         // allow-popups/downloads/forms enable the widget's interactive controls
         // (download, external links, form buttons). NO allow-same-origin → the
         // iframe keeps an opaque origin with no access to host DOM/cookies.
-        const allow = buildAllowAttribute(ui.permissions)
+        const allow = buildAllowAttribute(filterPermissions(ui.permissions))
         if (allow) frame.setAttribute("allow", allow)
         frame.setAttribute("sandbox", "allow-scripts allow-popups allow-downloads allow-forms")
 
@@ -167,9 +206,10 @@ export function McpAppFrame({ serverId, resourceUri, toolInput, toolOutput, onAp
                 const url = URL.createObjectURL(blob)
                 const a = document.createElement("a")
                 a.href = url
-                a.download = res.uri?.split("/").pop() ?? "download"
+                a.download = safeFilename(res.uri)
                 a.click()
-                URL.revokeObjectURL(url)
+                // Defer revoke so the download isn't cancelled before it starts.
+                setTimeout(() => URL.revokeObjectURL(url), 10_000)
               } else if (item.type === "resource_link" && typeof item.uri === "string") {
                 window.open(item.uri, "_blank", "noopener,noreferrer")
               }
@@ -188,6 +228,7 @@ export function McpAppFrame({ serverId, resourceUri, toolInput, toolOutput, onAp
             .map((c) => c.text as string)
             .join("\n")
             .trim()
+            .slice(0, MAX_APP_MESSAGE_CHARS) // bound widget-injected chat input
           dbg("ui/message", { role: (params as { role?: string })?.role, chars: text.length })
           if (text && onAppMessageRef.current) {
             onAppMessageRef.current(text)
@@ -227,7 +268,8 @@ export function McpAppFrame({ serverId, resourceUri, toolInput, toolOutput, onAp
         // our listener and is lost, so the host never replies and the widget times out.
         frame.addEventListener("load", () => dbg("iframe.load"), { once: true })
         dbg("bridge.connect→")
-        await bridge.connect(new PostMessageTransport(win, win))
+        transport = new PostMessageTransport(win, win)
+        await bridge.connect(transport)
         dbg("bridge.connect✓ (host listening)")
         if (cancelled) return
 
@@ -258,6 +300,9 @@ export function McpAppFrame({ serverId, resourceUri, toolInput, toolOutput, onAp
       if (bridge) {
         bridge.teardownResource({}).catch(() => {})
       }
+      // Close the transport so the window 'message' listener is removed (no leak
+      // across mount/unmount when scrolling a chat with several widgets).
+      transport?.close().catch(() => {})
     }
     // Re-mount the widget if the server/resource identity changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps

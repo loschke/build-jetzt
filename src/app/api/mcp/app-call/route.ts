@@ -27,7 +27,7 @@ export async function POST(request: Request) {
   if (authResult.error) return authResult.error
   const userId = authResult.user.id
 
-  const rateCheck = checkRateLimit(userId, RATE_LIMITS.api)
+  const rateCheck = checkRateLimit(userId, RATE_LIMITS.mcpPoll)
   if (!rateCheck.allowed) return rateLimitResponse(rateCheck.retryAfterMs)
 
   let parsed: z.infer<typeof bodySchema>
@@ -42,7 +42,9 @@ export async function POST(request: Request) {
     const status =
       result.error === "not_connected" ? 409 :
       result.error === "server_not_found" ? 404 :
-      result.error === "tool_not_allowed" ? 403 : 502
+      result.error === "tool_not_found" ? 404 :
+      result.error === "tool_not_allowed" ? 403 :
+      result.error === "timeout" ? 504 : 502
     return Response.json({ error: result.error, detail: result.detail }, { status })
   }
 

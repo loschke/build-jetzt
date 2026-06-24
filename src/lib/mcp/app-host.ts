@@ -24,13 +24,28 @@ import { connectMcpClient } from "@/lib/mcp"
 import { getErrorMessage } from "@/lib/errors"
 
 const APP_CALL_TIMEOUT = 30_000
+const DEBUG = process.env.NEXT_PUBLIC_MCP_APPS_DEBUG === "true"
 
-export type AppHostError = "server_not_found" | "not_connected" | "tool_not_allowed" | "connect_failed"
+export type AppHostError =
+  | "server_not_found"
+  | "not_connected"
+  | "tool_not_allowed"
+  | "tool_not_found"
+  | "timeout"
+  | "connect_failed"
 
-/** Structured, secret-safe diagnostics for the MCP Apps host legs. */
+/** Structured diagnostics. Failures always warn; timing/ok only under debug flag. */
 function log(op: string, fields: Record<string, unknown>) {
+  if (!op.endsWith(".fail") && !DEBUG) return
   const parts = Object.entries(fields).map(([k, v]) => `${k}=${typeof v === "string" ? v : JSON.stringify(v)}`)
-  console.info(`[MCP-App] ${op} ${parts.join(" ")}`)
+  const msg = `[MCP-App] ${op} ${parts.join(" ")}`
+  if (op.endsWith(".fail")) console.warn(msg)
+  else console.info(msg)
+}
+
+/** Strip URLs and cap length before returning an error detail to the client. */
+function safeDetail(msg: string): string {
+  return msg.replace(/https?:\/\/\S+/gi, "[url]").slice(0, 200)
 }
 
 type ResolveResult =
@@ -103,7 +118,7 @@ export async function readUiResource(
   } catch (error) {
     const detail = getErrorMessage(error)
     log("readResource.fail", { server: serverId, uri, totalMs: Date.now() - t0, detail })
-    return { error: "connect_failed", detail }
+    return { error: "connect_failed", detail: safeDetail(detail) }
   } finally {
     conn.close().catch(() => {})
   }
@@ -145,7 +160,7 @@ export async function callAppTool(
     const tool = tools[toolName]
     if (!tool || typeof tool.execute !== "function") {
       log("callTool.missing", { server: serverId, tool: toolName, available: Object.keys(tools).length })
-      return { error: "tool_not_allowed", detail: `tool not found on server: ${toolName}` }
+      return { error: "tool_not_found", detail: `tool not found on server: ${toolName}` }
     }
     const result = await Promise.race([
       tool.execute(args, { toolCallId: "mcp-app", messages: [] }),
@@ -164,8 +179,9 @@ export async function callAppTool(
     return { result }
   } catch (error) {
     const detail = getErrorMessage(error)
+    const isTimeout = error instanceof Error && /tool-call timeout/.test(error.message)
     log("callTool.fail", { server: serverId, tool: toolName, totalMs: Date.now() - t0, detail })
-    return { error: "connect_failed", detail }
+    return { error: isTimeout ? "timeout" : "connect_failed", detail: safeDetail(detail) }
   } finally {
     conn.close().catch(() => {})
   }
