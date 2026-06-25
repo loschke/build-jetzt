@@ -35,37 +35,56 @@ export function fixFilePartsForGateway(messages: ModelMessage[]): ModelMessage[]
   return messages
 }
 
+/** Attach an ephemeral Anthropic cache breakpoint to a single message. */
+function withCacheControl(msg: ModelMessage): ModelMessage {
+  return {
+    ...msg,
+    providerOptions: {
+      ...msg.providerOptions,
+      anthropic: { cacheControl: { type: "ephemeral" } },
+    },
+  }
+}
+
 /**
- * Add Anthropic cache control for prompt caching.
- * Marks the system message AND the first user message (which may contain
- * extracted file content) so they get cached across follow-up messages.
+ * Add Anthropic cache control for prompt caching. Sets up to three breakpoints
+ * (Anthropic allows four). Caching is a prefix match: each breakpoint caches
+ * everything before it, and cache reads cost ~0.1x vs. full input price.
+ *
+ *  1. System message — the large stable prefix (persona, tool/skill instructions).
+ *  2. First user message — may carry extracted file/document content.
+ *  3. Last message — rolling breakpoint. On every follow-up request the entire
+ *     prior conversation (history + previous turns) sits before this point and
+ *     is read from cache instead of reprocessed at full price. Cache reads thus
+ *     grow incrementally with the conversation length (cross-turn caching).
+ *
+ * Note: intermediate tool-call/tool-result blocks generated inside a single
+ * multi-step turn are appended by the AI SDK after this runs, so they are not
+ * covered here — only the prefix up to the newest user turn is.
+ *
  * Only applies to Anthropic models (detected by model ID prefix).
  */
 export function addCacheControl(messages: ModelMessage[], modelId: string): ModelMessage[] {
   if (!modelId.startsWith("anthropic/")) return messages
 
+  const lastIndex = messages.length - 1
   let firstUserFound = false
+
   return messages.map((msg, index) => {
-    // Cache the system message
+    // 1. System message (stable global prefix)
     if (index === 0 && msg.role === "system") {
-      return {
-        ...msg,
-        providerOptions: {
-          ...msg.providerOptions,
-          anthropic: { cacheControl: { type: "ephemeral" } },
-        },
-      }
+      return withCacheControl(msg)
     }
-    // Cache the first user message (contains extracted file content on follow-ups)
+    // 2. First user message (extracted file content on follow-ups)
     if (!firstUserFound && msg.role === "user") {
       firstUserFound = true
-      return {
-        ...msg,
-        providerOptions: {
-          ...msg.providerOptions,
-          anthropic: { cacheControl: { type: "ephemeral" } },
-        },
-      }
+      return withCacheControl(msg)
+    }
+    // 3. Rolling breakpoint on the last message (cross-turn caching).
+    //    Collapses to the same message when there is only one user turn, so
+    //    the breakpoint count stays at 2-3 and never exceeds Anthropic's 4.
+    if (index === lastIndex) {
+      return withCacheControl(msg)
     }
     return msg
   })
