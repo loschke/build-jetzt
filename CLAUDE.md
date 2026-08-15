@@ -349,3 +349,19 @@ Details: `docs/system/deployment-guide.md` und `docs/system/feature-flags-konfig
 | `src/lib/db/CLAUDE.md` | Schema, Queries, Migrations, Seeding, Caching |
 | `src/components/CLAUDE.md` | UI-Patterns, shadcn/ui, AI Elements, Generative UI |
 | `src/app/api/CLAUDE.md` | Route-Patterns, Guards, Chat-Route-Architektur |
+
+## Assets baut die media-factory
+
+Bilder, Audio, Videos und Druckvorlagen entstehen **nicht hier**, sondern in
+`../media-factory` (eigenes Repo, eigene CLAUDE.md). Der Output wird in das
+jeweilige Ziel-Repo geschrieben.
+
+build.jetzt ist heute noch kein Abnehmer — es gibt hier weder `public/images/og/`
+noch `public/audio/`. Sobald etwas gebraucht wird, kommt es von dort und wird
+nicht hier nachgebaut. Zwei Dinge sind für diese Brand schon vorbereitet: die
+Video-Engine kennt `build` als Brand, und das Blau `#488BFB` steht im
+LinkedIn-Asset-Stilbuch fest.
+
+Noch nicht vorbereitet: die Brand-Tokens für OG-Bilder und Cheatsheets, und die
+QR-Weiterleitungsroute (`media-factory/qr/hosts.json` führt build nicht, weil
+das Repo Next.js statt Astro ist).
