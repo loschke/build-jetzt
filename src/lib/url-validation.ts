@@ -11,6 +11,22 @@ const BLOCKED_HOSTNAMES = new Set([
   "metadata.google.internal",
 ])
 
+/**
+ * Explicitly allow-listed origins that bypass the SSRF block — for local
+ * development setups where a trusted MCP server runs on loopback (e.g. the
+ * media-factory Leitstand): MCP_LOCAL_URL_ALLOWLIST=http://127.0.0.1:4700
+ * Comma-separated, exact origin match only (protocol + host + port).
+ * Production deployments without the env var are unaffected.
+ */
+function localUrlAllowlist(): Set<string> {
+  return new Set(
+    (process.env.MCP_LOCAL_URL_ALLOWLIST ?? "")
+      .split(",")
+      .map((s) => s.trim().replace(/\/+$/, ""))
+      .filter(Boolean),
+  )
+}
+
 const PRIVATE_IP_RANGES = [
   /^10\.\d{1,3}\.\d{1,3}\.\d{1,3}$/,
   /^172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3}$/,
@@ -37,6 +53,11 @@ export function isAllowedUrl(input: string): boolean {
   // Only allow http and https
   if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
     return false
+  }
+
+  // Explicit local-development allowlist wins over all blocks below.
+  if (localUrlAllowlist().has(parsed.origin)) {
+    return true
   }
 
   // Block known internal hostnames (strip trailing dots to prevent bypass)

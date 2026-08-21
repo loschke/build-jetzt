@@ -48,3 +48,46 @@ describe("isAllowedUrl", () => {
     assert.strictEqual(isAllowedUrl("http://[::ffff:127.0.0.1]"), false);
   });
 });
+
+describe("MCP_LOCAL_URL_ALLOWLIST (local-dev loopback exception)", () => {
+  it("keeps loopback blocked when the env var is unset", () => {
+    delete process.env.MCP_LOCAL_URL_ALLOWLIST;
+    assert.strictEqual(isAllowedUrl("http://127.0.0.1:4700/mcp"), false);
+  });
+
+  it("allows exactly the allow-listed origin, nothing else", () => {
+    process.env.MCP_LOCAL_URL_ALLOWLIST = "http://127.0.0.1:4700";
+    try {
+      assert.strictEqual(isAllowedUrl("http://127.0.0.1:4700/mcp"), true);
+      // Same host, different port: still blocked.
+      assert.strictEqual(isAllowedUrl("http://127.0.0.1:9999/mcp"), false);
+      // Different hostname resolving to the same place: still blocked (exact origin match).
+      assert.strictEqual(isAllowedUrl("http://localhost:4700/mcp"), false);
+      // External URLs unaffected.
+      assert.strictEqual(isAllowedUrl("https://example.com"), true);
+      assert.strictEqual(isAllowedUrl("http://10.0.0.1"), false);
+    } finally {
+      delete process.env.MCP_LOCAL_URL_ALLOWLIST;
+    }
+  });
+
+  it("supports multiple comma-separated origins and trims trailing slashes", () => {
+    process.env.MCP_LOCAL_URL_ALLOWLIST = "http://127.0.0.1:4700/, http://localhost:5555";
+    try {
+      assert.strictEqual(isAllowedUrl("http://127.0.0.1:4700/mcp"), true);
+      assert.strictEqual(isAllowedUrl("http://localhost:5555/api"), true);
+      assert.strictEqual(isAllowedUrl("http://localhost:4700/mcp"), false);
+    } finally {
+      delete process.env.MCP_LOCAL_URL_ALLOWLIST;
+    }
+  });
+
+  it("never bypasses the protocol check", () => {
+    process.env.MCP_LOCAL_URL_ALLOWLIST = "ftp://127.0.0.1:21";
+    try {
+      assert.strictEqual(isAllowedUrl("ftp://127.0.0.1:21/x"), false);
+    } finally {
+      delete process.env.MCP_LOCAL_URL_ALLOWLIST;
+    }
+  });
+});
